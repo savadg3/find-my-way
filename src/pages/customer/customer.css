@@ -1,0 +1,36 @@
+.log-sub-beading {
+    font-size: 20px !important;
+}
+
+
+.customer-details-card {
+    /* background-color: #dff1fa; */
+    box-shadow: rgba(99, 99, 99, 0.2) 0px 2px 8px 0px;
+}
+
+.customer-labels{
+    font-size: 14px;
+    color: #00000099;
+    /* color: #000; */
+    font-weight: 500;
+}
+
+.customer-values{
+    font-weight: 600;
+    color: #26a3db;
+    font-size: 16px;
+}
+
+.customer-column{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+}
+
+.customer-div{
+    display: flex;
+    justify-content: center;
+    align-items: start;
+    flex-direction: column;
+}

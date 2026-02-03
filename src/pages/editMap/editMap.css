@@ -1,0 +1,117 @@
+.main-container {
+  height: 100%;
+  display: flex;
+}
+
+/* Build Project Side bar */
+
+.bp-sideBar {
+  padding: 7px;
+  height: 100%;
+  background-color: white;
+  border-right: 1px solid #0000001a;
+}
+.bp-sideBar .icon-btn {
+  padding: 10px;
+  border-radius: 10px;
+}
+.bp-sideBar img {
+  width: 15px;
+  height: 15px;
+  object-fit: contain;
+  cursor: pointer;
+}
+
+.bp-sideBar .selected {
+  background-color: #e9f6fb;
+}
+
+/* Project Settings */
+.ps-main-container {
+  height: 100%;
+}
+
+/* Ps Side Bar */
+.ps-sideb-bar {
+  /* width: 350px; */
+  /* height: 100%; */
+  background-color: white;
+}
+
+.ps-sideb-bar h1 {
+  /* padding-bottom: 15px; */
+  font-weight: 500;
+}
+
+.ps-sideb-bar .sub {
+  padding: 5px 0px;
+}
+
+.ps-sideb-bar h2 {
+  /* margin-top: 25px;
+  background-color: #e9f6fb;
+  padding: 8px 16px;
+  font-weight: normal;
+  border-radius: 5px;
+  font-size: 14px; */
+}
+.ps-sideb-bar .label {
+  margin: 15px 0 3px 0;
+  font-size: 12px;
+}
+.ps-sideb-bar .pl-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.ps-sideb-bar .pl-heading img {
+  margin-top: 15px;
+  /* height: 15px; */
+  width: 15px;
+  object-fit: contain;
+}
+.ps-sideb-bar .select-logo {
+  margin-bottom: 25px;
+  width: 50%;
+  height: 75px;
+  border: 1px dashed #26a3db;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #26a3db;
+  background-color: #e9f6fb;
+  cursor: pointer;
+}
+.ps-sideb-bar .color-input-wrpr {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.ps-sideb-bar .color-picker {
+  width: 15px;
+  height: 15px;
+}
+.ps-sideb-bar .color-input-wrpr .input-wrpr {
+  display: flex;
+  border-radius: 6px;
+  outline: initial !important;
+  box-shadow: none !important;
+  font-size: 0.8rem;
+  border: 1px solid #E6E6E6;
+  background: #fff;
+  color: #3a3a3a;
+  height: auto;
+  padding: 0.5rem;
+  /* padding: 0.5rem 0.75rem; */
+  line-height: 1;
+  /* width: 40% !important; */
+}
+.ps-sideb-bar .color-input-wrpr .input-wrpr input {
+  outline: none;
+  margin-left: 5px;
+}
+.ps-sideb-bar .color-label {
+  width: 200px;
+}

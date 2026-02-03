@@ -1,0 +1,17 @@
+.show-as-align {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.project-visitor {
+    font-size: 0.875rem;
+
+    /* font-weight: 500; */
+}
+
+.start-end-center {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}

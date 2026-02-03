@@ -1,0 +1,582 @@
+import { Field, Formik } from 'formik'
+import React, { useCallback, useState, useEffect } from 'react'
+import { Button, Label, Row, Col, Spinner } from 'reactstrap'
+import { BsArrowLeftShort } from 'react-icons/bs';
+import { BiSolidPencil } from 'react-icons/bi'
+import { FaInfo } from 'react-icons/fa';
+import { IoMdClose } from 'react-icons/io'
+import DropdownWithIcons from '../IconDropdown'
+import { postRequest, getRequest, deleteRequest } from '../../../hooks/axiosClient';
+import { getCurrentUser } from '../../../helpers/utils';
+import { SetBackEndErrorsAPi } from '../../../hooks/setBEerror';
+import { ChangeSvgColorPassingBE } from '../CustomSvg'
+import * as Yup from 'yup';
+import { toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import AutosaveForm from './AutoSaveForm';
+import { FiSearch } from "react-icons/fi";
+import { GoPlus } from "react-icons/go";
+import ColorPicker from '../../../components/common/Colorpicker';
+import { getAmenityIconDropDown } from '../Helpers/apis/getPins';
+import { handleBlockEnter } from '../Helpers/constants/constant';
+import { deletePinApi, removePinApi } from '../Helpers/apis/otherApis';
+import { useDrag } from 'react-dnd';
+import UndraggedDiv from '../Helpers/modal/UndraggedDiv';
+
+
+const ValidationSchema = Yup.object().shape({
+    // amenity_name: Yup.string().required('This field is required.'),
+    // icon: Yup.string().required('This field is required.'),
+
+})
+
+const AmenitySideBar = ({
+    id,
+    floorID,
+    setAddNew,
+    addNew,
+    selAmenityDtls,
+    setSelAmenityDtls,
+    projectSettings,
+    selFloorPlanDtls,
+    getAmenityList,
+    aminityIcons,
+    setAminityIcons,
+    onSideBarIconClick,
+    activeTab,
+    savingTimer, setSavingTimer,
+    handleEnableDisable,
+    setFloorID,
+    amenityList,
+    getFloorPlanByid,
+    searchTerm,
+    setSearchTerm,
+    setCommonSidebarVisible,
+    setIsDirty,
+    isDirty,
+    setPanTool,
+    setAmenities,
+    setStoredObjects,
+    onEditAmenity
+}) => {
+
+    const [mapDivSize, setMapDivSize] = useState(window.innerHeight - 70)
+    const [backClick, setBackClick] = useState(false);
+    const [color, setColor] = useState(null);
+    const [openPicker, setOpenPicker] = useState(null);
+
+    const addBeaconClick = () => {
+        setPanTool(false)
+        if (floorID) {
+            // setAddNew(true)
+            document.getElementById("amenitySubmitBtn")?.click();
+
+        } else {
+            toast.warning('Please select a floor plan to add an amenity')
+        }
+    }
+
+
+    useEffect(() => {
+        getAmenityIconDropDown(0, setAminityIcons)
+    }, [!selAmenityDtls && !selAmenityDtls?.enc_id])
+
+
+    const handleBeaconSubmit = async (values, setFieldError) => {
+        console.log(values, 'values')
+        setSavingTimer(true)
+        let value = {
+            customer_id: projectSettings?.enc_customer_id ?? getCurrentUser()?.user?.common_id,
+            project_id: id,
+            // floor_plan_id: values?.enc_floor_plan_id ?? selFloorPlanDtls?.enc_id,
+            floor_plan_id: values?.position === null ? null : (values?.enc_floor_plan_id ?? selFloorPlanDtls?.enc_id),
+            amenity_name: values?.amenity_name ?? `! New amenity`,
+            icon_id: values?.icon_id ?? aminityIcons[0]?.enc_id ?? 1,
+            amenity_color: values?.amenity_color ?? projectSettings?.amenity_color,
+            positions: values?.position
+        }
+        if (values?.enc_id) {
+            value.id = values?.enc_id
+            value.is_published = '0';
+            value.discard = '1';
+            value.publish = '1';
+
+        }
+        try {
+            const reqUrl = `amenity`
+            const response = await postRequest(reqUrl, value);
+            const data = response.response?.data ?? [];
+            if (response.type == 1) {
+                // onEditAmenity(data)
+                if (values?.enc_id && isDirty) {
+                    setSelAmenityDtls((prev) => ({
+                        ...prev,
+                        ...values,
+                        enc_id: data?.enc_id,
+                        icon: values?.icon,
+                        icon_id: values?.icon,
+                        icon_path: aminityIcons?.find(item => item.enc_id == values?.icon)?.path
+                    }));
+                } else {
+                    setSelAmenityDtls()
+                }
+                getAmenityList(floorID)
+                handleEnableDisable();
+                setIsDirty(false);
+                setTimeout(() => {
+                    setSavingTimer(false)
+                }, 1000);
+
+                if (backClick) {
+                    // setSavingTimer(false)
+                    onSideBarIconClick(activeTab, 1, 'pin')
+                    setBackClick(false)
+                }
+            } else {
+                setSavingTimer(false)
+
+                SetBackEndErrorsAPi(response, setFieldError);
+            }
+        } catch (error) {
+            setSavingTimer(false)
+
+            console.log(error);
+        }
+    }
+
+    const handleSearch = (e) => {
+        setSearchTerm(e.target.value);
+    };
+
+    const filteredData = amenityList.filter((val) => {
+        const {
+            amenity_name = '',
+            floor_plan = '',
+            search_name
+        } = val;
+        if (searchTerm === '') {
+            return val;
+        }
+        return (
+            amenity_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            floor_plan?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            search_name?.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+    });
+
+
+    const removeAmenity = (row, index, canDrag) => {
+        const buttons = {
+            cancel: {
+                text: "Cancel",
+                value: "No",
+                visible: true,
+                className: "btn-danger",
+                closeModal: true,
+            },
+
+            confirm: {
+                text: "Delete",
+                value: "Yes",
+                visible: true,
+                className: "btn-red",
+                closeModal: true,
+            },
+        }
+        // Conditionally add 'remove' button if canDrag is true
+        if (!canDrag) {
+            buttons.remove = {
+                text: "Remove From Floor Plan",
+                value: "Remove",
+                visible: true,
+                className: "btn-danger",
+                closeModal: true,
+            };
+        }
+        // Adjust the buttons order if 'remove' exists
+        const orderedButtons = !canDrag
+            ? { cancel: buttons.cancel, remove: buttons.remove, confirm: buttons.confirm }
+            : buttons;
+
+        swal({
+            title: "Are you sure you want to delete?",
+            // text: "This action is permanent and cannot be undone.",
+            icon: "warning",
+            buttons: orderedButtons
+        })
+            .then((value) => {
+                switch (value) {
+                    case "Yes":
+                        deletePinApi(`amenity/${row?.enc_id}`, setFloorID, floorID, getAmenityList, handleEnableDisable)
+                        setStoredObjects((prev) => {
+                            let updatedObjects = prev
+                            updatedObjects.delete(`${row?.enc_id}_${row?.fp_id}`)
+                            return updatedObjects
+                        })
+                        break;
+                    case "Remove":
+                        const para = {
+                            type: 4,
+                            id: row?.enc_id
+                        }
+
+                        removePinApi(`remove-pin`, para, setFloorID, floorID, getAmenityList, handleEnableDisable, projectSettings)
+                        setStoredObjects((prev) => {
+                            let updatedObjects = prev
+                            updatedObjects.delete(`${row?.enc_id}_${row?.fp_id}`)
+                            return updatedObjects
+                        })
+                        break;
+                    default:
+                        break;
+                }
+            });
+    }
+
+    const editClick = (item) => {
+        if (item.position) {
+            getFloorPlanByid(item?.fp_id, 'amenitys', "0", "default", item);
+        } else {
+            onEditAmenity(item)
+        }
+    }
+
+    const AmenityItems = ({ item, index, }) => {
+        const id = item.enc_id;
+        const canDrag = (item?.position === null)
+        const [{ isDragging }, drag, preview] = useDrag({
+            type: 'AmenityPin',
+            item: () => {
+                return { index, id, item };
+            },
+            canDrag: () => {
+                // Block dragging if the position is not (0, 0)
+                return canDrag && floorID;
+            },
+            collect: (monitor) => ({
+                isDragging: monitor.isDragging(),
+            }),
+        });
+
+        return (
+            <div className='drag-wrpr mxx-3'  >
+                <div className={`drag-item ${canDrag && 'can-drag'}`}>
+                    <div className='magical-words' ref={drag}>
+                        <div dangerouslySetInnerHTML={{ __html: ChangeSvgColorPassingBE(item?.path, item?.amenity_color ?? projectSettings?.amenity_color) }} />
+                        <div>
+                            {/* <p>{item?.amenity_name} ({item?.floor_plan})</p> */}
+                            <p>{item.amenity_name} {item?.floor_plan && ` (${item?.floor_plan})`}</p>
+                        </div>
+                    </div>
+                    <div className='flex-grow-1' />
+                    {canDrag &&
+                        <>
+                            <UndraggedDiv pinName={'amenity'} />
+                        </>
+                    }
+                    <div className=' edit-square magical-words' onClick={() => editClick(item)}  >
+                        <BiSolidPencil fontSize={15} />
+
+                    </div>
+                </div>
+                <div className='ml-2  rounded-circle' onClick={() => removeAmenity(item, index, canDrag)} style={{ backgroundColor: '#E5E5E5', cursor: 'pointer', marginBottom: '8px', padding: '4px' }} >
+                    <IoMdClose fontSize={10} />
+
+                </div>
+            </div>
+        )
+    }
+
+    const renderAmenityItem = useCallback((item, index) => {
+        return (
+            <AmenityItems
+                key={item.id}
+                index={index}
+                id={item.id}
+                item={item}
+            />
+        )
+    }, [])
+
+    const goBack = () => {
+        setSearchTerm('')
+        if (addNew) {
+            if (isDirty) {
+                setBackClick(true)
+                document.getElementById("amenitySubmitBtn")?.click();
+            } else {
+                setAddNew(false)
+                setSelAmenityDtls()
+            }
+
+        } else {
+            setCommonSidebarVisible(true)
+
+        }
+
+    }
+
+    const handleResize = () => {
+        const { clientHeight } = window.document.getElementById('pageDiv')
+        setMapDivSize(window.innerHeight - 70)
+    }
+
+    useEffect(() => {
+
+        window.addEventListener('resize', handleResize);
+
+        return () => {
+            window.removeEventListener('resize', handleResize);
+        };
+    }, []);
+
+    const handleAutoSave = () => {
+        setTimeout(() => {
+            document.getElementById("amenitySubmitBtn")?.click();
+        }, 500);
+    }
+
+    const autoSaveOnChange = (e, values) => {
+        if (values?.enc_id) {
+            setSelAmenityDtls((prev) => ({ ...prev, icon_id: e?.enc_id, icon_path: e?.path, icon: e?.enc_id }));
+            handleAutoSave();
+        }
+    }
+
+    const handlePickerClick = (name) => {
+        setOpenPicker(name);
+    };
+
+    return (
+        <div className="bar" id="inner-customizer2" style={{ position: 'relative', height: mapDivSize, paddingBottom: '20px' }} >
+
+            <Row className='backRow'>
+                <Col md={8}>
+                    <h1> {addNew ? 'Amenity Pin Details' : 'Amenity Pins'}</h1>
+
+                </Col>
+                {/* {addNew && ( */}
+                <Col md={4} >
+                    <div className='backArrow float-right' style={savingTimer ? { pointerEvents: 'none' } : { opacity: '1' }} onClick={goBack}>
+                        {savingTimer ?
+                            <Spinner className='loader-style' /> :
+                            <BsArrowLeftShort />
+                        }
+                    </div>
+                </Col>
+                {/* )} */}
+            </Row>
+
+            <Formik
+                initialValues={{
+                    amenity_name: '! New amenity',
+                    enc_id: null,
+                    position: null,
+                    // icon: 1,
+                    icon: aminityIcons[0]?.enc_id,
+                    // icon_id: 1,
+                    icon_id: aminityIcons[0]?.enc_id,
+                    ...selAmenityDtls
+                }}
+                validationSchema={ValidationSchema}
+                onSubmit={(values, setFieldError) => {
+                    handleBeaconSubmit(values, setFieldError)
+                }}
+                enableReinitialize
+            >
+                {({
+                    errors,
+                    values,
+                    touched,
+                    handleSubmit,
+                    handleChange,
+                    setFieldValue,
+                    setFieldError
+                }) => (
+                    <>
+                        {(selAmenityDtls?.position && !selAmenityDtls?.enc_id) &&
+                            <>
+                                {/* {!selAmenityDtls?.enc_id && setIsDirty(true)} */}
+                                <AutosaveForm handleSubmit={handleAutoSave} />
+                            </>
+                        }
+
+                        <form
+                            className="av-tooltip tooltip-label-bottom formGroups"
+                            onSubmit={(e) => handleSubmit(e, setFieldError)}
+                        >
+
+
+                            {
+                                addNew ?
+
+                                    <div className='custom-scrollbar customScroll' style={{ height: mapDivSize }} >
+                                        <div className='bar-sub'>
+                                            {/* {(selAmenityDtls?.position?.x) ? ( */}
+                                            <div>
+                                                <div className='bar-sub-header' style={{ marginTop: 0 }} >
+                                                    <p style={{ marginTop: 0 }} >Details</p>
+                                                </div>
+                                                <div className='pl-4 pr-4'>
+                                                    <div className="marginBottom">
+                                                        <Label for="exampleName" className="form-labels">Name</Label>
+                                                        <Field
+                                                            id="exampleName"
+                                                            className="form-control"
+                                                            type="text"
+                                                            placeholder="Please Type"
+                                                            name="amenity_name"
+                                                            autoComplete="off"
+                                                            value={values?.amenity_name}
+                                                            onChange={(e) => {
+                                                                handleChange(e)
+                                                                setSelAmenityDtls(prev => ({ ...prev, amenity_name: e.target.value }))
+                                                                setIsDirty(true);
+                                                            }}
+                                                        />
+                                                        {errors.amenity_name && touched.amenity_name ? (
+                                                            <div className="text-danger mt-1">
+                                                                {errors.amenity_name}
+                                                            </div>
+                                                        ) : null}
+                                                    </div>
+
+                                                    <div className="marginBottom">
+                                                        <Label for="exampleName" className="form-labels">Icon</Label>
+                                                        <DropdownWithIcons
+                                                            name='icon'
+                                                            options={aminityIcons}
+                                                            selDtls={values}
+                                                            setSelDtls={setSelAmenityDtls}
+                                                            setFieldValue={setFieldValue}
+                                                            vericalTransport={2}
+                                                            autoSaveOnChange={autoSaveOnChange}
+                                                            isDisabled={!values?.enc_id}
+                                                            setIsDirty={setIsDirty}
+
+                                                        />
+                                                        {errors.icon && touched.icon ? (
+                                                            <div className="text-danger mt-1">
+                                                                {errors.icon}
+                                                            </div>
+                                                        ) : null}
+                                                    </div>
+                                                </div>
+
+                                                <div className='bar-sub-header' >
+                                                    <p style={{ marginTop: 0 }} >Style</p>
+                                                </div>
+                                                <div className='pl-4 pr-4'>
+                                                    <ColorPicker
+                                                        label={'Pin Colour'}
+                                                        value={values.amenity_color ?? projectSettings?.amenity_color ?? '#9440C6'}
+                                                        name={'amenity_color'}
+                                                        onChange={(e) => {
+                                                            setColor(e)
+
+                                                        }}
+                                                        setFieldValue={setFieldValue} isOpen={openPicker === 'amenity_color'}
+                                                        setOpenPicker={setOpenPicker} onClick={() => handlePickerClick('amenity_color')}
+                                                        color={color} setColor={setColor} setSelDtls={setSelAmenityDtls} values={values}
+                                                        setIsDirty={setIsDirty}
+                                                    />
+                                                </div>
+                                                <div className='btn-wrpr' >
+                                                    <Button
+                                                        className="btnCancel "
+                                                        type="button"
+                                                        size="medium"
+                                                        hidden
+                                                        onClick={() => { setAddNew(false) }}
+                                                    >
+                                                        Cancel
+                                                    </Button>
+
+                                                    {/* <Button
+                                                            className="btn-primary bar-btn"
+                                                            htmlType="submit"
+                                                            type="primary"
+                                                            size="medium"
+                                                            id='amenitySubmitBtn'
+                                                            hidden
+                                                        >
+                                                            Submit
+                                                        </Button> */}
+
+                                                </div>
+                                            </div>
+                                            {/* ) : (
+                                                <div className='click-map-alert'>
+                                                    <div className='warning-pin-div'>
+                                                        <div className="d-flex align-items-center justify-content-center mb-2">
+                                                            <div className="info-cont">
+                                                                <FaInfo />
+                                                            </div>
+                                                        </div>
+                                                        <div className=" text-center  ">
+                                                            <p className='label color-labels' >Click on the map to place your amenity pin. Once you have placed the pin, you will be able to edit the pin details.</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )} */}
+                                        </div>
+                                    </div>
+                                    :
+                                    <>
+                                        <div className='bar-sub-header' style={{ marginRight: '14px' }} >
+                                            <p style={{ marginTop: 0 }} >Add New Amenity Pin</p>
+                                            <div className='plus-icon' onClick={() => addBeaconClick()}>
+                                                <GoPlus />
+                                            </div>
+                                        </div>
+                                        <div className="d-flex bar-search mb-2">
+                                            <input
+                                                type="text"
+                                                className="form-control"
+                                                placeholder="Search..."
+                                                value={searchTerm}
+                                                onChange={(e) => handleSearch(e)}
+                                                onKeyDown={(e) => handleBlockEnter(e)}
+                                            />
+                                            <div
+                                                className="input-group-append"
+                                                style={{ marginLeft: "-36px" }}
+                                            >
+                                                <span
+                                                    className="input-group-text"
+                                                    style={{
+                                                        border: "none",
+                                                        backgroundColor: "transparent",
+                                                        padding: '4px'
+                                                    }}
+                                                >
+                                                    <FiSearch className="iconStyle" />
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div className='custom-scrollbar customScroll' style={{ height: mapDivSize - 90 }} >
+                                            {filteredData.filter(p => p?.floorId === selFloorPlanDtls?.id)?.map((plan, idx) => renderAmenityItem(plan, idx))}
+                                        </div>
+
+                                    </>}
+                            {/* <Label for="exampleEmail1" className="form-labels">Name</Label> */}
+                            <Button
+                                className="btn-primary bar-btn"
+                                htmlType="submit"
+                                type="primary"
+                                size="medium"
+                                id='amenitySubmitBtn'
+                                hidden
+                            >
+                                Submit
+                            </Button>
+                        </form>
+                    </>
+                )}
+            </Formik>
+        </div>
+    )
+}
+
+export default AmenitySideBar;
+

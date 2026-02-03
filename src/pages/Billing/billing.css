@@ -1,0 +1,110 @@
+.menuIcon {
+    background-color: #DEF1FA;
+    border-radius: 5px;
+    color: #26A3DB;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+}
+
+.menuIcon:hover {
+    background-color: #26a3db !important;
+    color: white !important;
+}
+
+
+
+
+
+.btn-primary {
+    padding-left: 20px;
+    padding-right: 20px;
+}
+
+.addCard-Card {
+    background-color: #f3f8fa;
+    width: 400px;
+    min-height: 200px;
+
+}
+
+.align-content-center {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.add-card-text {
+    font-size: 1.125rem !important;
+    font-weight: 600;
+    text-align: center;
+}
+
+.add-credit-card-heading {
+    font-size: 34px;
+}
+
+.cardNumberInput {
+    padding-left: 35px;
+}
+
+.expiryInput {
+    padding-left: 70px;
+}
+
+.goBack {
+    font-size: 18px;
+    color: #26A3DB;
+}
+
+.card-details-list-card {
+    border: 1px solid #F5F6F7 !important;
+}
+
+.visa {
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.card-number {
+    font-size: 12px;
+    font-weight: 500;
+    color: #6A6D73;
+}
+
+.badge-success {
+    background-color: #2BCE78;
+    color: white;
+    border-radius: 3px;
+    font-size: 9px !important;
+    padding-top: 5px;
+    padding-bottom: 4px;
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+.show-center {
+    display: flex;
+    justify-content: end;
+    align-items: center;
+}
+.dwnld-div{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #dff1fa;
+    height: 26px;
+    width: 26px;
+    color: #26A3DB;
+    border-radius: 6px;
+    cursor: pointer;
+    /* padding: 13px; */
+}
+.dwnld-div:hover{
+    background-color: #26a3db !important;
+    color: #fff !important;
+}

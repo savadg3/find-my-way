@@ -1,0 +1,35 @@
+
+.confirm-to-go-back p {
+    text-align: center;
+    font-weight: 600;
+    /* font-size: 20px; */
+  }
+  .confirm-to-go-back p span {
+    /* font-size: 16px; */
+    background-color: #dff1fa;
+    color:#26a3db;
+    font-weight: 400;
+    padding: 5px 15px;
+    border-radius: 5px;
+    margin-top: 10px;
+    display: block;
+    margin: 10px auto;
+    width: fit-content;
+  }
+  
+  .confirm-to-go-back button,
+  .confirm-to-go-back button:active,.confirm-to-go-back button:hover {
+    padding: 5px 15px !important;
+    border-radius: 8px !important;
+    transition: 0.5s ease;
+    font-weight: 400;
+    /* width: 100px !important; */
+    margin: 0 !important;
+    height: 50px;
+  }
+  .confirm-to-go-back button.cancel-button,
+  .confirm-to-go-back button.cancel-button:active,.confirm-to-go-back button.cancel-button:hover {
+    padding: 5px 10px !important;
+    background-color: #e7e7e7 !important;
+    color: #212529;
+  } 

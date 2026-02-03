@@ -1,0 +1,45 @@
+/* checkbox.css */
+.checkbox-wrapper {
+    position: relative;
+    display: inline-block;
+    cursor: pointer;
+  }
+
+  .checkbox_animated {
+    /* removing default appearance */
+    -webkit-appearance: none;
+    appearance: none;
+  margin-top: 1px;
+    /* creating a custom design */
+    width: 17px;
+    height: 17px;
+    border-radius: 0.15em;
+    margin-right: 0.5em;
+    border: 1px solid #26a3db;
+    outline: none;
+    cursor: pointer;
+    position: relative;
+  }
+  
+  /* style for the custom checkbox */
+  .checkbox_animated:before {
+    content: "";
+    position: absolute;
+    top: 1px;
+    left: 4px;
+    width:6px;
+    height: 9px;
+    border: 1px solid #fff; /* White border for tickmark */
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+    display: none;
+  }
+  
+  /* show the checkmark when the checkbox is checked */
+  .checkbox_animated:checked:before {
+    display: block;
+  }
+  /* blue background when the checkbox is checked */
+.checkbox_animated:checked {
+    background-color: #26a3db;
+  }

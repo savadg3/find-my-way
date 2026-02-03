@@ -1,0 +1,279 @@
+.vertical-center {
+  display: flex;
+  align-items: center;
+  min-height: 100vh;
+}
+
+.ant-form-item {
+  margin-bottom: 14px;
+}
+
+.ant-btn-primary {
+  color: #fff;
+  background-color: #26a3db;
+  box-shadow: 0 2px 0 rgba(5, 145, 255, 0.1);
+  padding: 3.4px 55px !important
+}
+
+.forgot-pass-link {
+  color: #26a3db
+}
+
+.forgot-pass-link .link:hover {
+  text-decoration: underline !important;
+}
+
+.onHover:hover {
+  text-decoration: underline !important;
+
+}
+
+.ant-form {
+  line-height: 1 !important;
+}
+
+/* NEW STYLES */
+body {
+  background-color: #f3f8fa !important;
+}
+
+.form-side {
+  /* width: 60%; */
+  padding: 17px 17px 17px 17px;
+}
+
+/* .image-side{
+          width: 40%;
+          background: url('/src/static/img//auth//login-logo.png') no-repeat center top;
+      
+      } */
+.vertical-center {
+  display: flex;
+  align-items: center;
+  min-height: 100vh;
+}
+
+.form-labels {
+  margin-bottom: 4.81px !important;
+}
+
+.formGroups {
+  /* font-size: 12px; */
+  color: #1D1D1B;
+}
+
+.forms {
+  padding: 16px 20px 0px 8px;
+}
+
+input[type='text'],
+input[type='Password'],
+input[type='number'],
+textarea {
+  font-size: 0.875rem;
+}
+
+.auth-form-action {
+  font-size: 14px;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+
+  @media only screen and (max-width: 379px) {
+    flex-flow: column;
+
+    .forgot-pass-link {
+      margin-top: 15px;
+    }
+  }
+}
+
+.btn-signin {
+  background-color: #26a3db;
+  padding: 7px 49px !important;
+  border: none;
+  font-size: 1rem !important;
+}
+
+/* .imageLogin{
+              border-radius: 0;
+              position: absolute;
+              width: -webkit-fill-available;
+              height: -webkit-fill-available;
+              object-fit: cover;
+              vertical-align:middle
+          }
+          .imageContainer{
+              max-width: 100%;
+              max-height: 100%;
+          } */
+.imageContainer {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.imageLogin {
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+}
+
+.actions {
+  font-size: 0.875rem;
+  margin-bottom: 51px;
+}
+
+.marginBottom {
+  margin-bottom: 8px !important;
+}
+
+.main {
+  background-color: #F3F8FA;
+  color: #1D1D1B;
+}
+
+.timer {
+  display: inline-grid;
+  /* width: 75px; */
+  align-items: center;
+  /* height: 35px; */
+  /* background-color: #f3f8fa; */
+  border-radius: 5px;
+  color: #26a3db;
+}
+
+.timer2 {
+  display: inline-grid;
+  width: 75px;
+  height: 35px;
+
+}
+
+.auth-card {
+  width: 100%;
+}
+
+.align-card-center {
+  display: flex;
+  justify-content: center;
+}
+
+@media (min-width:877px)and (max-width:1024px) {
+  .img-center {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 30px !important;
+  }
+
+  .creat-an-account {
+    right: 60px !important;
+  }
+
+}
+
+@media (width:1228px) {
+  .forms {
+    padding: 0px !important;
+  }
+}
+
+.img-center {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 121.73px;
+  ;
+}
+
+.img-center-register {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.creat-an-account {
+  font-size: 0.875rem;
+  text-align: center;
+  /* bottom: 22px;
+  position: absolute;
+  right: 100px; */
+  margin-top: 107.73px;
+}
+
+.image-logo {
+  width: 149.16px;
+}
+
+.code-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 2rem 0;
+}
+
+.code {
+  border-radius: 8px;
+  font-size: 35px !important;
+  height: 80px;
+  width: 100%;
+  border: 1px solid #eee;
+  margin: 1%;
+  text-align: center;
+  font-weight: 300;
+  -moz-appearance: textfield;
+
+}
+
+.code:focus-visible {
+  outline: #26a3db auto 1px !important;
+
+}
+
+
+.code:nth-child() {
+  margin-right: 0%;
+}
+
+.code::-webkit-outer-spin-button,
+.code::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.code:valid {
+  background: #e5e5e5ba;
+  /* box-shadow: 0 10px 10px -5px rgba(0, 0, 0, 0.25); */
+}
+
+.T-C {
+  margin-bottom: 0px;
+  font-size: 11px;
+  color: #8e8b97;
+  margin-top: 6px;
+
+}
+
+
+.check-bx {
+  height: 25px;
+  width: 25px;
+}
+
+@media (max-width:768px)and (max-height:944px) {
+  .row-width {
+    width: 100% !important;
+  }
+  .two-factor-row{
+    width: 100% !important;
+  }
+}
+
+.row-width {
+  width: 40%;
+}
+.two-factor-row{
+  width: 70%;
+
+}
