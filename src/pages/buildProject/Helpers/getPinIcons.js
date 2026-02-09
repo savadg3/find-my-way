@@ -84,7 +84,6 @@ export const getSafetyPin = (fillColor) => {
 export const getVerticalPin = (fillColor) => {
     return `
     <svg width="18" height="18" xmlns="http://www.w3.org/2000/svg" fill="none">
-
     <g>
      <title>Layer 1</title>
      <path id="svg_1" fill="${fillColor}" d="m9,18c4.9705,0 9,-4.0295 9,-9c0,-4.97057 -4.0295,-9 -9,-9c-4.97057,0 -9,4.02943 -9,9c0,4.9705 4.02943,9 9,9zm0,-1.2857c-4.14213,0 -7.71429,-3.5722 -7.71429,-7.7143c0,-4.14213 3.57216,-7.71429 7.71429,-7.71429c4.1421,0 7.7143,3.57216 7.7143,7.71429c0,4.1421 -3.5722,7.7143 -7.7143,7.7143z"/>

@@ -170,6 +170,7 @@ import Overlay from "./Helpers/pageDiv/Overlay";
 import { IoMdClose } from "react-icons/io";
 import { RiRestartLine } from "react-icons/ri";
 import { IoImageOutline } from "react-icons/io5";
+import MapComponent from "../../components/map/components/Map";
 
 var obj,
   polyline,
@@ -9101,7 +9102,9 @@ const ViewFloor = () => {
         handleDiscard={handleDiscard}
         publishYesClick={publishYesClick}
       />
+
       <div className="bp-container  ">
+
         {isCommonSidebarVisible && (
           <BPCommonSideBar
             activeTab={activeTab}
@@ -9118,8 +9121,10 @@ const ViewFloor = () => {
             projectSettings={projectSettings}
           />
         )}
+
         {!isCommonSidebarVisible && (
           <>
+
             {activeTab === "floorDetails" && (
               <FloorPlanDtlsBar
                 floorPlans={floorPlans}
@@ -9193,6 +9198,7 @@ const ViewFloor = () => {
                 getSvgFileAsRefImage={getSvgFileAsRefImage}
               /> 
             )}
+
             {activeTab === "settings" && (
               <PSSideBar
                 projectSettings={projectSettings}
@@ -9221,6 +9227,7 @@ const ViewFloor = () => {
                 canvas={canvas}
               />
             )}
+
             {activeTab === "locations" && (
               <LocationsSideBar
                 locations={locations}
@@ -9315,6 +9322,7 @@ const ViewFloor = () => {
                 setStoredObjects={setStoredObjects}
               />
             )}
+
             {activeTab === "beacons" && (
               <QrcodeBeaconSideBar
                 id={id}
@@ -9391,6 +9399,7 @@ const ViewFloor = () => {
                 setStoredObjects={setStoredObjects}
               />
             )}
+
             {activeTab === "safety" && (
               <SafetySideBar
                 id={id}
@@ -9459,6 +9468,7 @@ const ViewFloor = () => {
                 setIsWheechairChecked={setIsWheechairChecked}
               />
             )}
+
             <VerticalTransportModal
               modal={modalVertical}
               setModal={setModalVertical}
@@ -9521,6 +9531,7 @@ const ViewFloor = () => {
                 setStoredObjects={setStoredObjects}
               />
             )}
+
             {activeTab === "advertisements" && (
               <AdvertisementSideBar
                 id={id}
@@ -9594,6 +9605,7 @@ const ViewFloor = () => {
               reftoggle={reftoggle}
             />
           )}
+
           <ReferenceImageModal
             modal={floorPlanModal}
             values={selFloorPlanDtls}
@@ -9604,11 +9616,6 @@ const ViewFloor = () => {
             loading={loadingScale}
             setSelFloorPlanDtls={setSelFloorPlanDtls}
           />
-
-
-
-
-
 
           {activeTab === "traversable" && addNewTraversablePath && (
             <TraversablePathTools
@@ -9632,7 +9639,7 @@ const ViewFloor = () => {
             />
           )}
 
-<ShortestpathModal pathModal={pathModal} TransportModaltoggle={TransportModaltoggle} closeTransportModal={closeTransportModal} submitTransportModal={submitTransportModal}/>
+          <ShortestpathModal pathModal={pathModal} TransportModaltoggle={TransportModaltoggle} closeTransportModal={closeTransportModal} submitTransportModal={submitTransportModal}/>
 
 
 
@@ -9647,18 +9654,22 @@ const ViewFloor = () => {
             id="map-div"
             onClick={onMapDivClick}
           >
+            
             <div className="pin-drag-drop-div"
               // ref={activeTab === 'products' ? dropProduct : dropLocation}
               ref={dropRefs[activeTab]}
             >
-              <CanvasDiv
+              {/* <CanvasDiv
                 mapDivSize={mapDivSize}
                 canvas={canvas}
                 onScrollBarMove={onScrollBarMove}
                 canvasCenter={canvasCenter}
                 currentZoom={currentZoom}
-              />
+              /> */}
+              <MapComponent/>
+
             </div>
+
             <div
               style={{
                 position: "absolute",
@@ -9670,6 +9681,7 @@ const ViewFloor = () => {
                 pointerEvents: "none",
               }}
             />
+
             {!addNewFloor && (
               <div className={`bp-select-wrpr`}>
                 <CustomSelect
@@ -9691,6 +9703,7 @@ const ViewFloor = () => {
                 />
               </div>
             )}
+
             {!addNewFloor && (
               <TotalPinsDiv
                 activeTab={activeTab}
@@ -9699,6 +9712,7 @@ const ViewFloor = () => {
                 addNewFloor={addNewFloor}
               />
             )}
+
             {/* {activeTab != "traversable" && ( */}
               <div className="pan-bar" id="panBar">
                 <div
@@ -9716,9 +9730,11 @@ const ViewFloor = () => {
                 </div>
               </div>
             {/* )} */}
+
             <UncontrolledTooltip placement="top" target={`panBar`}>
               Pan
             </UncontrolledTooltip>
+
           </div>
         </div>
       </div>

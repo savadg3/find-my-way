@@ -34,6 +34,7 @@ import UndraggedDiv from '../Helpers/modal/UndraggedDiv';
 import { Dropdown, DropdownToggle, DropdownMenu, DropdownItem } from 'reactstrap';
 import { getEmptyImage } from 'react-dnd-html5-backend';
 import CommonDropdown from '../../../components/common/CommonDropdown';
+import { useAppDispatch } from '../../../hooks/useAppDispatch';
 
 
 const { image_url } = environmentaldatas;
@@ -46,23 +47,23 @@ const ValidationSchema = Yup.object().shape({
         // .required('This field is required.'),
     // product_code: Yup.string().required('This field is required.'),
     websiteLink: Yup.array().of(
-            Yup.object().shape({
-                label: Yup.string()
-                    .required("Name is required")
-                ,
-                value: Yup.string()
-                    .required("URL is required")
-                    .test("is-valid-url", "Enter a valid URL ", function (val) {
-                    const { path, createError } = this;
-    
-                    if (!val || urlRegex.test(val.trim())) {
-                        return true;
-                    }
-                        
-                    return createError({ path, message: "Enter a valid URL" });
-                }),
-            })
-        ),
+        Yup.object().shape({
+            label: Yup.string()
+                .required("Name is required")
+            ,
+            value: Yup.string()
+                .required("URL is required")
+                .test("is-valid-url", "Enter a valid URL ", function (val) {
+                const { path, createError } = this;
+
+                if (!val || urlRegex.test(val.trim())) {
+                    return true;
+                }
+                    
+                return createError({ path, message: "Enter a valid URL" });
+            }),
+        })
+    ),
 })
 
 const ProductSideBar = ({
@@ -119,6 +120,8 @@ const ProductSideBar = ({
         // position: { x: 0, y: 0 },
         ...selProductDtls
     }
+
+    const dispatch = useAppDispatch();
 
     const imgInputRef = useRef()
     const fileInputRef = useRef()
@@ -941,7 +944,7 @@ const ProductSideBar = ({
             : <PinGroupAccordion product={product} movePinToGroup={movePinToGroup} editClick={editClick} canDrag={canDrag} drag={drag} removeProduct={removeProduct} addGroupProductClick={addGroupProductClick}/>
         return item
     }
-
+ 
     const renderProductItem = useCallback((product, index) => {
         return (
             <ProductItem
@@ -1325,7 +1328,7 @@ const ProductSideBar = ({
                                                 </div>}
 
                                                 <div className='bar-sub-header' >
-                                                    <p style={{ marginTop: 0 }} >Website</p>
+                                                    <p style={{ marginTop: 0 }} >Links</p>
                                                     <div className='plus-icon' onClick={() => setwebsiteLinks(prev => [...prev, {}])}>
                                                         <GoPlus />
                                                     </div>

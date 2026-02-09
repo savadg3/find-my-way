@@ -55,8 +55,7 @@ const editLocation = async (location, setAddNewLocation, setPromotions, setIsBou
 
         setSelLocationDtls(prefillData);
         setwebsiteLinks(weblink);
-
-        console.log({prefillData,weblink});
+ 
         setHours(converted ?? {});
 
     } catch (error) {
