@@ -171,6 +171,13 @@ import { IoMdClose } from "react-icons/io";
 import { RiRestartLine } from "react-icons/ri";
 import { IoImageOutline } from "react-icons/io5";
 import MapComponent from "../../components/map/components/Map";
+import LocationMapComponent from "../../components/map/components/ChooseLocationMap";
+import NewComponent from "./NewComponent";
+import { useSelector } from "react-redux";
+import { useDispatch } from "react-redux"; 
+import { useLoadPins } from "../../components/map/components/hooks/useLoadPins";
+import { PinCountApi } from "../../components/map/components/helpers/projectApi";
+import { setCurrentFloor, setFloorList, setPinCount, setProjectData } from "../../store/slices/projectItemSlice";
 
 var obj,
   polyline,
@@ -220,6 +227,7 @@ const ViewFloor = () => {
 
   const canvas = useRef(null);
   const canvasContainerRef = useRef(null);
+  const dispatch = useDispatch()
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -230,7 +238,8 @@ const ViewFloor = () => {
   const [floorPlans, setFloorPlans] = useState([]);
   const [floorPlansPathSort, setFloorPlansPathSort] = useState([]);
   const [floorPlanSelect, setFloorPlanSelect] = useState([]);
-  const [floorID, setFloorID] = useState(null);
+  // const [floorID, setFloorID] = useState(null);
+  
   const [floorIDs, setFloorIDs] = useState(null);
   const [traversibleHistory, setTraversibleHistory] = useState([]);
   const [dropDownFloor, setDropDownFloor] = useState();
@@ -365,7 +374,12 @@ const ViewFloor = () => {
 
   const [selectedObjects, setSelectedObjects] = useState([])
 
-  useEffect(() => {
+
+  const floorList = useSelector(state => state.api.floorList);
+  const currentFloor = useSelector(state => state.api.currentFloor); 
+  const floorID = currentFloor?.id || null
+
+  useEffect(() => {  
     let isFromEditor = localStorage.getItem("return")
     if (isFromEditor) {
       onSideBarIconClick('beacons',undefined)
@@ -433,7 +447,7 @@ const ViewFloor = () => {
     }
 
     if (tabName == "traversable") {
-      if (floorPlanSelect?.length == 0) {
+      if (floorList?.length == 0) {
         toast.warning("Please select a floor plan to navigate.");
         return;
       }
@@ -490,39 +504,55 @@ const ViewFloor = () => {
       getTraversablePins(id, setDropValues);
       setToolTraversible("Draw");
     }
-    const lastAddedFloor = floorPlanSelect[0];
+    const lastAddedFloor = floorList[0];
 
-    const floor = floorPlanSelect.find((el) => el.enc_id == floorID);
+    const floor = floorList.find((el) => el.enc_id == floorID);
     if (floorID) {
 
-      getFloorPlanByid(floorID, tabName, "0", "default");
-      setDropDownFloor({
+      // getFloorPlanByid(floorID, tabName, "0", "default");
+      // setDropDownFloor({
+      //   value: floor?.enc_id,
+      //   label: floor?.floor_plan,
+      //   id: floor?.enc_id,
+      //   plan: floor?.plan,
+      //   dec_id: floor?.dec_id,
+      // });
+      
+      dispatch(setCurrentFloor({
         value: floor?.enc_id,
         label: floor?.floor_plan,
         id: floor?.enc_id,
         plan: floor?.plan,
         dec_id: floor?.dec_id,
-      });
+      }))
     } else {
       if (lastAddedFloor) {
         
 
-        setFloorID(lastAddedFloor?.enc_id);
-        getFloorPlanByid(lastAddedFloor?.enc_id, tabName, "0", "default");
+        // setFloorID(lastAddedFloor?.enc_id);
+        // getFloorPlanByid(lastAddedFloor?.enc_id, tabName, "0", "default");
 
-        handleEnableDisable(lastAddedFloor?.enc_id);
-        setDropDownFloor({
+        // handleEnableDisable(lastAddedFloor?.enc_id);
+        // setDropDownFloor({
+        //   value: lastAddedFloor?.enc_id,
+        //   label: lastAddedFloor?.floor_plan,
+        //   id: lastAddedFloor.enc_id,
+        //   plan: lastAddedFloor.plan,
+        //   dec_id: lastAddedFloor?.dec_id,
+        // });
+        dispatch(setCurrentFloor({
           value: lastAddedFloor?.enc_id,
           label: lastAddedFloor?.floor_plan,
           id: lastAddedFloor.enc_id,
           plan: lastAddedFloor.plan,
           dec_id: lastAddedFloor?.dec_id,
-        });
+        }))
       } else {
         // console.log("floors null");
-        setFloorID(null);
-        handleEnableDisable(lastAddedFloor?.enc_id);
-        setDropDownFloor();
+        // setFloorID(null);
+        // handleEnableDisable(lastAddedFloor?.enc_id);
+        dispatch(setCurrentFloor(null))
+        // setDropDownFloor();
       }
     }
     /* For bulk pinload */
@@ -539,42 +569,58 @@ const ViewFloor = () => {
     window.scrollTo(0, 0);
   }, []);
 
-  useEffect(() => {
+  useEffect(() => {  
     getProjectById();
-    getFloorDropdown();
-    viewportTransform = undefined;
+    getFloorDropdown(); 
   }, [id]);
 
   useEffect(() => {
-    if (id && floorPlanSelect) {
-      const lastAddedFloor = floorPlanSelect[0];
-      const floor = floorPlanSelect.find((el) => el.enc_id == floorID);
+    // return
+    if (id && floorList) { 
+      const lastAddedFloor = floorList[0];
+      // console.log(object);
+      const floor = floorList.find((el) => el.enc_id == floorID);  
       if (floorID) {
         getFloorPlanByid(floorID, activeTab, "0", "default");
-        setDropDownFloor({
+        // setDropDownFloor({
+        //   value: floor?.enc_id,
+        //   label: floor?.floor_plan,
+        //   id: floor?.enc_id, 
+        //   plan: floor?.plan,
+        //   dec_id: floor?.dec_id,
+        // });
+
+        dispatch(setCurrentFloor({
           value: floor?.enc_id,
           label: floor?.floor_plan,
           id: floor?.enc_id,
           plan: floor?.plan,
           dec_id: floor?.dec_id,
-        });
+        }))
       } else {
-        if (lastAddedFloor) {
-          setFloorID(lastAddedFloor?.enc_id);
+        if (lastAddedFloor) { 
           getFloorPlanByid(lastAddedFloor?.enc_id, "0", "default");
 
-          handleEnableDisable(lastAddedFloor?.enc_id);
-          setDropDownFloor({
+          // handleEnableDisable(lastAddedFloor?.enc_id);
+          // setDropDownFloor({
+          //   value: lastAddedFloor?.enc_id,
+          //   label: lastAddedFloor?.floor_plan,
+          //   id: lastAddedFloor.enc_id,
+          //   plan: lastAddedFloor.plan,
+          //   dec_id: lastAddedFloor?.dec_id,
+          // });
+
+          dispatch(setCurrentFloor({
             value: lastAddedFloor?.enc_id,
             label: lastAddedFloor?.floor_plan,
-            id: lastAddedFloor.enc_id,
-            plan: lastAddedFloor.plan,
+            id: lastAddedFloor?.enc_id,
+            plan: lastAddedFloor?.plan,
             dec_id: lastAddedFloor?.dec_id,
-          });
+          }))
         }
       }
     }
-  }, [id, floorPlanSelect]);
+  }, [id, floorList]);
 
   const clearPinsList = () => {
     setLocationList([]);
@@ -584,34 +630,27 @@ const ViewFloor = () => {
     setSafetyList([]);
   };
 
-  useEffect(() => {
-    if (selFloorPlanDtls) {
-      setDropDownFloor({
-        value: selFloorPlanDtls?.enc_id,
-        label: selFloorPlanDtls?.floor_plan,
-        id: selFloorPlanDtls.enc_id,
-        plan: selFloorPlanDtls.plan,
-        dec_id: selFloorPlanDtls?.dec_id,
-      });
-    }
-
-    if (selFloorPlanDtls?.enc_id) {
-      
-      setStoredObjects(prevState => {
-        const newMap = new Map(
-          // [...prevState].filter(([key, _]) => !key.split[1] == selFloorPlanDtls?.enc_id)
-          [...prevState].filter(([key, _]) => {
-            
-            return key.includes(selFloorPlanDtls?.enc_id)
-          })
-        );
-        
-        
-        return newMap;
-      });
-    }
-
-  }, [selFloorPlanDtls]);
+  // useEffect(() => {
+  //   // return
+  //   // console.log('selFloorPlanDtls');
+  //   // return
+  //   if (selFloorPlanDtls) {
+  //     // setDropDownFloor({
+  //     //   value: selFloorPlanDtls?.enc_id,
+  //     //   label: selFloorPlanDtls?.floor_plan,
+  //     //   id: selFloorPlanDtls.enc_id,
+  //     //   plan: selFloorPlanDtls.plan,
+  //     //   dec_id: selFloorPlanDtls?.dec_id,
+  //     // });
+  //     dispatch(setCurrentFloor({
+  //       value: selFloorPlanDtls?.enc_id,
+  //       label: selFloorPlanDtls?.floor_plan,
+  //       id: selFloorPlanDtls.enc_id,
+  //       plan: selFloorPlanDtls.plan,
+  //       dec_id: selFloorPlanDtls?.dec_id,
+  //     }))
+  //   }
+  // }, [selFloorPlanDtls]);
 
   const handleResize = () => {
     const { clientWidth, clientHeight } =
@@ -628,29 +667,32 @@ const ViewFloor = () => {
     }
   };
 
-  useEffect(() => {
-    if (selProductDtls?.position) {
-      setShowAlret(true);
-    } else {
-      setShowAlret(false);
-    }
+  useEffect(() => { 
+    // console.log('selProductDtls');
+    // return
+    // if (selProductDtls?.position) {
+    //   setShowAlret(true);
+    // } else {
+    //   setShowAlret(false);
+    // }
   }, [selProductDtls]);
 
   const onLevelDDChange = (selected) => {
-    setFloorID(null);
+    // setFloorID(null);
     if (selected) {
-      setOverlay(true)
-      removePins()
+      // setOverlay(true)
+      // removePins()
       
       setSearchTerm("");
       setSelTracingId();
-      setVerticalFloorId(null);
-      setFloorIDs();
-      setFloorIDs(selected?.id);
-      setFloorID(selected?.id);
+      // setVerticalFloorId(null);
+      // setFloorIDs();
+      // setFloorIDs(selected?.id);
+      // setFloorID(selected?.id);
       getFloorPlanByid(selected?.id, activeTab, "0", "default");
-      setDropDownFloor(selected);
-      handleEnableDisable(selected?.id);
+      // setDropDownFloor(selected);
+      dispatch(setCurrentFloor(selected))
+      // handleEnableDisable(selected?.id);
       setSelProductDtls();
       setSelLocationDtls();
       setSelBeaconDtls();
@@ -665,7 +707,7 @@ const ViewFloor = () => {
       setAddNewSafety(false);
       setAddNewVertical(false);
       setAddNewAd(false);
-      resetCanvasTransform();
+      // resetCanvasTransform();
       setToolTraversible("Draw"); 
       setSelTraversibleDetails((prev) => ({
         ...prev,
@@ -690,13 +732,17 @@ const ViewFloor = () => {
     }
     setVerticalFloorId(null);
     setFloorIDs(selected?.id);
-    setFloorID(selected?.id);
+    // setFloorID(selected?.id);
     getFloorPlanByid(selected?.id, activeTab, "0", "default");
-    setDropDownFloor(selected);
+    // setDropDownFloor(selected);
+    dispatch(setCurrentFloor(selected))
     handleEnableDisable(selected?.id);
   };
 
   useEffect(() => {
+    return
+    // console.log('verticalFloorId return');
+    // return
     // getVerticalTransportList()
     if (addNewVertical) {
       getFloorPlanByid(verticalFloorId ?? floorID, activeTab, "0", "default");
@@ -744,6 +790,7 @@ const ViewFloor = () => {
   );
 
   useEffect(() => {
+    return
     handleResize();
     window.addEventListener("resize", handleResize);
     return () => {
@@ -751,38 +798,48 @@ const ViewFloor = () => {
     };
   }, []);
 
-  const getFloorDropdown = async (type) => {
+ 
+
+  const getFloorDropdown = async (type) => { 
     try {
       const response = await getRequest(`dropdown-floor-plan/${id}`);
       const data = response.data ?? [];
-      setFloorPlanSelect(data);
+      // setFloorPlanSelect(data);
+      dispatch(setFloorList(data))  
       if (type == "discard") {
         const lastAddedFloor = data[0];
         if (lastAddedFloor) {
-          getFloorPlanByid(lastAddedFloor?.enc_id, activeTab, "0", "default");
-          setDropDownFloor({
+          // getFloorPlanByid(lastAddedFloor?.enc_id, activeTab, "0", "default");
+          // setDropDownFloor({
+          //   value: lastAddedFloor?.enc_id,
+          //   label: lastAddedFloor?.floor_plan,
+          //   id: lastAddedFloor?.enc_id,
+          //   plan: lastAddedFloor?.plan,
+          //   dec_id: lastAddedFloor?.dec_id,
+          // });
+          dispatch(setCurrentFloor({
             value: lastAddedFloor?.enc_id,
             label: lastAddedFloor?.floor_plan,
             id: lastAddedFloor?.enc_id,
             plan: lastAddedFloor?.plan,
             dec_id: lastAddedFloor?.dec_id,
-          });
+          }))
         } else {
           if (data?.length === 0) {
-            setDropDownFloor(null);
+            dispatch(setCurrentFloor(null)) 
             reinitializeFabricCanvas(canvas);
             handleTraversibleData(null, graph, setSelTraversibleDetails, findShortestPath, renderTraversiblePaths, selTraversibleDetails);
           }
           reinitializeFabricCanvas(canvas);
-          setDropDownFloor(null);
+          dispatch(setCurrentFloor(null))
           removeListItems("noFloors");
         }
       } else {
         if (data?.length === 0) {
-          setDropDownFloor(null);
+          dispatch(setCurrentFloor(null))
         }
-        reinitializeFabricCanvas(canvas);
-        removeListItems();
+        // reinitializeFabricCanvas(canvas);
+        // removeListItems();
       }
     } catch (error) {
       ////
@@ -822,11 +879,7 @@ const ViewFloor = () => {
     setAmenities([]);
     setSafeties([]);
     setVerticalTransports([]);
-  };
-
-  useEffect(() => {
-    getFloorDropdown();
-  }, []);
+  }; 
 
   const getFloorPlanByid = async (id, tab, val, type, pinsId) => {
     let value;
@@ -858,72 +911,83 @@ const ViewFloor = () => {
         ...el,
         position: el?.positions ? JSON.parse(el?.positions) : "",
       }));
-      setTexts(arrayOfTexts ?? []);
-      setZoomInOut(data?.img_size ? JSON.parse(data?.img_size) : zoomInOut);
-      setVerticalTransports(modifiedData);
-      setTracings(arrayOfObjects ?? []);
-      setTracingCircle(objectCircle ?? [])
-      setTempPolygon([]);
-      setIsEdit(true);
+      // setTexts(arrayOfTexts ?? []);
+      // setZoomInOut(data?.img_size ? JSON.parse(data?.img_size) : zoomInOut);
+      // setVerticalTransports(modifiedData);
+      // setTracings(arrayOfObjects ?? []);
+      // setTracingCircle(objectCircle ?? [])
+      // setTempPolygon([]);
+      // setIsEdit(true);
       // localStorage.removeItem("shortestPath")
 
       // setAddNew(true)
       if (val === "0") {
         
-        setSelFloorPlanDtls(value);
+        setSelFloorPlanDtls(value); 
       }
-      handleTraversibleData(
-        value,
-        graph,
-        setSelTraversibleDetails,
-        findShortestPath,
-        renderTraversiblePaths,
-        selTraversibleDetails
-      );
-      if (tab == "floorDetails" && type !== "default") {
-        setAddNewFloor(true);
-        setToolActive("Draw");
-      } else {
-        setAddNewFloor(false);
-      }
+      // handleTraversibleData(
+      //   value,
+      //   graph,
+      //   setSelTraversibleDetails,
+      //   findShortestPath,
+      //   renderTraversiblePaths,
+      //   selTraversibleDetails
+      // );
+      // if (tab == "floorDetails" && type !== "default") {
+      //   setAddNewFloor(true);
+      //   setToolActive("Draw");
+      // } else {
+      //   setAddNewFloor(false);
+      // }
       // if (tab === "floorDetails" && type !== "default") {
       // canvasBackgroundImageHandler(value?.plan);
       // } else {
       //   canvasBackgroundImageHandler(null);
       // }
-      getSvgFileAsRefImage(value?.enc_id)
-      if (value?.show_image == 1 && value?.plan) {
-        canvasBackgroundImageHandler(value?.plan);
-      } else {
-        canvasBackgroundImageHandler(null);
-      }
-      stopPathDrawing();
+      // getSvgFileAsRefImage(value?.enc_id)
+      // if (value?.show_image == 1 && value?.plan) {
+      //   canvasBackgroundImageHandler(value?.plan);
+      // } else {
+      //   canvasBackgroundImageHandler(null);
+      // }
+      // stopPathDrawing();
     } catch (error) {
       ////
     } finally {
-      if (val !== "1") {
-        getLocationList(id);
-        getProductList(id);
-        getBeaconList(id);
-        getAmenityList(id);
-        getSafetyList(id);
-      }
-      getVerticalTransportList(projectSettings?.enc_id);
+      // if (val !== "1") {
+      //   getLocationList(id);
+      //   getProductList(id);
+      //   getBeaconList(id);
+      //   getAmenityList(id);
+      //   getSafetyList(id);
+      // }
+      // getVerticalTransportList(projectSettings?.enc_id);
       // getAdvertisementList();
 
-      if (pinsId) {
-        const delay = 800;
-        setTimeout(() => {
-          checkEditPin(pinsId, tab);
-        }, delay);
+      // if (pinsId) {
+      //   const delay = 800;
+      //   setTimeout(() => {
+      //     checkEditPin(pinsId, tab);
+      //   }, delay);
         setSelFloorPlanDtls(value);
-      }
+      // }
 
-      setTimeout(() => {
-        setOverlay(false)
-      },500)
+      // setTimeout(() => {
+      //   setOverlay(false)
+      // },500)
     }
   };
+
+
+
+// new map items----------------------
+
+  const { loading : pinLoading, error } = useLoadPins(id);
+
+// -----------------------------------
+
+
+
 
   const getSvgFileAsRefImage = async (enc_id) => {
     try {
@@ -940,7 +1004,7 @@ const ViewFloor = () => {
   }
 
   const checkEditPin = (pinsData, tab) => {
-    setFloorID(pinsData?.fp_id);
+    // setFloorID(pinsData?.fp_id);
     if (tab === "locations") {
       onEditLocation(pinsData);
     } else if (tab === "products") {
@@ -987,10 +1051,12 @@ const ViewFloor = () => {
 
   useEffect(() => {
     totalPinCount();
-  }, [locations, products, beacons]);
+  }, []);
 
   const totalPinCount = async () => {
-    totalPinCountApi(id, setTotalPinsUsed);
+    // totalPinCountApi(id, setTotalPinsUsed);
+    let pinCount = await PinCountApi(id) 
+    dispatch(setPinCount(pinCount));
   };
 
   const renderTracings = (tracingArray) => {
@@ -1072,8 +1138,25 @@ const ViewFloor = () => {
   const [, dropProduct] = useDrop({
     accept: 'productpin',
     drop: (item, monitor) => {
+      if (!map) return;
+ 
       const clientOffset = monitor.getClientOffset();
-      const pointer = canvas.current?.getPointer({ clientX: clientOffset.x, clientY: clientOffset.y });
+      if (!clientOffset) return;
+ 
+      const mapRect = map.getContainer().getBoundingClientRect();
+ 
+      const x = clientOffset.x - mapRect.left;
+      const y = clientOffset.y - mapRect.top;
+ 
+      const lngLat = map.unproject([x, y]);
+
+      const pointer = {
+        x: lngLat.lng,
+        y: lngLat.lat
+      }
+
+      // const clientOffset = monitor.getClientOffset();
+      // const pointer = canvas.current?.getPointer({ clientX: clientOffset.x, clientY: clientOffset.y });
       
       // getFloorPlanByid(item?.fp_id, 'products', "0", "default", item?.product);
       // return
@@ -1082,26 +1165,26 @@ const ViewFloor = () => {
       let obj
       let fillColor = prod?.product_color ?? projectSettings?.product_color;
       let productIcon = getProductPin(fillColor)
-      let path = fabric.loadSVGFromString(
-        productIcon,
-        function (objects, options) {
-          obj = fabric.util.groupSVGElements(objects, options);
-          obj.set({
-            left: pointer?.x - obj.width / 2,
-            top: pointer?.y - obj.height / 2,
-            selectable: false,
-            name: "product",
-            id: prod.product_name,
-            enc_id: prod?.enc_id,
-            lockRotation: true,
-            lockScalingX: true,
-            lockScalingY: true,
-            hoverCursor:
-              activeTab === "products" && addNewProduct ? "grab" : "default"
-          });
-          canvas.current.add(obj).renderAll();
-        }
-      );
+      // let path = fabric.loadSVGFromString(
+      //   productIcon,
+      //   function (objects, options) {
+      //     obj = fabric.util.groupSVGElements(objects, options);
+      //     obj.set({
+      //       left: pointer?.x - obj.width / 2,
+      //       top: pointer?.y - obj.height / 2,
+      //       selectable: false,
+      //       name: "product",
+      //       id: prod.product_name,
+      //       enc_id: prod?.enc_id,
+      //       lockRotation: true,
+      //       lockScalingX: true,
+      //       lockScalingY: true,
+      //       hoverCursor:
+      //         activeTab === "products" && addNewProduct ? "grab" : "default"
+      //     });
+      //     canvas.current.add(obj).renderAll();
+      //   }
+      // );
       
       const specArray = prod?.specifications ? JSON.parse(prod?.specifications) : [];
       const filteredSpecificationsArray = specArray;
@@ -1135,12 +1218,31 @@ const ViewFloor = () => {
     },
   });
 
+  const map = useSelector(state => state.map.mapContainer);
+
   const [, dropLocation] = useDrop({
     accept: 'LocationPin',
     drop: (item, monitor) => {
-      // console.log(item, 'LocationPin')
+      if (!map) return;
+ 
       const clientOffset = monitor.getClientOffset();
-      const pointer = canvas.current?.getPointer({ clientX: clientOffset.x, clientY: clientOffset.y });
+      if (!clientOffset) return;
+ 
+      const mapRect = map.getContainer().getBoundingClientRect();
+ 
+      const x = clientOffset.x - mapRect.left;
+      const y = clientOffset.y - mapRect.top;
+ 
+      const lngLat = map.unproject([x, y]);
+
+      const pointer = {
+        x: lngLat.lng,
+        y: lngLat.lat
+      }
+      // return
+      // console.log(item, 'LocationPin')
+      // const clientOffset = monitor.getClientOffset();
+      // const pointer = canvas.current?.getPointer({ clientX: clientOffset.x, clientY: clientOffset.y });
       // console.log(clientOffset, monitor, pointer, item, 'clientOffset')
       // getFloorPlanByid(item?.fp_id, 'products', "0", "default", item?.product);
       // return
@@ -1148,26 +1250,26 @@ const ViewFloor = () => {
       let obj
       let fillColor = prod?.location_color ?? projectSettings?.location_color;
       let productIcon = getLocationPin(fillColor)
-      let path = fabric.loadSVGFromString(
-        productIcon,
-        function (objects, options) {
-          obj = fabric.util.groupSVGElements(objects, options);
-          obj.set({
-            left: pointer?.x - obj.width / 2,
-            top: pointer?.y - obj.height / 2,
-            selectable: false,
-            name: "location",
-            id: prod.location_name,
-            enc_id: prod?.enc_id,
-            lockRotation: true,
-            lockScalingX: true,
-            lockScalingY: true,
-            hoverCursor:
-              activeTab === "locations" && addNewLocation ? "grab" : "default"
-          });
-          canvas.current.add(obj).renderAll();
-        }
-      );
+      // let path = fabric.loadSVGFromString(
+      //   productIcon,
+      //   function (objects, options) {
+      //     obj = fabric.util.groupSVGElements(objects, options);
+      //     obj.set({
+      //       left: pointer?.x - obj.width / 2,
+      //       top: pointer?.y - obj.height / 2,
+      //       selectable: false,
+      //       name: "location",
+      //       id: prod.location_name,
+      //       enc_id: prod?.enc_id,
+      //       lockRotation: true,
+      //       lockScalingX: true,
+      //       lockScalingY: true,
+      //       hoverCursor:
+      //         activeTab === "locations" && addNewLocation ? "grab" : "default"
+      //     });
+      //     canvas.current.add(obj).renderAll();
+      //   }
+      // );
 
       let promotionData = prod.promotions ? JSON.parse(prod.promotions) : [];
       promotionData?.forEach((el) => {
@@ -1188,7 +1290,9 @@ const ViewFloor = () => {
         }
       });
       setHours(converted ?? {});
-      setSelLocationDtls((prev) => ({
+      setSelLocationDtls((prev) => {
+        console.log(prev,"dsfksnds");
+        return {
         ...prev,
         ...prod,
         enc_id: prod?.enc_id,
@@ -1197,7 +1301,7 @@ const ViewFloor = () => {
         position: { x: pointer?.x, y: pointer?.y },
         isDrop: true,
         tags: prod.tags ? JSON.parse(prod.tags) : [],
-      }));
+      }});
       setIsBoundary(false)
       setPanTool(false)
       // setTimeout(() => {
@@ -1210,9 +1314,26 @@ const ViewFloor = () => {
   const [, dropBeacon] = useDrop({
     accept: 'BeaconPin',
     drop: (item, monitor) => {
-      // console.log(item, 'BeaconPin')
+      if (!map) return;
+ 
       const clientOffset = monitor.getClientOffset();
-      const pointer = canvas.current?.getPointer({ clientX: clientOffset.x, clientY: clientOffset.y });
+      if (!clientOffset) return;
+ 
+      const mapRect = map.getContainer().getBoundingClientRect();
+ 
+      const x = clientOffset.x - mapRect.left;
+      const y = clientOffset.y - mapRect.top;
+ 
+      const lngLat = map.unproject([x, y]);
+
+      const pointer = {
+        x: lngLat.lng,
+        y: lngLat.lat
+      }
+
+      // console.log(item, 'BeaconPin')
+      // const clientOffset = monitor.getClientOffset();
+      // const pointer = canvas.current?.getPointer({ clientX: clientOffset.x, clientY: clientOffset.y });
       // console.log(clientOffset, monitor, pointer, item, 'clientOffset')
       // getFloorPlanByid(item?.fp_id, 'products', "0", "default", item?.product);
       // return
@@ -1220,26 +1341,26 @@ const ViewFloor = () => {
       let obj
       let fillColor = prod?.beacon_color ?? projectSettings?.beacon_color;
       let beaconicon = getBeaconPin(fillColor)
-      let path = fabric.loadSVGFromString(
-        beaconicon,
-        function (objects, options) {
-          obj = fabric.util.groupSVGElements(objects, options);
-          obj.set({
-            left: pointer?.x - obj.width / 2,
-            top: pointer?.y - obj.height / 2,
-            selectable: false,
-            name: "beacon",
-            id: prod.beacon_name,
-            enc_id: prod?.enc_id,
-            lockRotation: true,
-            lockScalingX: true,
-            lockScalingY: true,
-            hoverCursor:
-              activeTab === "beacons" && addNewQrCodeBeacon ? "grab" : "default"
-          });
-          canvas.current.add(obj).renderAll();
-        }
-      );
+      // let path = fabric.loadSVGFromString(
+      //   beaconicon,
+      //   function (objects, options) {
+      //     obj = fabric.util.groupSVGElements(objects, options);
+      //     obj.set({
+      //       left: pointer?.x - obj.width / 2,
+      //       top: pointer?.y - obj.height / 2,
+      //       selectable: false,
+      //       name: "beacon",
+      //       id: prod.beacon_name,
+      //       enc_id: prod?.enc_id,
+      //       lockRotation: true,
+      //       lockScalingX: true,
+      //       lockScalingY: true,
+      //       hoverCursor:
+      //         activeTab === "beacons" && addNewQrCodeBeacon ? "grab" : "default"
+      //     });
+      //     canvas.current.add(obj).renderAll();
+      //   }
+      // );
 
 
       setSelBeaconDtls((prev) => ({
@@ -1262,8 +1383,25 @@ const ViewFloor = () => {
   const [, dropAmenity] = useDrop({
     accept: 'AmenityPin',
     drop: (item, monitor) => {
+      if (!map) return;
+ 
       const clientOffset = monitor.getClientOffset();
-      const pointer = canvas.current?.getPointer({ clientX: clientOffset.x, clientY: clientOffset.y });
+      if (!clientOffset) return;
+ 
+      const mapRect = map.getContainer().getBoundingClientRect();
+ 
+      const x = clientOffset.x - mapRect.left;
+      const y = clientOffset.y - mapRect.top;
+ 
+      const lngLat = map.unproject([x, y]);
+
+      const pointer = {
+        x: lngLat.lng,
+        y: lngLat.lat
+      }
+
+      // const clientOffset = monitor.getClientOffset();
+      // const pointer = canvas.current?.getPointer({ clientX: clientOffset.x, clientY: clientOffset.y });
       // console.log(clientOffset, monitor, pointer, item, 'clientOffset')
       // getFloorPlanByid(item?.fp_id, 'products', "0", "default", item?.product);
       // return
@@ -1273,26 +1411,26 @@ const ViewFloor = () => {
       let fillColor = prod?.amenity_color ?? projectSettings?.amenity_color;
       // let amenityIcon = getAmenityPin(fillColor)
       let amenityIcon = ChangeSvgColorPassingBE(prod?.path, fillColor)
-      let path = fabric.loadSVGFromString(
-        amenityIcon,
-        function (objects, options) {
-          obj = fabric.util.groupSVGElements(objects, options);
-          obj.set({
-            left: pointer?.x - obj.width / 2,
-            top: pointer?.y - obj.height / 2,
-            selectable: false,
-            name: "amenity",
-            id: prod.amenity_name,
-            enc_id: prod?.enc_id,
-            lockRotation: true,
-            lockScalingX: true,
-            lockScalingY: true,
-            hoverCursor:
-              activeTab === "amenitys" && addNewAmenity ? "grab" : "default"
-          });
-          canvas.current.add(obj).renderAll();
-        }
-      );
+      // let path = fabric.loadSVGFromString(
+      //   amenityIcon,
+      //   function (objects, options) {
+      //     obj = fabric.util.groupSVGElements(objects, options);
+      //     obj.set({
+      //       left: pointer?.x - obj.width / 2,
+      //       top: pointer?.y - obj.height / 2,
+      //       selectable: false,
+      //       name: "amenity",
+      //       id: prod.amenity_name,
+      //       enc_id: prod?.enc_id,
+      //       lockRotation: true,
+      //       lockScalingX: true,
+      //       lockScalingY: true,
+      //       hoverCursor:
+      //         activeTab === "amenitys" && addNewAmenity ? "grab" : "default"
+      //     });
+      //     canvas.current.add(obj).renderAll();
+      //   }
+      // );
       setSelAmenityDtls((prev) => ({
         ...prev,
         ...prod,
@@ -1315,8 +1453,25 @@ const ViewFloor = () => {
   const [, dropSafety] = useDrop({
     accept: 'SafetyPin',
     drop: (item, monitor) => {
+      if (!map) return;
+ 
       const clientOffset = monitor.getClientOffset();
-      const pointer = canvas.current?.getPointer({ clientX: clientOffset.x, clientY: clientOffset.y });
+      if (!clientOffset) return;
+ 
+      const mapRect = map.getContainer().getBoundingClientRect();
+ 
+      const x = clientOffset.x - mapRect.left;
+      const y = clientOffset.y - mapRect.top;
+ 
+      const lngLat = map.unproject([x, y]);
+
+      const pointer = {
+        x: lngLat.lng,
+        y: lngLat.lat
+      }
+
+      // const clientOffset = monitor.getClientOffset();
+      // const pointer = canvas.current?.getPointer({ clientX: clientOffset.x, clientY: clientOffset.y });
 
       const prod = item?.item;
       // console.log(prod, 'prod')
@@ -2368,10 +2523,10 @@ const ViewFloor = () => {
     if (floor_id) {
       floor = floor_id;
     } else {
-      setFloorID((prev) => {
-        floor = prev;
-        return prev;
-      });
+      // setFloorID((prev) => {
+      //   floor = prev;
+      //   return prev;
+      // });
     }
     let storedItem = new Map();
     setStoredObjects((prev) => {
@@ -2876,2851 +3031,6 @@ const ViewFloor = () => {
 
   // ------------------------- canvas clustering code over -------------------------
 
-  useEffect(() => {
-    if (addNewFloor) {
-      if (toolActive === "Draw") {
-        setSelTracingId();
-        obj = "";
-        changeSelectionAllObjs(canvas, false, "tracing");
-        changeSelectionAllObjs(canvas, false, "text");
-      } else if (toolActive === "Select") {
-        changeSelectionAllObjs(canvas, true, "tracing");
-        changeSelectionAllObjs(canvas, true, "text");
-      } else if (toolActive === "Text") {
-        obj = "";
-        changeSelectionAllObjs(canvas, false, "tracing");
-        changeSelectionAllObjs(canvas, false, "text");
-      } else if (toolActive !== "Select") {
-        changeSelectionAllObjs(canvas, false, "tracing");
-        changeSelectionAllObjs(canvas, false, "text");
-      }
-      setZoomInOut(zoomInOut);
-      setSelFloorPlanDtls((prev) => ({ ...prev, zoom: zoomInOut }));
-      removeFabricObjectsByName(canvas, "temp");
-      removeFabricObjectsByName(canvas, "corner_point");
-      // stopPathDrawing
-    }
-   
-  }, [toolActive, addNewFloor]);
-
-  const createNodeBtwPolyline = (e, mouse, lineData, type, isSubpath = false, startFromPath = false, isNode = false,ispin=false) => {
-    
-    if (isNode) {
-      removeLine(lineData?.id, graph, canvas, "nodeBTWline");
-     } else {
-      removeLine(e?.target?.id, graph, canvas, "nodeBTWline");
-    }
-    let nodeName = startFromPath ? startFromPath : generateNodeName(graph);
-    if (lastTraversibleUndoIndex != undefined) {
-      setTraversibleHistory((prev) =>
-        prev.splice(lastTraversibleUndoIndex - 1)
-      );
-      lastTraversibleUndoIndex = undefined;
-    }
-    let nodeAdded = false;
-    if (
-      !e.target ||
-      e.target?.name == "backgroundRect" ||
-      e.target?.name == "tracing" ||
-      e.target?.name == "boundary" ||
-      e?.target?.name == "text" ||
-      // for subpath point connect to node
-      e?.target?.name == "node" ||
-      // ---------------------------------
-      e?.target?.name == "path" ||
-      ispin
-    ) {
-      const color = toolTraversible === 'sub_path' ? "rgba(0,255,0,0.5)" : "rgba(0,0,255,0.5)"
-      let node = addNodePoint(mouse, nodeName, color);
-      
-      
-      canvas.current.add(node);
-      
-      const [node1, node2] = lineData?.id.split("$").slice(1);
-      let node1position = posits[node1];
-      let node2position = posits[node2];
-      
-      let poinCenter
-      if (isNode) {
-        poinCenter = mouse       
-      } else {
-        poinCenter = adjustPositionIfNeeded(
-          graph.positions,
-          e.target?.getCenterPoint(),
-          graph.positions[node1],
-          graph.positions[node2]
-        );
-      }
-      
-      let center = poinCenter;
-      const coords =
-        e.target &&
-          e.target.name != "backgroundRect" &&
-          e.target?.name != "line_starter_poly" &&
-          e.target.name != "tracing" &&
-          e.target.name != "path" &&
-          e.target.name != "boundary" &&
-          e.target.name != "text"
-          ? { x: center?.x, y: center?.y }
-          : { x: mouse?.x, y: mouse?.y };
-      poly = false;
-      polyBtn = "";
-      lastPt = 1;
-      pts = [];
-      polyline = addPolyLine(pts, "line_starter_poly"); 
-      
-      canvas.current.add(polyline);
-      
-      if (isSubpath) {
-        // onCreateNode(coords, nodeName,"mainpath");
-        onCreateNode(coords, nodeName);
-      } else {
-        onCreateNode(coords, nodeName);
-      }
-      // removeFabricObjectsByName(canvas,'line_starter_poly')
-      
-      if (startFromPath) {
-        // console.log(node,"startFromPath")
-      } else {
-        addConnectionBtwnEdges(key1, key2, graph, canvas);
-      }
-      
-      if (isSubpath) {
-        if ((graph?.connectedMainPathNodes?.includes(node1) && graph?.connectedMainPathNodes?.includes(node2)) || (!graph?.subNode?.includes(node2) && !graph?.subNode?.includes(node1)) || (!graph?.subNode?.includes(node1) && graph?.connectedMainPathNodes?.includes(node2)) || !graph?.subNode?.includes(node2) && graph?.connectedMainPathNodes?.includes(node1)) {
-          graph.addConnectedMainPathNodes(nodeName);
-        } else {
-          // console.log("not connected to nain path")
-        }
-      }
-      graph.addNode(node1);
-      graph.addEdge(nodeName, node1);
-      graph.addEdge(node2, nodeName);
-
-      
-      
-      const lineColor = toolTraversible === 'sub_path' ? "yellow" : 'black'
-      
-      drawLine(
-        { x: mouse.x, y: mouse.y },
-        node1position,
-        "path",
-        `path$${node1}$${nodeName}`,
-        canvas,
-        lineColor
-      );
-      
-      drawLine(
-        { x: mouse.x, y: mouse.y },
-        node2position,
-        "path",
-        `path$${node}$${nodeName}`,
-        canvas,
-      );
-      
-      
-      stopPathDrawing();
-      if (!type) {
-        renderTraversiblePaths();
-
-        setSelTraversibleDetails((prev) => ({
-          ...prev,
-          edges_data: graph.getEdges(),
-          points_data: graph.getPositions(),
-          post: true,
-        }));
-      }
-      if (isNode && ispin) {
-        addConnectionBtwnEdges(nodeName,  `${e.target.name}_${e.target.enc_id}`, graph, canvas,isSubpath ? "subpath" : "");
-      }
-      // if (isSubpath) {
-      //   node.set({
-      //     fill: "rgba(0,255,0,0.5)"
-      //   })
-      // }
-      // renderTraversiblePaths();
-    }
-  };
-
-  function generatePointOnLine(pointA,pointB,pointC) {
-    const a = graph.positions[pointA]
-    const b = graph.positions[pointB]
-    const c = pointC
-    const dx = b.x - a.x;
-    const dy = b.y - a.y;
-    const dotProduct = (c.x - a.x) * dx + (c.y - a.y) * dy;
-    const lenSquared = dx * dx + dy * dy;
-    let t = dotProduct / lenSquared;
-
-    // Clamp t to be within [0, 1]
-    t = Math.max(0, Math.min(1, t));
-
-    // Calculate clamped point
-    return {
-      x: a.x + t * dx,
-      y: a.y + t * dy,
-    };
-  }
-
-  useEffect(() => {
-    if (viewportTransform && canvas.current) {
-      canvas.current.viewportTransform = viewportTransform;
-    }
-  }, [toolActive, toolTraversible]);
-
-  useEffect(() => {
-    document.addEventListener("mousedown", handleMiddleMouseClick);
-    document.addEventListener("keydown", handleKeyBoardPress);
-    setSelFloorPlanDtls(selFloorPlanDtls);
-    canvas.current = initCanvas(
-      canvasContainerRef.current.clientWidth,
-      canvasContainerRef.current.clientHeight,
-      projectSettings
-    );
-
-    let PositionLocation = selLocationDtls?.position ?? null;
-    let Positionproduct = selProductDtls?.position ?? null;
-    let Positionsafety = selSafetyDtls?.position ?? null;
-    let Positionamenity = selAmenityDtls?.position ?? null;
-    let Positionbeacon = selBeaconDtls?.position ?? null;
-    let PositionverticalTransport = selVerticalDtls?.position ?? null;
-
-    firstClick = {
-      location: PositionLocation,
-      product: Positionproduct,
-      safety: Positionsafety,
-      amenity: Positionamenity,
-      beacon: Positionbeacon,
-      verticalTransport: PositionverticalTransport,
-    };
-    if (
-      viewportTransform &&
-      ((activeTab === "floorDetails" && addNewFloor) ||
-        (activeTab === "traversable" && addNewTraversablePath) ||
-        addNewLocation ||
-        addNewProduct ||
-        addNewQrCodeBeacon ||
-        addNewAmenity ||
-        addNewSafety ||
-        addNewVertical)
-    ) {
-      canvas.current.viewportTransform = viewportTransform;
-    } else if (viewportTransform) {
-      canvas.current.viewportTransform = viewportTransform;
-    }
-    let savedTextboxes = []; 
-
-    canvas.current.on("mouse:down", function (e) {
-      // console.log(e.target); 
-      // console.log(activeTab,"activeTab"); 
-            
-      let toolActive;
-      setToolActive((prev) => {
-        toolActive = prev;
-        return prev;
-      });
-
-      let panToolVariabl = false;
-      setPanTool((prev) => {
-        panToolVariabl = prev;
-        return prev;
-      });
-
-      if (panToolVariabl) {
-        const activeObject = e.target;
-        if (activeObject?.name === "boundary") {
-          setPanTool(false);
-        }
-      }
-
-      mouseDown2 = true;
-      if (obj) {
-        originalObjCenterPoints = obj.getCenterPoint();
-      }
-
-      if (e.e.altKey === 1) {
-        draggingCanvas = true;
-        lastPosX = e.e.clientX;
-        lastPosY = e.e.clientY;
-      } else if (
-        activeTab === "floorDetails" &&
-        !obj &&
-        toolActive === "Draw" &&
-        addNewFloor &&
-        !panToolVariabl
-      ) {
-        activeText = undefined;
-        changeSelectionAllObjs(canvas, false, "tracing");
-        let mouse = canvas.current.getPointer(e.e);
-        // if (pts?.length > 1) {pts.splice(-1, 1);} //remove duplicate start points
-        let coords = { x: mouse?.x, y: mouse?.y };
-        if (e.e.shiftKey && prevMouseClick) {
-          let type = getVerticalOrHorizontalMove(prevMouseClick, {
-            x: mouse.x,
-            y: mouse.y,
-          });
-          if (type == "vertical") {
-            coords = { x: prevMouseClick?.x, y: mouse.y };
-          } else {
-            coords = {
-              x: mouse?.x,
-              y: prevMouseClick.y,
-            };
-          }
-        }
-        createCornerPoint(canvas, coords, "corner_point", pts, Pencil);
-        polyline = new fabric.Polyline(pts, {
-          objectCaching: false,
-          name: "temp",
-          fill: "",
-          stroke: "black",
-          zIndex: 100,
-          originX: "center",
-          originY: "center",
-          selectable: false,
-          strokeUniform: true,
-          position: "absolute",
-          hoverCursor: `url(${Pencil}) 1 17, auto`,
-        });
-        canvas.current?.add(polyline);
-        canvas.current.requestRenderAll(); // Force the canvas to re-render immediately
-
-        bringFabricObjectsToFrontByName(canvas, "length_text");
-        /* showing length of polyline */
-        removeFabricObjectsByName(canvas, "length_text_temp");
-        showLineLength("length_text");
-        tracingLengthZoomLevel(canvas, canvas.current.getZoom());
-
-        polyline.points[pts?.length] = { x: coords.x, y: coords.y };
-        lastPt++;
-
-        mouseDown = true;
-        prevMouseClick = { x: coords?.x, y: coords?.y };
-        const firstCircleObj = findObjectById("corner_point_1", canvas);
-        if (
-          pts?.length > 1 &&
-          isInsideRadius(
-            { x: pts[0]?.x, y: pts[0]?.y },
-            pts[pts.length - 1],
-            firstCircleObj?.radius
-          )
-        ) {
-          pts?.splice(pts.length - 2, 2);
-          completeTracingShape();
-        }
-      } else if (
-        activeTab === "floorDetails" &&
-        !obj &&
-        toolActive === "Text" &&
-        addNewFloor &&
-        !panToolVariabl
-      ) {
-        let activeObject = e.target;
-
-        if (activeObject && activeObject.type === "textbox") {
-          if (activeObject?._text?.length > 0) {
-            canvas.current.setActiveObject(activeObject);
-            setSelObject(activeObject);
-            activeText = activeObject;
-            updateText(canvas, setTexts, postTexts);
-          }
-        } else {
-          let LastSelected;
-          setSelObject((prev) => {
-            if (prev?.name == "text") {
-              LastSelected = prev;
-            }
-            return prev;
-          });
-          let lastSelValue;
-          setTextStyleValue((prev) => {
-            lastSelValue = prev;
-            return prev;
-          });
-          // console.log(lastSelValue, "LastSelected");
-          if (activeText) return (activeText = undefined);
-          let mouse = canvas.current.getPointer(e.e);
-          var text = new fabric.Textbox("Name", {
-            left: mouse.x - 12,
-            top: mouse.y - 6,
-            // fill: lastSelValue?.fill ?? LastSelected?.fill ?? "#646464",
-            fill: lastSelValue?.fill ?? "#646464",
-            fontSize: 14,
-            maxWidth: Infinity,
-            name: "text",
-            backgroundColor: "transparent",
-            selectable: false,
-            // isWrapping: true,
-            hasRotatingPoint: false,
-            // fontFamily: lastSelValue?.fontFamily ?? LastSelected?.fontFamily ?? standardFonts[0],
-            fontFamily: lastSelValue?.fontFamily ?? standardFonts[0],
-            textAlign: lastSelValue?.textAlign ?? "left",
-            fontWeight: lastSelValue?.fontWeight ?? "normal",
-            fontSize: lastSelValue?.fontSize ?? standardFontSize[5],
-
-            id: new Date().toString(),
-          });
-          // text.set({ width: text.getScaledWidth() + 25 })
-
-          text.on("keydown", function (e) {
-            if (e.key === " ") {
-              e.preventDefault();
-            }
-          });
-          document.addEventListener("keydown", function (event) {
-            if (
-              (event.ctrlKey || event.metaKey) &&
-              (event.key === "z" || event.key === "y" || event.key === "x")
-            ) {
-              event.preventDefault();
-            }
-          });
-          canvas.current.add(text);
-          canvas.current.setActiveObject(text);
-          text.enterEditing();
-          text.setSelectionStart(0);
-          text.setSelectionEnd(text.text.length);
-          setSelObject(text);
-          activeText = text;
-          updateText(canvas, setTexts, postTexts);
-        }
-      } else if (
-        activeTab === "floorDetails" &&
-        obj?.id == "corner_point_1" &&
-        toolActive === "Draw" &&
-        addNewFloor
-      ) {
-        pts?.splice(pts.length - 1, 1);
-        completeTracingShape();
-      } else if (
-        activeTab === "floorDetails" &&
-        obj &&
-        obj.id != "corner_point_1" &&
-        toolActive === "Select" &&
-        addNewFloor &&
-        !panToolVariabl
-      ) {
-        
-
-        obj = e.target;
-        activeText = undefined;
-
-        if (obj.name === "tracing" && obj.type === "polygon") {
-          
-          setTracingIntialValue({
-            fill_color: e.target.fill,
-            border_color: e.target.stroke,
-            border_thick: e.target.strokeWidth,
-          });
-          setSelTracingId(e.target.id);
-          showCornerPoints(obj);
-          removeFabricObjectsByName(canvas, "tracing_obj_length");
-          const points = getPolygonVertices(obj);
-          showObjLength(obj, points, canvas);
-          tracingLengthZoomLevel(canvas, canvas.current.getZoom());
-        } else if (obj.name === "tracing" && obj.type === "circle") {
-          removeFabricObjectsByName(canvas, "tracing_obj_length");
-          setTracingIntialValue({
-            fill_color: e.target.fill,
-            border_color: e.target.stroke,
-            border_thick: e.target.strokeWidth,
-          });
-          // cornersVisible.current = false
-        } else {
-          removeFabricObjectsByName(canvas, "tracing_obj_length");
-          // cornersVisible.current = false
-        }
-
-        setSelTracingId(e.target.id);
-        setSelObject(e.target);
-      } else if (
-        activeTab === "floorDetails" &&
-        toolActive === "Rectangle" &&
-        addNewFloor &&
-        !panToolVariabl
-      ) {
-        handleCreateRectangleShape(canvas, e);
-      } else if (
-        activeTab === "floorDetails" &&
-        toolActive === "Triangle" &&
-        addNewFloor &&
-        !panToolVariabl
-      ) {
-        handleCreateTriangleShape(canvas, e);
-      } else if (
-        activeTab === "floorDetails" &&
-        toolActive === "Circle" &&
-        addNewFloor &&
-        !panToolVariabl
-      ) {
-        handleCreateCircleShape(canvas, e);
-      } else if (
-        activeTab === "floorDetails" &&
-        e.target &&
-        e.target.name === "tracing" &&
-        toolActive === "Fill" &&
-        addNewFloor &&
-        !panToolVariabl
-      ) {
-        
-
-        // obj = e.target;
-        let trace = e.target;
-        
-        activeText = undefined;
-
-        let tracingValue = {};
-        setTracingIntialValue((prev) => {
-          tracingValue = prev;
-          return prev;
-        });
-        let floorplanDetails = {};
-        setSelFloorPlanDtls((prev) => {
-          floorplanDetails = prev;
-          return prev;
-        });
-        if (trace.name === "tracing") {
-          trace.set(
-            "fill",
-            tracingValue?.fill_color ??
-            floorplanDetails?.fill_color ??
-            projectSettings?.fill_color
-          );
-          trace.set(
-            "stroke",
-            tracingValue?.border_color ??
-            floorplanDetails?.border_color ??
-            projectSettings?.border_color
-          );
-          trace.set(
-            "strokeWidth",
-            tracingValue?.border_thick ??
-            floorplanDetails?.border_thick ??
-            projectSettings?.border_thick
-          );
-
-          updateTracing(
-            canvas,
-            setTracings,
-            setTracingIntialValue,
-            postTrasing
-          );
-          updateTracingCircle(
-            canvas,
-            setTracingCircle,
-            setTracingIntialValue,
-            postTrasingCircle
-          );
-        }
-      } else if (
-        activeTab === "floorDetails" &&
-        e.target &&
-        toolActive === "Erase" &&
-        addNewFloor &&
-        !panToolVariabl
-      ) {
-        if (e.target.name === "tracing" && e.target?.type !== "circle") {
-          canvas.current.remove(e.target);
-          canvas.current.requestRenderAll();
-          updateTracing(
-            canvas,
-            setTracings,
-            setTracingIntialValue,
-            postTrasing
-          );
-        } else if (e.target.name === "text") {
-          canvas.current.remove(e.target);
-          canvas.current.requestRenderAll();
-          updateText(canvas, setTexts, postTexts);
-        } else if (e.target.name === "tracing" && e.target?.type === "circle") {
-          canvas.current.remove(e.target);
-          canvas.current.requestRenderAll();
-          updateTracingCircle(
-            canvas,
-            setTracingCircle,
-            setTracingIntialValue,
-            postTrasingCircle
-          );
-        }
-      }
-      if (
-        activeTab === "locations" &&
-        addNewLocation &&
-        !obj &&
-        !firstClick?.location?.x &&
-        selLocationDtls?.position 
-      ) {
-
-        canvas.current.forEachObject(function (obj) {
-          if (obj.name == "temp_loc") {
-            canvas.current.remove(obj);
-          }
-        });
-
-        removeFabricObjectsBId(canvas, selLocationDtls?.enc_id);
-        let mouse = canvas.current.getPointer(e.e);
-        let vertices = getSquareCoordinates(mouse.x, mouse.y, 50);
-
-        if (
-          selLocationDtls?.boundary_attributes &&
-          selLocationDtls?.boundary_attributes != "null"
-        ) {
-          vertices = selLocationDtls?.boundary_attributes;
-        }
-
-        let fillColor =
-          selLocationDtls?.location_color ??
-          projectSettings?.location_color ??
-          "red";
-        let locationIcon = getLocationPin(fillColor);
-        addPins(
-          canvas,
-          mouse,
-          locationIcon,
-          "temp_loc",
-          setSelLocationDtls,
-          selLocationDtls,
-          "locationSubmitBtn"
-        );
-        firstClick = { location: { x: mouse?.x, y: mouse?.y } };
-      } else if (
-        activeTab === "products" &&
-        addNewProduct &&
-        !obj &&
-        !firstClick?.product &&
-        selProductDtls?.position 
-      ) {
-        
-        canvas.current.forEachObject(function (obj) {
-          if (obj.name == "temp_prod") {
-            canvas.current.remove(obj);
-          }
-        });
-        removeFabricObjectsBId(canvas, selProductDtls?.enc_id);
-        let mouse = canvas.current.getPointer(e.e);
-        let fillColor =
-          selProductDtls?.product_color ??
-          projectSettings?.product_color ??
-          "red";
-        let productIcon = getProductPin(fillColor);
-        addPins(
-          canvas,
-          mouse,
-          productIcon,
-          "temp_prod",
-          setSelProductDtls,
-          selProductDtls,
-          "productSubmitBtn"
-        );
-        firstClick = { product: { x: mouse?.x, y: mouse?.y } };
-      } else if (
-        activeTab === "beacons" &&
-        addNewQrCodeBeacon &&
-        !obj &&
-        !firstClick?.beacon &&
-        selBeaconDtls?.position 
-      ) {
-        // canvas.current.forEachObject(function (obj) {
-        //   if (obj.name == "temp_beacon") {
-        //     canvas.current.remove(obj);
-        //   }
-        // });
-        // console.log(e.target, obj, 'e.target.name')
-        // removeFabricObjectsBId(canvas, selBeaconDtls?.enc_id);
-        let mouse = canvas.current.getPointer(e.e);
-        let fillColor =
-          selBeaconDtls?.beacon_color ?? projectSettings?.beacon_color ?? "red";
-        let beaconIcon = getBeaconPin(fillColor);
-        addPins(
-          canvas,
-          mouse,
-          beaconIcon,
-          "temp_beacon",
-          setSelBeaconDtls,
-          selBeaconDtls,
-          "beaconSubmitBtn"
-        );
-        firstClick = { beacon: { x: mouse?.x, y: mouse?.y } };
-      } else if (
-        activeTab === "amenitys" &&
-        addNewAmenity &&
-        !obj &&
-        !firstClick?.amenity &&
-        selAmenityDtls?.position 
-      ) {
-        canvas.current.forEachObject(function (obj) {
-          if (obj.name == "temp_amenity") {
-            // console.log(obj.name, 'remove')
-            canvas.current.remove(obj);
-          }
-        });
-        removeFabricObjectsBId(canvas, selAmenityDtls?.enc_id);
-        let mouse = canvas.current.getPointer(e.e);
-        let fillColor =
-          selAmenityDtls?.amenity_color ??
-          projectSettings?.amenity_color ??
-          "red";
-        let amenityIcon = selAmenityDtls?.icon_path ?? getAmenityPin(fillColor);
-        addPins(
-          canvas,
-          mouse,
-          amenityIcon,
-          "temp_amenity",
-          setSelAmenityDtls,
-          selAmenityDtls,
-          "amenitySubmitBtn"
-        );
-        firstClick = { amenity: { x: mouse?.x, y: mouse?.y } };
-      } else if (
-        activeTab === "safety" &&
-        addNewSafety &&
-        !obj &&
-        !firstClick?.safety &&
-        selSafetyDtls?.position 
-      ) {
-        canvas.current.forEachObject(function (obj) {
-          if (obj.name == "temp_safety") {
-            canvas.current.remove(obj);
-          }
-        });
-        removeFabricObjectsBId(canvas, selSafetyDtls?.enc_id);
-        let mouse = canvas.current.getPointer(e.e);
-        let fillColor =
-          selSafetyDtls?.safety_color ?? projectSettings?.safety_color ?? "red";
-        let safetyIcon = selSafetyDtls?.icon_path ?? getSafetyPin(fillColor);
-        addPins(
-          canvas,
-          mouse,
-          safetyIcon,
-          "temp_safety",
-          setSelSafetyDtls,
-          selSafetyDtls,
-          "safetySubmitBtn"
-        );
-        firstClick = { safety: { x: mouse?.x, y: mouse?.y } };
-      } else if (
-        activeTab === "traversable" &&
-        toolTraversible == "Draw" &&
-        !obj &&
-        addNewTraversablePath &&
-        !panToolVariabl
-      ) {
-        
-
-        let mouse = canvas.current.getPointer(e.e);
-        checkPinConnectOrNot();
-        if (e?.target?.name == "path" && mouseDown) {
-          let removedLine = e?.target;
-          createNodeBtwPolyline(e, mouse, removedLine); 
-          return
-        }
-        
-        let nodeName = generateNodeName(graph);
-        // ---------------------------------------------------------------- //
-        
-        if (e?.target?.name == "path" && !mouseDown) {
-          let removedLine = e?.target;
-          createNodeBtwPolyline(e, mouse, removedLine, undefined, false, nodeName); 
-          if (e.target && e.target.name && e.target.enc_id) {
-            nodeNameArray.push(`${e.target.name}_${e.target.enc_id}`);
-          } else {
-            nodeNameArray.push(nodeName);
-          }
-        }
-        
-        // ---------------------------------------------------------------- //
-
-        let nodeAdded = false;
-        let nodeCoords = {
-          x: mouse?.x,
-          y: mouse?.y,
-        };
-        //  console.log(e.target?.name,e?.target?.types);
-        if (
-          !e.target ||
-          e.target?.name == "backgroundRect" ||
-          e.target.name == "svg_refImage" ||
-          e.target?.name == "tracing" ||
-          e.target?.name == "boundary" ||
-          e?.target?.name == "text" ||
-          e?.target?.types == "text_field"
-        ) {
-          
-          
-          if (e.target && e.target.name && e.target.enc_id) {
-            nodeNameArray.push(`${e.target.name}_${e.target.enc_id}`);
-          } else {
-            nodeNameArray.push(nodeName);
-          }
-
-          const color = "rgba(0,0,255,0.5)"
-          if (canvas.current?.getZoom() < 0.85) {
-            toast.warning('Drawing Disabled: Please zoom in closer to enable drawing on the canvas.')
-            return 
-          }
-          
-          let node = addNodePoint(nodeCoords, nodeName, color);
-
-          if (e?.target?.types == "text_field") {
-            canvas.current.add(node);
-            const pinNameObj = e?.target;
-            let updatedNodeName = pinNameObj.node_name
-              ? [...pinNameObj.node_name, nodeName]
-              : [nodeName];
-            pinNameObj.set({
-              node_name: nodeName,
-              node_coords: nodeCoords,
-            });
-            graph.highlightNode(nodeName);
-          } else {
-            canvas.current.add(node);
-            // createNodeBtwPolyline
-          }
-        }
-
-        let center = e.target?.getCenterPoint();
-        let coords =
-          e.target &&
-            e.target.name != "backgroundRect" &&
-            e.target.name != "svg_refImage" &&
-            e.target?.name != "line_starter_poly" &&
-            e.target.name != "tracing" &&
-            e.target.name != "path" &&
-            e.target.name != "boundary" &&
-            e.target.name != "text" &&
-            e.target.types != "text_field"
-            ? { x: center?.x, y: center?.y }
-            : { x: mouse?.x, y: mouse?.y };
-
-        poly = false;
-        polyBtn = "";
-        lastPt = 1;
-        pts = [];
-        
-        polyline = addPolyLine(pts, "line_starter_poly");
-        canvas.current.add(polyline);
-        polyline.points[pts?.length] = coords;
-        lastPt++;
-        mouseDown = true;
-
-        prevMouseClick = { x: mouse.x, y: mouse.y };
-
-        if (
-          (e.target &&
-            e.target.name != "backgroundRect" &&
-            e.target?.name != "line_starter_poly" &&
-            e.target.name != "tracing" &&
-            e.target.name != "path" &&
-            e.target.name != "boundary" &&
-            e.target.name != "svg_refImage" &&
-            e.target.name != "text") ||
-          e?.target?.types == "text_field"
-        ) {
-          if (e.target.name == "node" || e?.target?.types == "text_field") {
-
-            nodeNameArray.push(e.target?.id);
-            storeNodeTypes(e.target?.id)
-
-            if (graph.nodes.has(e.target?.id)) {
-              nodeAdded = false;
-              if (graph.subNode.includes(e.target?.id)) {
-                graph.addConnectedMainPathNodes(e.target?.id)
-              }
-            } else if (e?.target?.types != "text_field") {
-              nodeAdded = true;
-            } else {
-              nodeAdded = true;
-              
-            }
-            if (e?.target?.types != "text_field") {
-              if (nodeNameArray.length === 2 && nodeNameArray.find((item) => item.includes("_"))) {
-
-                let node = e.target
-                let connectedEdgeskeys = Object.keys(graph.edges[node.id])
-                let connectedEdges = connectedEdgeskeys.filter((item) => !item.includes("_"))
-                
-                let originalLine = findObjectById(`path$${connectedEdges[0]}$${node.id}`, canvas) || findObjectById(`path$${node.id}$${connectedEdges[0]}`, canvas) || null;
-
-                if (connectedEdgeskeys.length === 1 && connectedEdgeskeys.find((item) => item.includes("_"))) {
-                  toast.warning("Connections can't be added to this line; it's a pin connection")
-                  return
-                }
-                
-                let lineitem = originalLine?.id.split("$").splice(1)
-
-                if (lineitem?.some((item) => graph.subNode.includes(item)) && lineitem.every((item) => !graph.connectedMainPathNodes.includes(item))) {
-                  createNodeBtwPolyline(e, center, originalLine, undefined, true, false,true);
-                } else {
-                  // onCreateNode(adjustedPoint, nodeName, "subpath");
-                  
-                  createNodeBtwPolyline(e, center, originalLine, undefined, true, false,true);
-                }
-              } else {
-                onCreateNode(coords, e.target?.id);
-              }
-            } else {
-              onCreateNode(coords, e?.target?.node_name);
-            }
-
-          } else {
-            // console.log({name : e.target.name, target : e.target}, 'e.target sfsdfdffsd')
-            if (e.target && e.target.name && e.target.enc_id) {
-              nodeNameArray.push(`${e.target.name}_${e.target.enc_id}`);
-            } else {
-              nodeNameArray.push(nodeName);
-            }
-
-            if (graph.nodes.has(`${e.target.name}_${e.target.enc_id}`)) {
-              nodeAdded = false;
-            } else {
-              nodeAdded = true;
-            }
-
-            onCreateNode(coords, `${e.target.name}_${e.target.enc_id}`);
-
-            // renderTraversiblePaths()
-            checkPinConnectOrNot();
-          }
-        } else {
-          if (graph.nodes.has(nodeName)) {
-            nodeAdded = false;
-          } else {
-            nodeAdded = true;
-          }
-          onCreateNode(coords, nodeName); 
-          // renderTraversiblePaths()
-          checkPinConnectOrNot();
-        }
-
-        if (key1 && key2 && key1 != key2) {
-          if (!nodeAdded && key1 != key2) {
-          }
-          
-
-           
-          addConnectionBtwnEdges(key1, key2, graph, canvas,"mainpath");
-
-          if (nodeTypeArray.length > 0) {
-            if (nodeNameArray.length === 2 && nodeNameArray.find((item) => item.includes("_"))) {
-              let node = nodeNameArray.find(item => !item.includes("_"))
-              let nodePossition = graph.positions[node];
-              let connectedEdgeskeys = graph.edges[node] ? Object.keys(graph.edges[node]) : []
-              
-              let connectedEdges = connectedEdgeskeys.filter((item) => !item.includes("_"))
-              let lineToBeDrawnTo = connectedEdgeskeys.filter((item) => item.includes(`${e.target.name}_${e.target.enc_id}`))
-  
-              
-              let firstItem = nodeNameArray.find((item) => !item.includes("_"))
-              let nodeStatus = nodeTypeArray.find((item) => item?.node === firstItem)
-                
-              let originalLine = findObjectById(`path$${connectedEdges[0]}$${node}`, canvas) || findObjectById(`path$${node}$${connectedEdges[0]}`, canvas) || null;
-              let pathToDelete = findObjectById(`path$${lineToBeDrawnTo[0]}$${node}`, canvas) || findObjectById(`path$${node}$${lineToBeDrawnTo[0]}`, canvas) || null;
-              
-              if (connectedEdgeskeys.length === 1 && connectedEdgeskeys.find((item) => item.includes("_")) && originalLine && pathToDelete) {
-                toast.warning("Connections can't be added to this line; it's a pin connection")
-                return
-              }
-              
-              let lineitem = originalLine?.id.split("$").splice(1)
-              if (lineitem && pathToDelete) {
-                let lineValue = generatePointOnLine(connectedEdges[0],node,nodePossition)
-  
-                if (lineitem?.some((item) => graph.subNode.includes(item)) && lineitem.every((item) => !graph.connectedMainPathNodes.includes(item))) {
-                  createNodeBtwPolyline(e, nodePossition, originalLine, undefined, false, nodeName, true, true);
-                  addConnectionBtwnEdges(nodeName,  `${e.target.name}_${e.target.enc_id}`, graph, canvas);
-                } else {
-                  createNodeBtwPolyline(e, nodePossition, originalLine, undefined, false, nodeName, true, true);
-                  addConnectionBtwnEdges(nodeName,  `${e.target.name}_${e.target.enc_id}`, graph, canvas);
-                }
-              
-                removeLine(pathToDelete.id, graph, canvas);
-  
-                if (nodeStatus?.type === "mainNode") {
-                  graph.removeSubnode(nodeStatus.node)                
-                  graph.removeConnectedMainPathNodes(nodeStatus.node)                
-                } else if (nodeStatus?.type === "connectedToMainPath") {
-                  graph.addSubnode(nodeStatus.node)                
-                  graph.addConnectedMainPathNodes(nodeStatus.node)   
-                } else if (nodeStatus?.type === "subNode") {
-                  graph.addSubnode(nodeStatus.node)                
-                  graph.removeConnectedMainPathNodes(nodeStatus.node)   
-                }
-              }
-  
-            } else {
-              // console.log("point not connecting to mainpath")
-            }
-          }
-
-
-        }        
-
-        if (
-          key1 &&
-          key2 &&
-          key1 !== key2 &&
-          e.target &&
-          e.target?.name != "tracing" &&
-          e.target?.name != "line_starter_poly" &&
-          e.target.name != "backgroundRect" &&
-          e.target.name != "svg_refImage" &&
-          e.target.name != "path" &&
-          e.target.name != "boundary" &&
-          e.target.name != "text" &&
-          e?.target?.types != "text_field"
-          // && !objPinNamesOnly?.includes(e.target.name)
-        ) {
-          stopPathDrawing();
-          // undoTraversablePath(graph.getPositions(), graph.getEdges())
-        }
-        
-        bringFabricObjectsToFrontByName(canvas, "node");
-        bringFabricObjectsToFrontByName(canvas, "location");
-        bringFabricObjectsToFrontByName(canvas, "product");
-        bringFabricObjectsToFrontByName(canvas, "beacon");
-        bringFabricObjectsToFrontByName(canvas, "safety");
-        bringFabricObjectsToFrontByName(canvas, "amenity");
-        bringFabricObjectsToFrontByName(canvas, "vertical");
-        bringFabricObjectsToFrontByName(canvas, "text");
-
-        graph?.getHighlightNode()?.forEach((item) => {
-          bringToFrontPinNameNodes(canvas, item);
-        });
-
-        setSelTraversibleDetails((prev) => ({
-          ...prev,
-          edges_data: graph.getEdges(),
-          points_data: graph.getPositions(),
-          post: true,
-        }));
-
-        navigationPathZoomLevel(
-          canvas,
-          canvas.current.getZoom(),
-          projectSettings
-        );
-      }
-      else if (
-        activeTab === "traversable" &&
-        toolTraversible == "sub_path" &&
-        !obj &&
-        addNewTraversablePath &&
-        !panToolVariabl
-      ) {
-        
-        
-        /* New condition for sub path */
-
-        if (canvas.current?.getZoom() < 0.85) {
-          toast.warning('Drawing Disabled: Please zoom in closer to enable drawing on the canvas.')
-          return 
-        }
-        
-        let mouse = canvas.current.getPointer(e.e);
-        checkPinConnectOrNot();
-
-        if (e?.target?.name == "path" && mouseDown) {
-          let removedLine = e?.target;
-          // console.log(removedLine.id,e?.target?.id?.includes("_"),"removed line")
-          if (nodeNameArray.length === 1 && nodeNameArray.find((item) => item.includes("_")) && e?.target?.id?.includes("_")) { 
-            toast.warning("Connections can't be added to this line; it's a pin connection")
-            return
-          }
-          let point = generateNodeName(graph)
-          let pathnames = removedLine.id.split("$")?.splice(1)
-          let nodeName = pathnames.find((item) => item.includes("_"))
-          createNodeBtwPolyline(e, mouse, removedLine, undefined, true);
-          if (nodeName) {
-            let originalLine = findObjectById(`path$${point}$${nodeName}`, canvas) || findObjectById(`path$${nodeName}$${point}`, canvas) || null;
-            // console.log(removedLine,originalLine,nodeName,point,"pointpointpointpointpointpointpoint")
-            createNodeBtwPolyline(e, mouse, originalLine, undefined, true,generateNodeName(graph),true);
-          }
-          return
-        }
-
-        // if (e?.target?.name == "path" || e?.target?.name == "line_starter_poly")
-        //   return;
-
-        // create corner points at polyline end and start
-        let nodeName = generateNodeName(graph);
-        if (e?.target?.name == "path" && !mouseDown) {
-          let removedLine = e?.target;
-          createNodeBtwPolyline(e, mouse, removedLine, undefined, true, nodeName);
-          if (e.target && e.target.name && e.target.enc_id) {
-            nodeNameArray.push(`${e.target.name}_${e.target.enc_id}`);
-          } else {
-            nodeNameArray.push(nodeName);
-          }
-        }
-
-      
-        let nodeAdded = false;
-        let nodeCoords = {
-          x: mouse?.x,
-          y: mouse?.y,
-        };
-
-       
-        if (
-          !e.target ||
-          e.target?.name == "backgroundRect" ||
-          e.target.name == "svg_refImage" ||
-          e.target?.name == "tracing" ||
-          e.target?.name == "boundary" ||
-          e?.target?.name == "text" ||
-          e?.target?.types == "text_field"
-        ) {
-          if (e.target && e.target.name && e.target.enc_id) {
-            nodeNameArray.push(`${e.target.name}_${e.target.enc_id}`);
-          } else {
-            nodeNameArray.push(nodeName);
-          }
-
-          const color = "rgba(0,255,0,0.5)"
-          let node = addNodePoint(nodeCoords, nodeName, color);
-
-          if (e?.target?.types == "text_field") {
-            canvas.current.add(node);
-            const pinNameObj = e?.target;
-            let updatedNodeName = pinNameObj.node_name
-              ? [...pinNameObj.node_name, nodeName]
-              : [nodeName];
-            pinNameObj.set({
-              node_name: nodeName,
-              node_coords: nodeCoords,
-            });
-            graph.highlightNode(nodeName);
-          } else {
-            canvas.current.add(node);
-          }
-        }
-
-        let center = e.target?.getCenterPoint();
-        let coords =
-          e.target &&
-            e.target.name != "backgroundRect" &&
-            e.target.name != "svg_refImage" &&
-            e.target?.name != "line_starter_poly" &&
-            e.target.name != "tracing" &&
-            e.target.name != "path" &&
-            e.target.name != "boundary" &&
-            e.target.name != "text" &&
-            e.target.types != "text_field"
-            ? { x: center?.x, y: center?.y }
-            : { x: mouse?.x, y: mouse?.y };
-
-        poly = false;
-        polyBtn = "";
-        lastPt = 1;
-        pts = [];
-        
-        polyline = addPolyLine(pts, "line_starter_poly");
-        polyline.set({
-          stroke: "rgba(0,255,0,0.5)"
-        })
-        canvas.current.add(polyline);
-        polyline.points[pts?.length] = coords;
-        lastPt++;
-        mouseDown = true;
-
-        prevMouseClick = { x: mouse.x, y: mouse.y };
-
-        if (
-          (e.target &&
-            e.target.name != "backgroundRect" &&
-            e.target?.name != "line_starter_poly" &&
-            e.target.name != "tracing" &&
-            e.target.name != "path" &&
-            e.target.name != "boundary" &&
-            e.target.name != "svg_refImage" &&
-            e.target.name != "text") ||
-          e?.target?.types == "text_field"
-        ) {
-          if (e.target.name == "node" || e?.target?.types == "text_field") {
-
-            // console.log(e?.target?.id, graph.nodes.has(e.target?.id), graph, "e.target subpath node");
-            
-            nodeNameArray.push(e.target?.id);
-            storeNodeTypes(e.target?.id)
-            
-            if (graph.nodes.has(e.target?.id)) {
-              e.target.set({
-                fill:"rgba(0,255,0,0.5)"
-              });
-              nodeAdded = false;
-              if (!graph.subNode.includes(e.target?.id)) {
-                // graph.addConnectedMainPathNodes(e.target?.id)
-              } 
-            } else if (e?.target?.types != "text_field") {
-              nodeAdded = true;
-            } else {
-              nodeAdded = true;
-            }
-
-            if (e?.target?.types != "text_field") {
-              if (nodeNameArray.length === 2 && nodeNameArray.find((item) => item.includes("_"))) {
-                let node = e.target
-                let connectedEdgeskeys = Object.keys(graph.edges[node.id])
-                let connectedEdges = connectedEdgeskeys.filter((item) => !item.includes("_"))
-                let originalLine = findObjectById(`path$${connectedEdges[0]}$${node.id}`, canvas) || findObjectById(`path$${node.id}$${connectedEdges[0]}`, canvas) || null;
-                if (connectedEdgeskeys.length === 1 && connectedEdgeskeys.find((item) => item.includes("_"))) {
-                  toast.warning("Connections can't be added to this line; it's a pin connection")
-                  return
-                }
-                
-                let lineitem = originalLine?.id.split("$").splice(1)
-
-                if (lineitem?.some((item) => graph.subNode.includes(item)) && lineitem.every((item) => !graph.connectedMainPathNodes.includes(item))) {
-                  createNodeBtwPolyline(e, center, originalLine, undefined, true, false,true);
-                } else {
-                  createNodeBtwPolyline(e, center, originalLine, undefined, true, false,true);
-                }
-              } else {
-                onCreateNode(coords, e.target?.id);
-              }
-            } else {
-              onCreateNode(coords, e?.target?.node_name);
-            }
-
-          } else {
-            if (e.target && e.target.name && e.target.enc_id) {
-              nodeNameArray.push(`${e.target.name}_${e.target.enc_id}`);
-            } else {
-              nodeNameArray.push(nodeName);
-            }
-            if (graph.nodes.has(`${e.target.name}_${e.target.enc_id}`)) {
-              nodeAdded = false;
-            } else {
-              nodeAdded = true;
-            } 
-            
-            onCreateNode(coords, `${e.target.name}_${e.target.enc_id}`);
-            checkPinConnectOrNot();
-          }
-        } else {
-          if (graph.nodes.has(nodeName)) {
-            nodeAdded = false;
-          } else {
-            nodeAdded = true;
-          }
-          onCreateNode(coords, nodeName);
-          // renderTraversiblePaths()
-          checkPinConnectOrNot();
-        }
-
-        if (key1 && key2 && key1 != key2) {
-          if (!nodeAdded && key1 != key2) {
-          }
-          addConnectionBtwnEdges(key1, key2, graph, canvas,"subpath");
-
-          if (nodeTypeArray.length > 0) {
-            if (nodeNameArray.length === 2 && nodeNameArray.find((item) => item.includes("_"))) {
-              let node = nodeNameArray.find(item => !item.includes("_"))
-              let nodePossition = graph.positions[node];
-              let connectedEdgeskeys = Object.keys(graph.edges[node])
-              
-              let connectedEdges = connectedEdgeskeys.filter((item) => !item.includes("_"))
-              let lineToBeDrawnTo = connectedEdgeskeys.filter((item) => item.includes(`${e.target.name}_${e.target.enc_id}`))
-  
-              let firstItem = nodeNameArray.find((item) => !item.includes("_"))
-              let nodeStatus = nodeTypeArray.find((item) => item?.node === firstItem)
-                
-              let originalLine = findObjectById(`path$${connectedEdges[0]}$${node}`, canvas) || findObjectById(`path$${node}$${connectedEdges[0]}`, canvas) || null;
-              let pathToDelete = findObjectById(`path$${lineToBeDrawnTo[0]}$${node}`, canvas) || findObjectById(`path$${node}$${lineToBeDrawnTo[0]}`, canvas) || null;
-              
-              if (connectedEdgeskeys.length === 1 && connectedEdgeskeys.find((item) => item.includes("_")) && originalLine && pathToDelete) {
-                toast.warning("Connections can't be added to this line; it's a pin connection")
-                return
-              }
-              
-              let lineitem = originalLine?.id.split("$").splice(1)
-              if (lineitem && pathToDelete) {
-  
-                if (lineitem?.some((item) => graph.subNode.includes(item)) && lineitem.every((item) => !graph.connectedMainPathNodes.includes(item))) {
-                  // console.log(nodeName, "point connecting to subpath")
-                  graph.addSubnode(nodeName);
-                  createNodeBtwPolyline(e, nodePossition, originalLine, undefined, true, nodeName, true, true);
-                  addConnectionBtwnEdges(nodeName,  `${e.target.name}_${e.target.enc_id}`, graph, canvas);
-                } else {
-                  // console.log(nodeName, "point connecting to mainpath")
-                  graph.addSubnode(nodeName);
-                  createNodeBtwPolyline(e, nodePossition, originalLine, undefined, true, nodeName, true, true);
-                  addConnectionBtwnEdges(nodeName,  `${e.target.name}_${e.target.enc_id}`, graph, canvas);
-                }
-              
-                removeLine(pathToDelete.id, graph, canvas);
-                
-                if (nodeStatus?.type === "mainNode") {
-                  graph.removeSubnode(nodeStatus.node)                
-                  graph.removeConnectedMainPathNodes(nodeStatus.node)                
-                } else if (nodeStatus?.type === "connectedToMainPath") {
-                  graph.addSubnode(nodeStatus.node)                
-                  graph.addConnectedMainPathNodes(nodeStatus.node)   
-                } else if (nodeStatus?.type === "subNode") {
-                  graph.addSubnode(nodeStatus.node)                
-                  graph.removeConnectedMainPathNodes(nodeStatus.node)   
-                }
-                  
-              }
-  
-  
-            } else {
-              // console.log("point not connecting to mainpath")
-            }
-          }
-
-        }
-
-        
-
-        if (
-          key1 &&
-          key2 &&
-          key1 !== key2 &&
-          e.target &&
-          e.target?.name != "tracing" &&
-          e.target?.name != "line_starter_poly" &&
-          e.target.name != "backgroundRect" &&
-          e.target.name != "svg_refImage" &&
-          e.target.name != "path" &&
-          e.target.name != "boundary" &&
-          e.target.name != "text" &&
-          e?.target?.types != "text_field"
-          // &&!objPinNamesOnly?.includes(e.target.name)
-        ) {
-          stopPathDrawing();
-          
-          // undoTraversablePath(graph.getPositions(), graph.getEdges())
-        }
-        bringFabricObjectsToFrontByName(canvas, "node");
-        bringFabricObjectsToFrontByName(canvas, "location");
-        bringFabricObjectsToFrontByName(canvas, "product");
-        bringFabricObjectsToFrontByName(canvas, "beacon");
-        bringFabricObjectsToFrontByName(canvas, "safety");
-        bringFabricObjectsToFrontByName(canvas, "amenity");
-        bringFabricObjectsToFrontByName(canvas, "vertical");
-        bringFabricObjectsToFrontByName(canvas, "text");
-
-        graph?.getHighlightNode()?.forEach((item) => {
-          bringToFrontPinNameNodes(canvas, item);
-        });
-
-        setSelTraversibleDetails((prev) => ({
-          ...prev,
-          edges_data: graph.getEdges(),
-          points_data: graph.getPositions(),
-          post: true,
-        }));
-        navigationPathZoomLevel(
-          canvas,
-          canvas.current.getZoom(),
-          projectSettings
-        );
-      }
-      else if (
-        activeTab === "traversable" &&
-        toolTraversible == "Erase" &&
-        !obj &&
-        addNewTraversablePath
-      ) {
-        let obj = e.target;
-        if (obj?.name == "node") {
-          let edges = graph.getEdges();
-
-          if (edges[obj.id]) {
-            if (graph.subNode.includes(obj.id)) {
-              deleteSubPath(obj);
-              removeNode(obj.id, true, graph, canvas);
-              if (graph.autoConnectNode.includes(obj.id)) {
-                graph.removeAutoConnectNode(obj.id)
-              }
-            } else {
-              removeNode(obj.id, true, graph, canvas);
-            }
-            // console.log("removed :", obj.id)
-          }
-
-        } else if (obj?.name == "path") {
-          const key1 = obj?.id?.split("$")[1];
-          const key2 = obj?.id?.split("$")[2];
-          if (obj?.id) {
-            graph.removeAutoConnectNode(key1)
-            graph.removeAutoConnectNode(key2)
-          }
-          removeLine(obj.id, graph, canvas);      
-          deleteSubPath(obj);
-        }
-
-        setSelTraversibleDetails((prev) => ({
-          ...prev,
-          edges_data: graph.getEdges(),
-          points_data: graph.getPositions(),
-          post: true,
-        }));
-        renderTraversiblePaths()
-        checkPinConnectOrNot();
-
-      } else if (
-        activeTab === "traversable" &&
-        toolTraversible == "Select" &&
-        // obj &&
-        addNewTraversablePath
-      ) {
-        
-        if (e?.target?.name == "node" && e.target.id.includes("_")) {
-         
-       }
-
-        if (e.target?.type === "activeSelection") {
-          mouseDownSelect = canvas.current.getPointer(e.e)
-        }
-
-        if (e?.target?.name == "path") {
-          
-          if (e?.target?.stroke === "green") {
-            canvas.current.forEachObject(obj => {
-              if (obj.name === "node" && obj.fill === "rgba(0,255,0,0.5)") {
-                if (!obj.id.includes("_")) {
-                  canvas.current.bringToFront(obj);
-                }
-              }
-            })
-          } else if (e?.target?.stroke === "black") {
-            canvas.current.forEachObject(obj => {
-              if (obj.name === "node" && obj.fill === "rgba(0,0,255,0.5)") {
-                if (!obj.id.includes("_")) {
-                  canvas.current.bringToFront(obj);
-                }
-              }
-            })
-          }
-        }
-
-        if (e?.target?.name == "node") {
-          // new change
-          // e.target.selectable = true;
-          // e.target.lockMovementX = false;
-          // e.target.lockMovementY = false;
-          // e.target.lockRotation = true;
-          // e.target.lockScalingX = true;
-          // e.target.lockScalingY = true;
-          // e.target.hasControls = false;
-          // e.target.hasBorders = false;
-          // // mouseDown = true
-          // canvas.current.renderAll();
-          // ---------------------
-          // let objs = canvas.current.getObjects()
-          // const newColor = 'black';
-          // highLightSelectedPaths(canvas, objs, newColor)
-          // nodeLinesSelected(obj, graph, canvas)
-          if (e?.target?.fill === "rgba(0,255,0,0.5)") {
-            canvas.current.forEachObject(obj => {
-              if (obj.name === "node" && obj.fill === "rgba(0,255,0,0.5)" && !obj.id.includes("_")) {
-                canvas.current.bringToFront(obj);
-                
-              }
-            })
-          } else if (e?.target?.fill === "rgba(0,0,255,0.5)") {
-            canvas.current.forEachObject(obj => {
-              if (obj.name === "node" && obj.fill === "rgba(0,0,255,0.5)" && !obj.id.includes("_")) {
-                if (!obj.id.includes("_")) {
-                  canvas.current.bringToFront(obj);
-                  
-                }
-              }
-            })
-          }
-        }
-
-      } else if (
-        activeTab === "traversable" &&
-        toolTraversible == "Erase" &&
-        !obj &&
-        addNewTraversablePath
-      ) {
-
-        // console.log("nodeee");
-        let obj = e.target;
-        if (obj?.name == "node") {
-          let edges = graph.getEdges();
-          if (edges[obj.id]) {
-            const linesDeleted = Object.keys(edges[obj.id]).map((a) => ({
-              key1: obj.id,
-              key2: a,
-            }));
-            const nodePosition = graph.positions[obj.id];
-            setTraversibleHistory((prev) => [
-              ...prev,
-              {
-                type: "nodeAndLine",
-                action: "delete",
-                data: {
-                  nodeName: obj.id,
-                  nodePosition,
-                  lines: linesDeleted,
-                },
-              },
-            ]);
-          }
-          removeNode(obj.id, true, graph, canvas);
-          graph.removeAutoConnectNode(obj.id)
-        } else if (obj?.name == "path") {
-          // console.log(obj.id,"nodeee");
-          if (obj.id) {
-            const node1 = obj.id.split("$")[1];
-            const node2 = obj.id.split("$")[2];
-            graph.removeAutoConnectNode(node1)
-            graph.removeAutoConnectNode(node2)
-          }
-          removeLine(obj.id, graph, canvas);
-        }
-
-        setSelTraversibleDetails((prev) => ({
-          ...prev,
-          edges_data: graph.getEdges(),
-          points_data: graph.getPositions(),
-          post: true,
-        }));
-
-      } else if (
-        activeTab === "verticalTransport" &&
-        addNewVertical &&
-        !obj &&
-        !firstClick?.verticalTransport &&
-        verticalFloorId
-      ) {
-        
-        canvas.current.forEachObject(function (obj) {
-          if (obj.name == "temp_vertical") {
-            canvas.current.remove(obj);
-          }
-        });
-
-        removeFabricObjectsBId(canvas, selVerticalDtls?.enc_id);
-        let fillColor =
-          selVerticalDtls?.vt_color ??
-          projectSettings?.level_change_color ??
-          "red";
-        let verticalIcon =
-          selVerticalDtls?.icon_path ?? getVerticalPin(fillColor);
-        let path = fabric.loadSVGFromString(
-          verticalIcon,
-          function (objects, options) {
-            let obj = fabric.util.groupSVGElements(objects, options);
-
-            let mouse = canvas.current.getPointer(e.e);
-            obj.set({
-              left: mouse?.x - obj.width / 2,
-              top: mouse?.y - obj.height / 2,
-              name: "temp_vertical",
-              lockRotation: true,
-              lockScalingX: true,
-              lockScalingY: true,
-              hoverCursor: "grab",
-            });
-            canvas.current.add(obj).renderAll();
-            if (verticalFloorId) {
-              selVerticalDtls?.connectionPins?.forEach((item) => {
-                if (item?.value == verticalFloorId) {
-                  // item.value
-                  (item.value = item?.value),
-                    (item.label = item?.label),
-                    (item.position = { x: mouse?.x, y: mouse?.y });
-                }
-              });
-              let values = {
-                // ...selVerticalDtls,
-                position: { x: mouse?.x, y: mouse?.y },
-              };
-              setselVerticalDtls((prev) => ({ ...prev, ...values }));
-            }
-            firstClick = { verticalTransport: { x: mouse?.x, y: mouse?.y } };
-            document.getElementById("transportSubmitBtn")?.click();
-            // canvasBackgroundImageHandler(null);
-          }
-        );
-      }
-    });
-
-    canvas.current.on("text:changed", function (e) {
-      const textObject = e.target;
-      
-      if (isEnterKey) {
-        const newText = textObject.text + "\n";
-        textObject.set("text", newText);
-        canvas.current.renderAll();
-      } else {
-        const newText = textObject.text.replace(/[^\S\n]/g, "\u00A0"); // Remove spaces
-        textObject.set("text", newText);
-        canvas.current.renderAll();
-      }
-      updateText(canvas, setTexts, postTexts);
-    });
-
-    canvas.current.on("object:modified", function (e) {
-      
-      const obj1 = e.target;
-      
-      let panToolVariabl = false;
-      setPanTool((prev) => {
-        panToolVariabl = prev;
-        return prev;
-      });
-      if (obj && !panToolVariabl) {
-        let mouse = canvas.current.getPointer(e.e);
-
-        if (activeTab === "floorDetails" && addNewFloor) {
-          updateTracing(
-            canvas,
-            setTracings,
-            setTracingIntialValue,
-            postTrasing
-          );
-          updateText(canvas, setTexts, postTexts);
-          updateTracingCircle(
-            canvas,
-            setTracingCircle,
-            setTracingIntialValue,
-            postTrasingCircle
-          );
-          if (obj?.name == "tracing" && obj.type === "polygon") {
-            removeFabricObjectsByName(canvas, "tracing_obj_length");
-            const points = getPolygonVertices(obj);
-            // console.log(points, "points-modified");
-            showObjLength(obj, points, canvas);
-            tracingLengthZoomLevel(canvas, canvas.current.getZoom());
-          }
-        } else if (activeTab === "locations" && addNewLocation) {
-          if (obj.name == "boundary") {
-            boundaryAttributes = getPolygonVertices(obj);
-
-            prevSelectedBoundary = canvas.current.getActiveObject();
-
-            let locPosition;
-            canvas.current.forEachObject((obj1) => {
-              if (
-                obj1.name == "temp_loc" ||
-                obj1.enc_id == selLocationDtls?.enc_id
-              ) {
-                locPosition = obj1.getCenterPoint();
-              }
-              canvas.current.bringToFront(obj1);
-            });
-            setSelLocationDtls((prev) => ({
-              ...prev,
-              boundary_attributes: boundaryAttributes,
-              position: { x: locPosition?.x, y: locPosition?.y },
-            }));
-            nodePositionUpdate(
-              "location",
-              selLocationDtls,
-              {
-                x: locPosition?.x,
-                y: locPosition?.y,
-              },
-              graph,
-              setSelTraversibleDetails
-            );
-          } else {
-            // let boundaryAttributes;
-            canvas.current.forEachObject((obj1) => {
-              if (
-                obj1.id == "temp_boundary" ||
-                obj1.id == `boundary_${selLocationDtls?.enc_id}`
-              ) {
-                boundaryAttributes = getPolygonVertices(obj1);
-                obj1.set("selectable", true);
-                canvas.current.renderAll();
-              }
-              // canvas.current.bringToFront(obj1)
-            });
-            // console.log(selLocationDtls, "selLocationDtls");
-            setSelLocationDtls((prev) => ({
-              ...prev,
-              boundary_attributes: boundaryAttributes,
-              position: { x: mouse?.x, y: mouse?.y },
-            }));
-            nodePositionUpdate(
-              "location",
-              selLocationDtls,
-              {
-                x: mouse?.x,
-                y: mouse?.y,
-              },
-              graph,
-              setSelTraversibleDetails
-            );
-          }
-          setIsDirty(true);
-          document.getElementById("locationSubmitBtn")?.click();
-
-          // setMousetrigger((prev) => {
-          //   if (prev === 0) {
-          //     prev = prev + 1
-          //   } else {
-          //     prev = prev - 1
-          //   }
-          //   return prev
-          // })
-
-          
-        } else if (activeTab === "products" && addNewProduct) {
-          setSelProductDtls((prev) => ({
-            ...prev,
-            position: { x: mouse?.x, y: mouse?.y },
-          }));
-
-          // if (selProductDtls?.enc_id) {
-          nodePositionUpdate(
-            "product",
-            selProductDtls,
-            {
-              x: mouse?.x,
-              y: mouse?.y,
-            },
-            graph,
-            setSelTraversibleDetails
-          );
-          setIsDirty(true);
-          document.getElementById("productSubmitBtn")?.click();
-          // }
-        } else if (activeTab === "beacons" && addNewQrCodeBeacon) {
-          setSelBeaconDtls((prev) => ({
-            ...prev,
-            position: { x: mouse?.x, y: mouse?.y },
-          }));
-          nodePositionUpdate(
-            "beacon",
-            selBeaconDtls,
-            {
-              x: mouse?.x,
-              y: mouse?.y,
-            },
-            graph,
-            setSelTraversibleDetails
-          );
-          setIsDirty(true);
-          document.getElementById("beaconSubmitBtn")?.click();
-        } else if (activeTab === "amenitys" && addNewAmenity) {
-          let selAmenityDtls;
-          setSelAmenityDtls((prev) => {
-            selAmenityDtls = prev;
-            return prev;
-          });
-          if (selAmenityDtls?.enc_id) {
-            setSelAmenityDtls((prev) => ({
-              ...prev,
-              position: { x: mouse?.x, y: mouse?.y },
-            }));
-            nodePositionUpdate(
-              "amenity",
-              selAmenityDtls,
-              {
-                x: mouse?.x,
-                y: mouse?.y,
-              },
-              graph,
-              setSelTraversibleDetails
-            );
-            setIsDirty(true)
-            document.getElementById("amenitySubmitBtn")?.click();
-          }
-        } else if (activeTab === "safety" && addNewSafety) {
-          let selSafetyDtls;
-          setSelSafetyDtls((prev) => {
-            selSafetyDtls = prev;
-            return prev;
-          });
-          if (selSafetyDtls?.enc_id) {
-            setSelSafetyDtls((prev) => ({
-              ...prev,
-              position: { x: mouse?.x, y: mouse?.y },
-            }));
-            nodePositionUpdate(
-              "safety",
-              selSafetyDtls,
-              {
-                x: mouse?.x,
-                y: mouse?.y,
-              },
-              graph,
-              setSelTraversibleDetails
-            );
-            // setIsDirty(true)
-            document.getElementById("safetySubmitBtn")?.click();
-          }
-        } else if (activeTab === "verticalTransport" && addNewVertical) {
-          let selVerticalDtlsVar;
-          setselVerticalDtls((prev) => {
-            selVerticalDtlsVar = prev;
-            return prev;
-          });
-          selVerticalDtlsVar?.connectionPins?.forEach((item) => {
-            // console.log(item, "item");
-            if (item?.value == (verticalFloorId ?? e.target?.floor_id)) {
-              (item.value = item?.value),
-                (item.label = item?.label),
-                (item.position = { x: mouse?.x, y: mouse?.y });
-            }
-          });
-          let values = {
-            ...selVerticalDtlsVar,
-            position: { x: mouse?.x, y: mouse?.y },
-          };
-          
-          setselVerticalDtls((prev) => ({
-            ...prev,
-            ...values,
-          }));
-          nodePositionUpdate(
-            "vertical",
-            e.target,
-            {
-              x: mouse?.x,
-              y: mouse?.y,
-            },
-            graph,
-            setSelTraversibleDetails
-          );
-          // removeFabricObjectsEncId(canvas, e?.target?.enc_id, 'vertical')
-          document.getElementById("transportSubmitBtn")?.click();
-        }
-        /* Drag pin */
-        if (
-          checkConditionDrag() &&
-          [
-            "location",
-            "product",
-            "beacon",
-            "amenity",
-            "safety",
-            "vertical",
-          ]?.includes(obj1?.name)
-        ) {
-          const center = obj1.getCenterPoint();
-          nodePositionUpdate(
-            obj1?.name,
-            obj1,
-            {
-              x: center?.x,
-              y: center?.y,
-            },
-            graph,
-            setSelTraversibleDetails
-          );
-          updatePinPosition(obj1, center, activeTab)
-          changeFabricObjectSelectionByName(canvas, "node", true);
-          changeFabricObjectSelectionByName(canvas, "path", true);
-
-        }
-      }
-    });
-
-    canvas.current.on("object:moving", function (e) {
-      let panToolVariabl = false;
-      setPanTool(false);
-      const newObj = e?.target;
-      
-      let mouse = canvas.current.getPointer(e.e);
-      if (!panToolVariabl) {
-        if (activeTab === "floorDetails" && newObj?.name === "tracing") {
-          removeFabricObjectsByName(canvas, "tracing_obj_length");
-        }
-        if (activeTab == "locations" && addNewLocation) {
-          if (newObj?.name == "boundary") {
-            canvas.current.forEachObject((obj1) => {
-              if (
-                obj1.name == "temp_loc" ||
-                obj1?.id == selLocationDtls?.enc_id
-              ) {
-                let cneterPoint = newObj.getCenterPoint();
-                obj1.set(
-                  "left",
-                  // obj1.left +
-                  cneterPoint.x - obj1.width / 2
-                  // originalObjCenterPoints.x
-                );
-                obj1.set(
-                  "top",
-                  // obj1.top +
-                  cneterPoint.y - obj1.height / 2
-                  // originalObjCenterPoints.y
-                );
-                obj1.setCoords();
-              }
-            });
-            canvas.current.renderAll();
-          } else {
-            canvas.current.forEachObject((obj1) => {
-              if (
-                obj1.id == "temp_boundary" ||
-                // obj1.id == `boundary_${selLocationDtls?.enc_id}`
-                obj1.id == `boundary_${e.target?.enc_id}`
-              ) {
-                
-
-                let centerPointpin = newObj.getCenterPoint();
-                // let centerPointBoundary = obj1.getCenterPoint();
-                
-
-                obj1.set(
-                  "left",
-                  obj1.left +
-                  parseInt(centerPointpin.x) -
-                  parseInt(originalObjCenterPoints.x)
-                );
-                obj1.set(
-                  "top",
-                  obj1.top +
-                  parseInt(centerPointpin.y) -
-                  parseInt(originalObjCenterPoints.y)
-                );
-
-                // obj1.set(
-                //   "left",
-                //   newObj.left +
-                //   parseInt(centerPointpin.x) -
-                //   parseInt(originalObjCenterPoints.x)+newObj.width/2
-                // );
-                // obj1.set(
-                //   "top",
-                //   newObj.top +
-                //   parseInt(centerPointpin.y) -
-                //   parseInt(originalObjCenterPoints.y)+newObj.height/2
-                // );
-                obj1.setCoords();
-                originalObjCenterPoints = centerPointpin;
-                // canvas.current.bringToFront(obj1);
-              }
-            });
-
-            // moveDraggedPinAndName(canvas, newObj, 'location')
-          }
-          canvas.current.renderAll();
-        }
-        if (checkConditionDrag() && ['product', 'beacon', 'amenity', 'safety', 'vertical']?.includes(newObj?.name)) {
-          moveDraggedPinAndName(canvas, newObj, newObj?.name)
-          // console.log(e.pointer);
-          // if (activeTab === 'traversable' && toolTraversible === 'Drag_pin') {
-          if (activeTab === 'traversable' && toolTraversible === 'Select') {
-            const center = newObj.getCenterPoint()
-            nodePositionUpdate(
-              newObj?.name,
-              newObj,
-              {
-                x: center?.x,
-                y: center?.y,
-              },
-              graph,
-              setSelTraversibleDetails
-            );
-            renderTraversiblePaths()
-          }
-        } else if (checkConditionDrag() && newObj?.name === "location") {
-          canvas.current.forEachObject((obj1) => {
-            if (
-              obj1.id == "temp_boundary" ||
-              // obj1.id == `boundary_${selLocationDtls?.enc_id}`
-              obj1.id == `boundary_${e.target?.enc_id}`
-            ) {
-              boundaryAttributes = getPolygonVertices(obj1)
-              // console.log(boundaryAttributes, 'temp_boundary')
-              let cneterPoint = newObj.getCenterPoint();
-
-              obj1.set(
-                "left",
-                obj1.left +
-                parseInt(cneterPoint.x) -
-                parseInt(originalObjCenterPoints.x)
-              );
-              obj1.set(
-                "top",
-                obj1.top +
-                parseInt(cneterPoint.y) -
-                parseInt(originalObjCenterPoints.y)
-              );
-              obj1.setCoords();
-              originalObjCenterPoints = cneterPoint;
-              // canvas.current.bringToFront(obj1);
-            }
-          });
-          moveDraggedPinAndName(canvas, newObj, 'location')
-          // if (activeTab === 'traversable' && toolTraversible === 'Drag_pin') {
-          if (activeTab === 'traversable' && toolTraversible === 'Select') {
-            const center = newObj.getCenterPoint()
-            nodePositionUpdate(
-              newObj?.name,
-              newObj,
-              {
-                x: center?.x,
-                y: center?.y,
-              },
-              graph,
-              setSelTraversibleDetails
-            );
-            // const nodeId = `${newObj?.name}_${newObj?.enc_id}`;
-            // let node = findObjectById(nodeId, canvas)
-            // node.set({
-            //   left: center?.x,
-            //   top: center?.y,
-            // })
-            // Object.keys(graph.edges[nodeId]).forEach((neighbor) => {
-            //   // console.log(neighbor, 'moveDraggedPinAndName')
-            // })
-            
-            renderTraversiblePaths()
-
-          }
-        }
-      }
-    });
-
-    canvas.current.on("object:added", function (e) {
-      if (activeTab == "traversable") {
-        handleTraversibleDropDown();
-      }
-      
-
-      const newObject = e.target;
-      
-      // let floorId = null;
-      // setFloorID((prev) => {
-      //   floorId = prev;
-      //   return prev;
-      // });
-      let validTypes = [
-        "product",
-        "location",
-        "boundary",
-        "amenity",
-        "beacon",
-        "safety",
-        "vertical",
-      ];
-
-      
-      if (activeTab === "traversable" &&  toolTraversible == "Select" ) return
-
-      if (newObject.name === "boundary") {
-        bringFabricObjectsToFrontByName(canvas, "location");
-        
-      }
-
-      if (validTypes.includes(newObject.name)) {
-        let nameWithfloodId;
-
-
-        setStoredObjects((prevStoredObjects) => {
-          const updatedStoredObjects = new Map(prevStoredObjects);
-          if (newObject.name === "boundary") {
-            let obj = findObjectByEnc_id(
-              newObject?.id?.split("_")[1],
-              "location",
-              canvas
-            );
-            if (obj) {
-              nameWithfloodId = `${obj.enc_id}_${obj.fp_id}`;
-            } else {
-              nameWithfloodId = newObject?.id;
-            }
-          } else {
-            nameWithfloodId = `${newObject.enc_id}_${newObject.fp_id}`;
-          }
-
-          // if (nameWithfloodId) {
-          if (!updatedStoredObjects.has(nameWithfloodId)) {
-            updatedStoredObjects.set(nameWithfloodId, []);
-          }
-
-
-          const objectsArray = updatedStoredObjects.get(nameWithfloodId);
-
-          const storedObjectExists = objectsArray.some((obj) => {
-            if (obj?.enc_id === newObject?.enc_id) {
-              return true;
-            }
-            return false;
-          });
-
-          if (storedObjectExists) {
-            let index;
-            if (newObject.name === "boundary") {
-              index = updatedStoredObjects
-                .get(nameWithfloodId)
-                .findIndex((item) => item.id === newObject.id); 
-            } else if (newObject.types) {
-              index = updatedStoredObjects
-                .get(nameWithfloodId)
-                .findIndex(
-                  (item) =>
-                    item.enc_id === newObject.enc_id &&
-                    item.types === "text_field"
-                );
-            } else {
-              index = updatedStoredObjects
-                .get(nameWithfloodId)
-                .findIndex(
-                  (item) =>
-                    item.enc_id === newObject.enc_id &&
-                    item.types !== "text_field"
-                );
-            }
-
-            if (index !== -1) {
-              updatedStoredObjects.get(nameWithfloodId).splice(index, 1);
-            }
-
-            updatedStoredObjects.get(nameWithfloodId).push(newObject);
-            if (newObject.name === "boundary") {
-              updatedStoredObjects.delete(newObject.id);
-            }
-
-            return updatedStoredObjects;
-          } else {
-            updatedStoredObjects.get(nameWithfloodId).push(newObject);
-            return updatedStoredObjects;
-          }
-          // } else {
-          //   return prevStoredObjects
-          // }
-        });
-
-      
-
-
-        // if (newObject.boundaryGroup) {
-        //   let array = storedObjects.get(`${newObject.enc_id}_${newObject.fp_id}`)
-        //   let bounderyobject = array.find((item) =>(item.id == `boundary_${newObject.enc_id}`))
-        //   cornersVisible.current = bounderyobject
-        // }
-        // fabricCanvas.setActiveObject(cornersVisible.current);
-
-
-      }
-
-    });
-
-    canvas.current.on("object:removed", function (e) {
-      if (activeTab == "traversable") {
-        handleTraversibleDropDown();
-      }
-    });
-
-    canvas.current.on("mouse:up", function (evt) {
-      
-      localStorage.removeItem("connectedNodePoint");
-      triggerMouseWheelManually(canvas)
-      
-
-      let selectionUp = canvas.current.getActiveObjects();
-      
-      let panToolVariabl = false;
-      setPanTool((prev) => {
-        panToolVariabl = prev;
-        return prev;
-      });
-
-      let toolActive;
-      setToolActive((prev) => {
-        toolActive = prev;
-        return prev;
-      });
-
-      
-      draggingCanvas = false;
-      mouseDown2 = false;
-      mouseDownSelect = false;
-
-
-      if (
-        activeTab == "floorDetails" &&
-        toolActive === "Select" &&
-        (evt?.target?.name === "text" || obj?.name === "text")
-      ) {
-        // console.log(evt?.target?.id, "evt?.target");
-        setSelTracingId(obj.id);
-        setSelObject(evt?.target);
-      } else if (
-        activeTab == "floorDetails" &&
-        toolActive === "Select" &&
-        (evt?.target?.name === "tracing" || obj?.name === "tracing")
-      ) {
-        setSelTracingId(obj.id);
-        setSelObject(evt?.target);
-      } else if (
-        activeTab == "floorDetails" &&
-        toolActive === "Select" &&
-        (evt?.target?.name !== "tracing" || evt?.target?.name !== "text") &&
-        selectionUp?.length === 1
-      ) {
-        // console.log("selection-up");
-        setSelTracingId();
-        setSelObject();
-      } else if (
-        activeTab == "floorDetails" &&
-        toolActive === "Rectangle" &&
-        polyObj
-      ) {
-        handleCompleteRectangleShape(evt);
-      } else if (
-        activeTab == "floorDetails" &&
-        toolActive === "Triangle" &&
-        polyObj
-      ) {
-        handleCompleteTriangleShape(evt);
-      } else if (
-        activeTab == "floorDetails" &&
-        toolActive === "Circle" &&
-        polyObj
-      ) {
-        handleCompleteCircleShape(evt);
-      } else if (
-        activeTab === "traversable" &&
-        toolTraversible == "Select" &&
-        addNewTraversablePath
-      ) {
-        canvas.current.selection = true;
-        var selection = canvas.current.getActiveObject();
-        if (!['location', 'product', 'beacon', 'amenity', 'safety', 'vertical']?.includes(selection?.name)) {
-          
-          if (selection) {
-            // Lock the transforms on the selected objects
-            selection.lockMovementX = true;
-            selection.lockMovementY = true;
-            selection.lockRotation = true;
-            selection.lockScalingX = true;
-            selection.lockScalingY = true;
-            selection.hasControls = false;
-            // selection.hasBorders = false;
-            // selection.selectable=true
-            canvas.current.renderAll();
-            setSelectedPaths(true);
-
-
-          } else {
-            setSelectedPaths(false);
-          }
-        }
-
-        const objects = canvas.current.getActiveObjects();
-        
-        
-
-        if (objects?.length > 0) {
-          findPathsFromSelectedNode(objects);
-        } else {
-          if (["path", "node"].includes(evt?.target?.name)) {
-            evt?.target.set({
-              hasBorders: false,
-              hasControls: false,
-            });
-            canvas.current.setActiveObject(evt?.target);
-            setSelectedPaths(true);
-          }
-          findPathsFromSelectedNode([evt?.target]);
-        }
-
-        let connectedNodePointObj;
-        canvas.current?.forEachObject(function (o) {
-          if (o["name"] == "node" && o["fill"] == "rgba(255,255,0,0.5)") {
-            o.set({ fill: "rgba(0,255,0,0.5)", radius: 7 });
-          }
-        });
-      } else if (
-        activeTab === "traversable" &&
-        toolTraversible == "Select" &&
-        addNewTraversablePath &&
-        selectionUp
-      ) {
-        // console.log(selectionUp, "selectionUp");
-      }
-      if (
-        activeTab == "floorDetails" &&
-        addNewFloor &&
-        toolActive === "Select" &&
-        selectionUp?.length > 1
-      ) {
-        // } else if (activeTab == "floorDetails" && toolActive === "Select") {
-        canvas.current.selection = true;
-        var selection = canvas.current.getActiveObject();
-        // console.log(selection, "getActiveObject");
-        if (
-          selection &&
-          selection?.name !== "tracing" &&
-          selection?.name !== "text"
-        ) {
-          /* These 2 are the selected tracing block move */
-          selection.lockMovementX = true;
-          selection.lockMovementY = true;
-          selection.lockRotation = true;
-          selection.lockScalingX = true;
-          selection.lockScalingY = true;
-          selection.hasControls = false;
-          selection.name = "tracing_group";
-          // selection.hasBorders = false;
-          canvas.current.renderAll();
-          setSelTracingId(true);
-          setSelObject(selection);
-        }
-      }
-      // else if (activeTab == "floorDetails" && toolActive !== "Select") {
-      //   canvas.current.selection = false;
-      // }
-
-      /* Dragged pin move from list */
-      // else if (activeTab === "products" && evt?.target.name === 'product'
-      // ) {
-      //   // console.log(evt?.target, 'evt?.target')
-      //   let obj = evt?.target;
-      //   obj.set({
-      //     selectable: true,
-      //     lockRotation: true,
-      //     lockScalingX: true,
-      //     lockScalingY: true,
-      //     hasControls: false,
-      //     hasBorders: false,
-      //   })
-      // }
-    });
-
-    canvas.current.on("mouse:move", function (evt) {
-      let toolActive;
-
-      setToolActive((prev) => {
-        toolActive = prev;
-        return prev;
-      });
-      
-
-      let mouse = canvas.current.getPointer(evt.e);
-      let panToolVariabl = false;
-
-      setPanTool((prev) => {
-        panToolVariabl = prev;
-        return prev;
-      });
-
-      let selectedObjects = []
-      setSelectedObjects((prev) => {
-        selectedObjects = prev
-        return prev
-      })
-      
-      if (mouseDownSelect && selectedObjects.length > 0) {
-        let currentPointer = canvas.current.getPointer(evt.e);
-
-        // Calculate the difference in mouse movement
-        const deltaX = currentPointer.x - mouseDownSelect.x;
-        const deltaY = currentPointer.y - mouseDownSelect.y;
-
-        selectedObjects.map((node) => {
-          
-          let mousepoint = {
-            x: node.left + deltaX,
-            y: node.top + deltaY
-          }
-          const zoom = canvas.current.getZoom();
-          const viewportTransform = canvas.current.viewportTransform;
-
-          const adjustedPosition = {
-            x: (mousepoint.x * zoom) + viewportTransform[4],
-            y: (mousepoint.y * zoom) + viewportTransform[5]
-          };
-
-
-          dragNodeOnMainPath(
-            node,
-            mousepoint,
-            graph,
-            canvas,
-            setSelTraversibleDetails,
-            renderTraversiblePaths,
-            evt,
-            false
-          )
-          
-        })
-        // mouseDownSelect = currentPointer
-      }
-
-      
-      handleCursor(activeTab, toolActive, canvas, panToolVariabl);
-      if (["location", "product", "beacon", "safety", "amenity", "vertical"].includes(evt?.target?.name) && mouseDown2) {
-        if (canvas.current.getActiveObject()) {
-          removeFabricObjectsBId(canvas, "short_path");
-          localStorage.removeItem("shortestPath")
-        }
-      }
-      
-      if (evt.e.buttons === 4 || (panToolVariabl && mouseDown2)) {
-        viewportTransform = canvas.current.viewportTransform;
-        controllPan(evt, canvas);
-        // ------------------------- navigation optimisation -------------------------
-        renderTraversiblePaths();
-
-        // ------------------------- navigation optimisation -------------------------
-
-        // ------------------------- canvas clustering code -------------------------
-        // if (canvas.current) {
-        //   clusturGroup(canvas.current)
-        // }
-
-        // if (!addNewFloor && !addNewTraversablePath) {
-          
-        setMousetrigger((prev) => {
-            if (prev === 0) {
-              prev = prev + 1
-            } else {
-              prev = prev - 1
-            }
-            return prev
-        })
-        
-        // }
-
-        // ------------------------- canvas clustering code over -------------------------
-      } else if (mouseDown) {
-        
-        if (activeTab === "floorDetails" && toolActive === "Draw") {
-          if (evt.e.shiftKey) {
-            let type = getVerticalOrHorizontalMove(prevMouseClick, {
-              x: mouse.x,
-              y: mouse.y,
-            });
-            if (type == "vertical") {
-              polyline.points[lastPt - 1] = {
-                x: prevMouseClick?.x,
-                y: mouse.y,
-              };
-            } else {
-              polyline.points[lastPt - 1] = {
-                x: mouse?.x,
-                y: prevMouseClick.y,
-              };
-            }
-          } else {
-            polyline.points[lastPt - 1] = { x: mouse?.x, y: mouse?.y };
-            polyline.dirty = true;
-            // polyline.setBoundingBox(true);
-            canvas.current.requestRenderAll();
-          }
-        } else {
-          polyline.points[lastPt - 1] = { x: mouse?.x, y: mouse?.y };
-          // polyline.setBoundingBox(true);
-        }
-
-        if (activeTab == "floorDetails" && toolActive === "Draw") {
-          /* showing length of polyline */
-          removeFabricObjectsByName(canvas, "length_text_temp");
-          showLineLength("length_text_temp", `url(${Pencil}) 1 17, auto`);
-          tracingLengthZoomLevel(canvas, canvas.current.getZoom(), mouse);
-        } else if (activeTab == "floorDetails") {
-          stopPathDrawing();
-        }
-        canvas.current.renderAll();
-      } else if (evt.e.buttons === 0) {
-        canvas.current.defaultCursor = "default";
-        canvas.current.forEachObject(function (obj) {
-          if (obj.name === "backgroundRect") {
-            obj.set("defaultCursor", "default");
-          }
-        });
-        canvas.current.renderAll();
-      }
-
-      if (activeTab === "traversable" && drawingLine) {
-        drawingLine.set({
-          x2: mouse.x,
-          y2: mouse.y,
-        });
-
-        canvas.current.renderAll();
-      } else if (
-        activeTab === "traversable" &&
-        (toolTraversible === "Draw" || toolTraversible === "sub_path")
-      ) {
-        handleCursor(activeTab, toolTraversible, canvas);
-      } else if (activeTab === "traversable" && toolTraversible === "Select") {
-        // ---------------make main path point visible  ----------------------
-        // let pathLineNodes = filterObject(graph.edges)
-        // Object.keys(pathLineNodes)?.map((item) => {
-        //   let pathNode = findObjectById(item, canvas)
-        //   canvas.current.bringToFront(pathNode)
-        // })
-        // ---------------make main path point visible  ----------------------
-
-        handleCursor(activeTab, toolTraversible, canvas);
-        const activeNode = canvas.current.getActiveObject();
-
-        if (
-          activeNode &&
-          activeNode?.name == "node" &&
-          activeNode?.id == evt?.target?.id &&
-          evt?.transform?.action == "drag"
-        ) {
-          activeNode?.id == evt?.target?.id == "node"
-          
-          
-          // dragNodeAndItsPath(
-          //   activeNode,
-          //   mouse,
-          //   graph,
-          //   canvas,
-          //   setSelTraversibleDetails,
-          //   renderTraversiblePaths
-          // );
-          if (evt?.target?.name == "node" && !evt?.target?.id.includes("_")) {
-            dragNodeOnMainPath( 
-              activeNode,
-              mouse,
-              graph,
-              canvas,
-              setSelTraversibleDetails,
-              renderTraversiblePaths,
-              evt
-            )
-          }
-
-          checkPinConnection()
-        } else if (activeNode &&
-          activeNode?.name == "path" &&
-          activeNode?.id == evt?.target?.id &&
-          evt?.transform?.action == "drag"
-        ) {
-          
-          
-          // dragPathAndItsNodes(
-          //   activeNode,
-          //   mouse,
-          //   graph,
-          //   canvas,
-          //   setSelTraversibleDetails,
-          //   renderTraversiblePaths
-          // )
-        }
-      } else if (activeTab === "traversable" && toolTraversible === "Erase") {
-        // handleCursor(activeTab, toolTraversible, canvas);
-        HoverCursorChanger(canvas, `url(${Eraser}) 1 4, auto`, "path");
-        HoverCursorChanger(canvas, `url(${Eraser}) 1 8, auto`, "node");
-      } else if (mouseDownShape && toolActive === "Rectangle") {
-        handleCreateRectangleShape(canvas, evt);
-      } else if (mouseDownShape && toolActive === "Triangle") {
-        handleCreateTriangleShape(canvas, evt);
-      } else if (mouseDownShape && toolActive === "Circle") {
-        handleCreateCircleShape(canvas, evt);
-      }
-    });
-
-    canvas.current.on("mouse:dblclick", function (e) {
-      
-      if (activeTab === "floorDetails") {
-        pts?.splice(pts.length - 1, 1);
-        completeTracingShape();
-      } else if (
-        activeTab === "locations" &&
-        !addNewLocation &&
-        !isCommonSidebarVisible &&
-        e?.target?.name === "location"
-      ) {
-        // console.log(e?.target);
-        onEditLocation(e?.target);
-      } else if (
-        activeTab === "products" &&
-        !addNewProduct &&
-        !isCommonSidebarVisible &&
-        e?.target?.name === "product"
-      ) {
-        // console.log(e?.target);
-
-        onEditProduct(e?.target);
-      } else if (
-        activeTab === "beacons" &&
-        !addNewQrCodeBeacon &&
-        !isCommonSidebarVisible &&
-        e?.target?.name === "beacon"
-      ) {
-        // console.log(e?.target);
-        setPrefilledMessage();
-        onEditBeacon(e?.target);
-      } else if (
-        activeTab === "amenitys" &&
-        !addNewAmenity &&
-        !isCommonSidebarVisible &&
-        e?.target?.name === "amenity"
-      ) {
-        // console.log(e?.target);
-
-        onEditAmenity(e?.target);
-      } else if (
-        activeTab === "safety" &&
-        !addNewSafety &&
-        !isCommonSidebarVisible &&
-        e?.target?.name === "safety"
-      ) {
-        // console.log(e?.target);
-
-        onEditSafety(e?.target);
-      } else if (activeTab === "traversable") {
-        canvas.current.discardActiveObject();
-        // stopPathDrawing();
-        // undoTraversablePath(graph.getPositions(), graph.getEdges())
-      }
-    });
-
-    canvas.current.on("selection:created", function (e) {
-      obj = canvas.current.getActiveObject();
-    
-      let panToolVariabl = false;
-      setPanTool((prev) => {
-        panToolVariabl = prev;
-        return prev;
-      });
-
-      let toolActive;
-      setToolActive((prev) => {
-        toolActive = prev;
-        return prev;
-      });
-
-      if (objPinNames?.includes(obj?.name) && obj?.name === "tracing") {
-        obj.set({ hasControls: false, hasBorders: false });
-        canvas?.current?.requestRenderAll();
-      }
-      if (activeTab == "floorDetails" && toolActive == "Select") {
-        if (
-          obj.name == "tracing" &&
-          obj.type === "polygon" &&
-          !panToolVariabl
-        ) {
-          setTracingIntialValue({
-            fill_color: e.selected[0].fill,
-            border_color: e.selected[0].stroke,
-            border_thick: e.selected[0].strokeWidth,
-          });
-          setSelTracingId(obj.id);
-          showCornerPoints(obj);
-          removeFabricObjectsByName(canvas, "tracing_obj_length");
-          const points = getPolygonVertices(obj);
-          showObjLength(obj, points, canvas);
-          tracingLengthZoomLevel(canvas, canvas.current.getZoom());
-        }
-      } else if (activeTab == "locations" && !panToolVariabl) {
-        canvas.current.forEachObject(function (obj1) {
-          if (
-            (obj1.name == "temp_loc" || obj1.id == obj?.enc_id) &&
-            obj1.type == "group"
-          ) {
-            
-            canvas.current.bringToFront(obj1);
-          }
-        });
-        if (obj.name == "boundary") {
-          // console.log("showcorners");
-          showCornerPoints(obj);
-          cornersVisible.current = obj
-          
-        } else {
-          cornersVisible.current = false
-        }
-      } else if (
-        activeTab === "traversable" &&
-        toolTraversible == "Select" &&
-        addNewTraversablePath
-      ) {
-        // const objects = canvas.current.getActiveObjects();
-        // const newColor = "black";
-        
-        // if (objects) {
-        //   // findPathsFromSelectedNode(objects)
-        // }
-
-        const objects = e.selected.filter(items => items.name === "node" && !items.id.includes("_"));
-        let currentObjects = objects.map((obj) => {
-          let currentPossition = graph.positions[obj.id]
-          return {
-            ...obj,
-            left: currentPossition.x,
-            top: currentPossition.y
-          }
-        })
-        setSelectedObjects(currentObjects)
-      }
-
-    });
-
-    canvas.current.on("selection:cleared", function () {
-      
-      obj = "";
-      setSelTracingId();
-      removeFabricObjectsByName(canvas, "tracing_obj_length");
-      
-      if (
-        activeTab === "traversable" &&
-        toolTraversible == "Select" &&
-        addNewTraversablePath
-      ) {
-        let objs = canvas.current.getObjects();
-        const newColor = "black";
-        highLightSelectedPaths(canvas, [], newColor, graph);
-      }
-      canvas.current.discardActiveObject();
-      canvas.current.renderAll();
-    });
-
-    canvas.current.on("mouse:wheel", function (options) {
-      setSelectedPaths(false);
-      handleMouseWheel(options, canvas);
-      viewportTransform = canvas.current.viewportTransform;
-      options.e.preventDefault();
-      options.e.stopPropagation();
-      // updatePolylinePointsOnZoom();
-
-      // ------------------------- navigation optimisation -------------------------
-      
-      // renderTraversiblePaths();
-      // if (!mouseDown) {
-      
-      renderTraversiblePaths(undefined, false, mouseDown) 
-      // }
-
-      if (!(canvas.current?.getZoom() > 0.85)) {
-        setSelectedObjects([])
-        canvas.current.discardActiveObject().renderAll();
-      }
-
-
-      // ------------------------- navigation optimisation -------------------------
-
-      // ------------------------- canvas clustering code -------------------------
-      
-      // if (!addNewFloor && !addNewTraversablePath) {
-        
-        setMousetrigger((prev) => {
-          if (prev === 0) {
-            prev = prev + 1
-          } else {
-            prev = prev - 1
-          }
-          return prev
-        })
-      // }
-
-      // ------------------------- canvas clustering code over -------------------------
-    });
-
-    if (canvas?.current) {
-      renderTracings();
-      renderTracingCircles();
-      renderTexts();
-      renderLocations();
-      
-      renderProducts();
-      renderBeacons();
-      renderAmenitys();
-      renderSafeties();
-      renderVerticalTransport();
-      renderTraversiblePaths();
-
-      // if (addNewFloor && activeTab == "floorDetails") {
-      //   canvasBackgroundImageHandler(selFloorPlanDtls?.plan);
-      // } else {
-      //   canvasBackgroundImageHandler(null);
-      // }
-      
-
-      if (selFloorPlanDtls?.show_image == 1 && selFloorPlanDtls?.plan) {
-        canvasBackgroundImageHandler(selFloorPlanDtls?.plan);
-      } else {
-        canvasBackgroundImageHandler(null);
-      }
-
-      // canvas?.current?.forEachObject(function (obj) {
-      //   if (["location", "product", "beacon", "safety", "amenity", "vertical", "text"].includes(obj?.name)) {
-      //      console.log(obj.name)
-      //      canvas.current?.bringToFront(obj);
-      //    }
-      //  });
-    }
-
-    // destroy fabric on unmount
-    return () => {
-      canvas?.current?.dispose();
-      canvas.current = null;
-    };
-
-  }, [
-    addNewFloor,
-    addNewLocation,
-    addNewProduct,
-    // toolActive,
-    addNewQrCodeBeacon,
-    addNewAmenity,
-    addNewSafety,
-    addNewTraversablePath,
-    addNewVertical,
-    verticalFloorId,
-    activeTab,
-    toolTraversible,
-    isCommonSidebarVisible,
-  ]);
-
-  // Function to update polyline points on zoom
-  function updatePolylinePointsOnZoom() {
-    polyline.dirty = true;
-    canvas.current.requestRenderAll();
-  }
-  
-  function storeNodeTypes(node) {
-    let result = {}
-    if (graph.connectedMainPathNodes.includes(node)) {
-      result = {
-        node,
-        type:"connectedToMainPath"
-      }
-    } else if (graph.subNode.includes(node)) { 
-      result = {
-        node,
-        type:"subNode"
-      }
-    } else if (graph.nodes.has(node) && !graph.subNode.includes(node)) {
-      result = {
-        node,
-        type:"mainNode"
-      }
-    }
-    nodeTypeArray.push(result)
-  } 
-
-
-  const moveDraggedPinAndName = (canvas, newObj, type) => {
-    let storedObjects;
-    setStoredObjects((prev) => {
-      storedObjects = prev;
-      return prev;
-    });
-    const textObj = findPinNameGroup(canvas, newObj?.enc_id, type);
-    // textObj?.set({
-    //   left: newObj?.left + 10,
-    //   top: newObj?.top - 12,
-    //   originX: "center",
-    //   originY: "center",
-    // });
-
-    // const selectedKey = `${newObj?.enc_id}_${newObj?.fp_id}`
-    // let values = storedObjects?.get(selectedKey);
-    
-    // if (values) {
-    // values.length = 0; // Clear the array while retaining the key
-    // storedObjects.get(selectedKey).push(values)
-    // }
-    
-
-    
-    // if (values) {
-    // values = values.filter(item => item.enc_id !== newObj.enc_id);
-    // Update the Map with the filtered array
-    // }
-    
-  };
 
   const checkConditionDrag = () => {
     const condition = activeTab === 'traversable'
@@ -5748,233 +3058,6 @@ const ViewFloor = () => {
     
     return condition;
   };
-
-  useEffect(() => {
-    if (canvas.current) {
-      // ------------------------- canvas clustering code -------------------------
-      if (
-        !["floorDetails", "traversable"].includes(activeTab) ||
-        (activeTab === "traversable" && isCommonSidebarVisible) ||
-        (activeTab === "floorDetails" && !addNewFloor)
-      ) {
-        // clusturGroup(canvas.current, selFloorPlanDtls?.enc_id);
-      }
-      // ------------------------- canvas clustering code over -------------------------
-
-      if (activeTab === "traversable" && !isCommonSidebarVisible) {
-        updatePinsInNavigation(canvas);
-      }
-    }
-  }, [storedObjects, selFloorPlanDtls, mouseTrigger]);
-
-  const updatePinsInNavigation = (canvas) => {
-    const pinsToKeep = new Set();
-    const combinedArray = Array.from(storedObjects?.values()).flat();
-    let viewport = updateVisibleArea(canvas.current);
-    combinedArray.forEach((object) => {
-      const validTypes = [
-        "product",
-        "location",
-        "boundary",
-        "amenity",
-        "beacon",
-        "safety",
-        "vertical",
-      ];
-      if (
-        validTypes.includes(object.name) &&
-        object.type === "group" &&
-        object.fp_id === floorID
-      ) {
-        const boundingRect = object.getBoundingRect(true);
-        const isInViewport = isObjectInViewport(boundingRect, viewport);
-        // if (showAllPins) {
-        //   if (!visibleObjects.current.has(object)) {
-        //     canvas.current.add(object);
-        //     visibleObjects.current.add(object);
-        //   }
-        //   pinsToKeep.add(object);
-        // } else
-        if (isInViewport) {
-          if (!visibleObjects.current.has(object)) {
-            canvas.current.add(object);
-            visibleObjects.current.add(object);
-          }
-          pinsToKeep.add(object);
-        } else {
-          canvas.current.remove(object);
-        }
-      }
-    });
-    
-    visibleObjects.current.forEach((obj) => {
-      if (!pinsToKeep.has(obj)) {
-        canvas.current.remove(obj);
-        visibleObjects.current.delete(obj);
-      }
-    });
-
-    // let nodes = graph.getPositions();
-    // let shortestPath = JSON.parse(localStorage.getItem("shortestPath"))
-    // let projectSettings = JSON.parse(localStorage.getItem("projectSettings"))
-
-    // if (navPathStorage.current) {
-      // pathLine(canvas, nodes, navPathStorage.current.projectSettings, navPathStorage.current.shortestPath,false);
-      // highligthNodes(canvas, navPathStorage.current.projectSettings, navPathStorage.current.shortestPath,false);
-    // }
-
-    // canvas.current.discardActiveObject();
-    canvas.current.renderAll();
-  };
-  
-
-  const filterObject = (inputObj) => {
-    // Create a new object to store the filtered results
-    let filteredObj = {};
-
-    // Iterate through each key in the input object
-    for (const [key, value] of Object.entries(inputObj)) {
-      // If the key doesn't start with "location" and none of the nested keys start with "location"
-      if (!key.includes('_') && !Object.keys(value).some(k => k.includes('_'))) {
-        filteredObj[key] = value; // Add it to the filtered object
-      }
-    }
-
-    return filteredObj;
-  };
-
-  const findPathsFromSelectedNode = (objects) => {
-    const nodes = objects.filter(obj => obj?.name === 'node');
-    if (nodes?.length > 0) {
-      let edges = graph.getEdges();
-      let pathArray = [];
-      nodes.forEach((node) => {
-        let id = node.id;
-        if (edges[id]) {
-          Object.keys(edges[id]).forEach((key) => {
-            let path1 = findObjectById(`path$${key}$${id}`, canvas);
-            let path2 = findObjectById(`path$${id}$${key}`, canvas);
-            if (path1) {
-              pathArray.push(path1);
-            }
-            if (path2) {
-              pathArray.push(path2);
-            }
-          });
-        }
-      });
-      const newColor = "#e78fbc";
-      highLightSelectedPaths(canvas, pathArray, newColor, graph);
-    } else {
-      const newColor = "#f595c4";
-      highLightSelectedPaths(canvas, objects, newColor, graph);
-    }
-  };
-
-  useEffect(() => {
-    /* For screen break issue onload */
-    if (activeTab === "settings" && canvas?.current) {
-      canvas?.current?.setHeight(canvasContainerRef.current.clientHeight);
-      canvas?.current?.setWidth(canvasContainerRef.current.clientWidth);
-      canvas?.current?.requestRenderAll();
-    }
-  }, [activeTab, canvas?.current]);
-
-  const storeOriginalProperties = () => {
-    canvas.current.forEachObject((obj) => {
-      if (!obj.originalScaleX) {
-        obj.originalScaleX = obj.scaleX;
-        obj.originalScaleY = obj.scaleY;
-        obj.originalLeft = obj.left;
-        obj.originalTop = obj.top;
-      }
-    });
-  };
-
-  const resizeAndScaleCanvas = (canvasObj) => {
-    const viewportWidth =
-      selFloorPlanDtls?.width ?? canvasContainerRef.current.clientWidth;
-    const viewportHeight =
-      selFloorPlanDtls?.height ?? canvasContainerRef.current.clientHeight;
-    const originalCanvasWidth = selFloorPlanDtls?.width || viewportWidth;
-    const originalCanvasHeight = selFloorPlanDtls?.height || viewportHeight;
-
-    const scaleRatio = Math.min(
-      viewportWidth / originalCanvasWidth,
-      viewportHeight / originalCanvasHeight
-    );
-    const bgImg = canvas.current.backgroundImage;
-
-    if (bgImg) {
-      bgImg.scaleX = bgImg.scaleY = scaleRatio;
-      bgImg.set({
-        originX: "center",
-        originY: "center",
-        left: viewportWidth / 2,
-        top: viewportHeight / 2,
-      });
-
-      const deltaX = (viewportWidth - originalCanvasWidth * scaleRatio) / 2;
-      const deltaY = (viewportHeight - originalCanvasHeight * scaleRatio) / 2;
-      canvas.current.forEachObject((obj) => {
-        obj.set({
-          scaleX: obj.originalScaleX * scaleRatio,
-          scaleY: obj.originalScaleY * scaleRatio,
-          left: obj.originalLeft * scaleRatio + deltaX,
-          top: obj.originalTop * scaleRatio + deltaY,
-        });
-        obj.setCoords();
-      });
-    } else {
-      canvas.current.forEachObject((obj) => {
-        obj.set({
-          scaleX: obj.originalScaleX * scaleRatio,
-          scaleY: obj.originalScaleY * scaleRatio,
-          left: obj.originalLeft * scaleRatio,
-          top: obj.originalTop * scaleRatio,
-        });
-        obj.setCoords();
-      });
-    }
-    canvas.current.renderAll();
-  };
-
-  useEffect(() => {
-    if (windowWidth && canvas?.current) {
-      const canvasWidth = canvasContainerRef.current.clientWidth;
-      const canvasHeight = canvasContainerRef.current.clientHeight;
-      canvas.current.setDimensions({
-        width: canvasWidth,
-        height: canvasHeight,
-      });
-      canvas.current.requestRenderAll();
-      storeOriginalProperties();
-      canvas.current.requestRenderAll();
-      const pageDiv = document.querySelector(".pageDiv");
-      if (pageDiv) {
-        pageDiv.style.height = "100%";
-      }
-    }
-  }, [windowWidth, selFloorPlanDtls]);
-
-  useEffect(() => {
-    const handleResizeWindow = () => {
-      setWindowWidth(window.innerWidth);
-    };
-    window.addEventListener("resize", handleResizeWindow);
-    return () => {
-      window.removeEventListener("resize", handleResizeWindow);
-    };
-  }, []);
-
-  useEffect(() => {
-    // handling key presses
-    document.removeEventListener("keydown", keyDownHandler);
-    document.addEventListener("keydown", keyDownHandler);
-    return () => {
-      document.removeEventListener("keydown", keyDownHandler);
-    };
-  }, [traversibleHistory, toolTraversible]);
 
   function resetCanvasTransform() {
     viewportTransform = undefined;
@@ -6193,101 +3276,6 @@ const ViewFloor = () => {
     }
   };
 
-  const undoTraversablePath = (positions, edges) => {
-    const redoStack = []; // To store undone operations
-
-    document.addEventListener("keydown", function (event) {
-      if (event.ctrlKey && event.key === "z") {
-        // Undo operation
-        // console.log("Undoing...");
-        undoOperation(positions, edges);
-      } else if (event.ctrlKey && event.key === "y") {
-        // Redo operation
-        // console.log("Redoing...");
-        redoOperation(positions, edges, redoStack);
-      }
-    });
-
-    const undoOperation = (positions, edges) => {
-      const redoPositions = positions;
-      const redoEdges = edges;
-
-      // console.log(positions, edges, "first");
-      if (positions) {
-        const keys = Object.keys(positions);
-        const lastKey = keys[keys.length - 1];
-        const lastObject = positions[lastKey];
-        // console.log(lastKey, "lastKey");
-        removeFabricObjectsBId(canvas, lastKey);
-        delete positions[lastKey];
-        graph.restorePositions(positions);
-        redoStack.push({ type: "positions", key: lastKey, data: lastObject });
-      }
-
-      if (edges) {
-        const keys = Object.keys(edges);
-        const lastKey = keys[keys.length - 1];
-        const lastObject = edges[lastKey];
-        // console.log(lastKey, "edges");
-        if (edges[lastKey]) {
-          Object.keys(edges[lastKey]).forEach((key) => {
-            delete edges[key][lastKey];
-            removeFabricObjectsBId(canvas, `path$${key}$${lastKey}`);
-            removeFabricObjectsBId(canvas, `path$${lastKey}$${key}`);
-          });
-          delete edges[lastKey];
-          graph.restoreEdges(edges);
-          redoStack.push({ type: "edges", key: lastKey, data: lastObject });
-        }
-      }
-
-      setSelTraversibleDetails((prev) => ({
-        ...prev,
-        edges_data: graph.getEdges(),
-        points_data: graph.getPositions(),
-      }));
-    };
-
-    const redoOperation = (positions, edges, redoStack) => {
-      const redoItem = redoStack.pop();
-      // console.log(redoItem);
-
-      if (redoItem) {
-        const { type, key, data } = redoItem;
-
-        if (type === "positions") {
-          // Redo positions
-          positions[key] = data;
-          // graph.restorePositions(positions);
-          onCreateNode(data, key);
-          canvas?.current.renderAll();
-        } else if (type === "edges") {
-          // Redo edges
-          edges[key] = data;
-          // addConnectionBtwnEdges()
-          // graph.restoreEdges(edges);
-        }
-        setSelTraversibleDetails((prev) => ({
-          ...prev,
-          edges_data: graph.getEdges(),
-          points_data: graph.getPositions(),
-        }));
-      }
-    };
-  };
-
-  const handleTraversibleDropDown = () => {
-    const notIncludeObjs = [
-      "tracing",
-      "path",
-      "boundary",
-      "node",
-      "line_starter_poly",
-      "short_path",
-      "text",
-    ];
-    let tmpData = [];
-  };
 
   const stopPathDrawing = () => {
     poly = false;
@@ -6315,73 +3303,6 @@ const ViewFloor = () => {
     renderTraversiblePaths()
   };
 
-  const completeTracingShape = () => {
-    let projectData;
-    setProjectSettings((prev) => {
-      projectData = prev;
-      return prev;
-    });
-
-    let strokeColor =
-      projectData?.border_color ?? selFloorPlanDtls?.border_color;
-    let strokeWidth =
-      projectData?.border_thick ?? selFloorPlanDtls?.border_thick;
-    let fillColor = projectData?.fill_color ?? selFloorPlanDtls?.fill_color;
-
-    removeFabricObjectsByName(canvas, "corner_point"); // to remove corners at polyline
-    removeFabricObjectsByName(canvas, "length_text");
-    removeFabricObjectsByName(canvas, "length_text_temp");
-    pts?.map((ele, index) => {
-      if (
-        pts[index]?.x == pts[index - 1]?.x &&
-        pts[index]?.y == pts[index - 1]?.y
-      ) {
-        pts?.splice(index, 1);
-        // console.log("remove");
-      }
-    });
-    let polyObj = new fabric.Polygon(pts, {
-      objectCaching: false,
-      id: new Date().toString(),
-      fill: fillColor,
-      stroke: strokeColor,
-      strokeWidth: Number(0),
-      originX: "center",
-      originY: "center",
-      selectable: false,
-      name: "tracing",
-      position: "absolute",
-      zIndex: 2000,
-      perPixelTargetFind: true,
-      // hoverCursor: "default",
-      hoverCursor: `url(${Pencil}) 1 17, auto`,
-      evented: true,
-      strokeLineJoin: "bevil",
-      // perPixelTargetFind: false,
-    });
-    polyObj.set("strokeWidth", Number(strokeWidth));
-    polyObj.setCoords();
-    // setSelTracingId()
-    canvas.current.forEachObject(function (obj) {
-      if (obj.name == "temp") {
-        canvas.current.remove(obj);
-      }
-    });
-    setTracings((prev) => [...prev, { vertices: pts }]);
-
-    canvas?.current?.add(polyObj);
-    canvas?.current.bringToFront(polyObj);
-    sendToBackObjects(canvas, "backgroundRect");
-
-    updateTracing(canvas, setTracings, setTracingIntialValue, postTrasing);
-    // changeSelectionAllObjs(false, "tracing");
-    poly = false;
-    polyBtn = "";
-    lastPt = 1;
-    mouseDown = false;
-    pts = [];
-    prevMouseClick = undefined;
-  };
 
   const showCornerPoints = (obj) => {
     if (obj) {
@@ -6409,252 +3330,7 @@ const ViewFloor = () => {
     }
   };
 
-  useEffect(() => {
-    // to change boundary color on selecting new color
-    let combinedArray = storedObjects?.values()
-      ? Array.from(storedObjects?.values())?.flat()
-      : [];
-    if (canvas?.current && addNewLocation) {
-      // canvas?.current?.forEachObject((ob) => {
-      combinedArray?.forEach((ob) => {
-        if (ob?.name == "boundary" && !ob?.id) {
-          const propertiesToUpdate = {
-            ...ob,
-            fill: selLocationDtls.boundary_color
-              ? hexToRgb(selLocationDtls.boundary_color, 0.4 ?? "#26A3DB")
-              : "",
-          };
-          ob.set(propertiesToUpdate);
-        } else if (
-          ob?.id === selLocationDtls?.enc_id &&
-          ob.name !== "backgroundRect"
-        ) {
-          ob.set(
-            "fill",
-            selLocationDtls.boundary_color
-              ? hexToRgb(selLocationDtls.boundary_color, 0.4 ?? "#26A3DB")
-              : ""
-          );
-        }
-        if (selLocationDtls?.location_color && ob?.name === "temp_loc") {
-          removeFabricObjectsByName(canvas, "temp_loc");
-          let fillColor =
-            selLocationDtls?.location_color ??
-            projectSettings?.location_color ??
-            "red";
 
-          let locationIcon = getLocationPin(fillColor);
-          let path = fabric.loadSVGFromString(
-            locationIcon,
-            function (objects, options) {
-              let obj = fabric.util.groupSVGElements(objects, options);
-              obj.set({
-                left: selLocationDtls?.position?.x - obj.width / 2,
-                top: selLocationDtls?.position?.y - obj.height / 2,
-                name: "temp_loc",
-                lockRotation: true,
-                lockScalingX: true,
-                lockScalingY: true,
-                hoverCursor: "grab",
-                hasControls: false,
-                hasBorders: false,
-              });
-              canvas.current.add(obj);
-            }
-          );
-        }
-        if (ob?.name === "temp_loc" && selLocationDtls?.boundary_color) {
-          ob.set("isBoundary", true);
-        }
-      });
-
-      if (selLocationDtls?.boundary_color && addNewLocation) {
-        const position = selLocationDtls.position;
-        let vertices = getSquareCoordinates(position.x, position.y, 50);
-        if (selLocationDtls?.boundary_attributes) {
-          vertices = selLocationDtls?.boundary_attributes;
-        }
-        if (boundaryAttributes) {
-          vertices = boundaryAttributes;
-        } else {
-          boundaryAttributes = vertices;
-        }
-        if (
-          !getFabricObject(
-            `boundary_${selLocationDtls.enc_id}`,
-            "id",
-            canvas
-          ) &&
-          !getFabricObject("temp_boundary", "id", canvas)
-        ) {
-          let polyObj = new fabric.Polygon(vertices, {
-            name: "boundary",
-            objectCaching: false,
-            id: "temp_boundary",
-            fill: hexToRgb(selLocationDtls.boundary_color, 0.4) ?? null,
-            stroke: "grey",
-            strokeWidth: Number(0),
-            // lockMovementX: true, lockMovementY: true,
-            originX: "center",
-            originY: "center",
-            selectable: activeTab === "locations" && addNewLocation,
-            hoverCursor: "grab",
-          });
-          
-          canvas.current.add(polyObj).renderAll();
-          showCornerPoints(polyObj);
-
-        } else {
-          //this means its on edit
-          changeSelectionById(
-            true,
-            `boundary_${selLocationDtls.enc_id}`,
-            canvas
-          );
-          const returObj = findObjectById(
-            `boundary_${selLocationDtls.enc_id}`,
-            canvas
-          );
-          
-          if (returObj) {
-            showCornerPoints(returObj);
-          } else if (obj.id === "temp_boundary") {
-            showCornerPoints(obj);
-          }
-
-          changePropertyById(
-            hexToRgb(selLocationDtls.boundary_color, 0.4),
-            "fill",
-            `boundary_${selLocationDtls.enc_id}`,
-            canvas
-          );
-
-          changePropertyById(
-            hexToRgb(selLocationDtls.boundary_color, 0.4),
-            "fill",
-            "temp_boundary",
-            canvas
-          );
-        }
-      } else {
-        removeFabricObjectsBId(canvas, "temp_boundary");
-        // boundaryAttributes = null   //this is to remove existing boundary vertices data while saving location.
-      }
-      if (!selLocationDtls || !selLocationDtls.boundary_attributes) {
-        boundaryAttributes = undefined;
-      }
-      if (selLocationDtls && !selLocationDtls.boundary_color) {
-        boundaryAttributes = undefined;
-        removeFabricObjectsBId(canvas, "temp_boundary");
-        removeFabricObjectsBId(canvas, `boundary_${selLocationDtls.enc_id}`);
-      }
-    }
-
-    if (canvas?.current && selLocationDtls?.location_color && addNewLocation) {
-      // canvas?.current?.forEachObject((obj) => {
-      combinedArray?.forEach((obj) => {
-        if (obj?.enc_id == selLocationDtls?.enc_id) {
-          removeFabricObjectsEncId(canvas, obj?.enc_id, "location");
-          RemoveObjectFromStoredObjects(obj, "location");
-          let fillColor =
-            selLocationDtls?.location_color ?? projectSettings?.location_color;
-          let locationIcon = getLocationPin(fillColor);
-          let square;
-          square = new fabric.Rect({
-            left: selLocationDtls?.position?.x - 14,
-            top: selLocationDtls.position?.y - 15,
-            width: 26,
-            height: 28,
-            fill: "transparent",
-            stroke: "red",
-            strokeWidth: 2,
-          });
-
-          let path = fabric.loadSVGFromString(
-            locationIcon,
-            function (objects, options) {
-              let obj = fabric.util.groupSVGElements(objects, options);
-
-              obj.set({
-                left: selLocationDtls?.position?.x - obj.width / 2,
-                top: selLocationDtls.position?.y - obj.height / 2,
-                selectable: true,
-                // obj?.enc_id === selLocationDtls?.enc_id ? true : false,
-                name: "location",
-                locationEdit: true,
-                id: selLocationDtls.location_name,
-                enc_id: selLocationDtls?.enc_id,
-                lockRotation: true,
-                lockScalingX: true,
-                lockScalingY: true,
-                hoverCursor: "grab",
-                hasControls: false,
-                hasBorders: false,
-              });
-              
-              if (addNewLocation) {
-                const group = new fabric.Group([square, obj], {
-                  selectable: addNewLocation ? true : false,
-                  lockRotation: true,
-                  lockScalingX: true,
-                  lockScalingY: true,
-                  hasControls: false,
-                  hasBorders: false,
-                  name: "location",
-                  id: selLocationDtls.location_name,
-                  enc_id: selLocationDtls?.enc_id,
-                  fp_id: selLocationDtls?.enc_floor_plan_id,
-                  boundaryGroup: true,
-                  hoverCursor: "grab",
-                });
-                canvas.current.add(group).renderAll();
-              } else {
-                canvas.current.add(obj).renderAll();
-              }
-              // canvas.current.bringToFront(group);
-            }
-          );
-
-          
-        }
-      });
-    }
-    triggerMouseWheelManually(canvas)
-    if (!selLocationDtls) {
-      boundaryAttributes = undefined;
-    }
-
-  }, [selLocationDtls]);
-
-  useEffect(() => {
-    /* Product pin color change dinamically */
-    let combinedArray = storedObjects?.values()
-      ? Array.from(storedObjects?.values())?.flat()
-      : [];
-    if (canvas?.current && selProductDtls?.product_color) {
-      RemoveObjectFromStoredObjects(selProductDtls)
-      updateProductPin(
-        canvas,
-        selProductDtls,
-        projectSettings,
-        setCanvasUpdated,
-        addNewProduct,
-        combinedArray
-      );
-    }
-  }, [selProductDtls]);
-
-  useEffect(() => {
-    /* Beacon color change dinamically */
-    let combinedArray = storedObjects?.values()
-      ? Array.from(storedObjects?.values())?.flat()
-      : [];
-    if (canvas?.current && selBeaconDtls?.beacon_color) {
-      RemoveObjectFromStoredObjects(selBeaconDtls)
-      
-      updateBeaconPin(canvas, selBeaconDtls, projectSettings, setCanvasUpdated, combinedArray, addNewQrCodeBeacon);
-    }
-  }, [selBeaconDtls]);
 
   const RemoveObjectFromStoredObjects = (obj, name) => {
     
@@ -6677,106 +3353,6 @@ const ViewFloor = () => {
     });
   }
 
-  useEffect(() => {
-    /* Amenity color change dinamically */
-    let combinedArray = storedObjects?.values()
-      ? Array.from(storedObjects?.values())?.flat()
-      : [];
-    if (
-      canvas?.current &&
-      (selAmenityDtls?.amenity_color || selAmenityDtls?.icon_path)
-    ) {
-
-      RemoveObjectFromStoredObjects(selAmenityDtls)
-
-      updateAmenityPin(
-        canvas,
-        selAmenityDtls,
-        projectSettings,
-        setCanvasUpdated,
-        aminityIcons,
-        combinedArray,
-        addNewAmenity
-      );
-    }
-  }, [selAmenityDtls]);
-
-  useEffect(() => {
-    /* safety color change dinamically */
-    let combinedArray = storedObjects?.values()
-      ? Array.from(storedObjects?.values())?.flat()
-      : [];
-    if (
-      canvas?.current &&
-      (selSafetyDtls?.safety_color || selSafetyDtls?.icon_path)
-    ) {
-      RemoveObjectFromStoredObjects(selSafetyDtls)
-      updateSafetyPin(
-        canvas,
-        selSafetyDtls,
-        projectSettings,
-        setCanvasUpdated,
-        safetyIcons,
-        combinedArray,
-        addNewSafety
-      );
-    }
-  }, [selSafetyDtls]);
-
-  useEffect(() => {
-    /* vertical color change dinamically */
-    let combinedArray = storedObjects?.values()
-      ? Array.from(storedObjects?.values())?.flat()
-      : [];
-    let selVerticalDtlsVar
-    setselVerticalDtls(prev => {
-      selVerticalDtlsVar = prev
-      return prev
-    })
-    if (
-      canvas?.current &&
-      (selVerticalDtls?.vt_color || selVerticalDtls?.icon_path)
-    ) {
-      // console.log(selVerticalDtls, selVerticalDtlsVar, "selVerticalDtlsVar")
-      if (selVerticalDtls?.transport_details) {
-        RemoveObjectFromStoredObjects(selVerticalDtls?.transport_details[0], "vertical")
-      }
-      updateVerticalPin(canvas, selVerticalDtls, projectSettings, combinedArray);
-    }
-  }, [selVerticalDtls]);
-
-  useEffect(() => {
-    if (toolTraversible == "Erase") {
-      HoverCursorChanger(canvas, "grab", "node");
-      HoverCursorChanger(canvas, "grab", "path");
-      // canvas.current.selection = true;
-      setSelectedPaths(false);
-      obj = "";
-      changeFabricObjectSelectionByName(canvas, "node", false);
-      changeFabricObjectSelectionByName(canvas, "path", false);
-    } else if (toolTraversible == "Select") {
-      canvas.current.selection = true;
-      changeFabricObjectSelectionByName(canvas, "node", true);
-      changeFabricObjectSelectionByName(canvas, "path", true);
-    } else {
-      stopPathDrawing();
-      canvas.current.selection = false;
-      changeFabricObjectSelectionByName(canvas, "node", false);
-      changeFabricObjectSelectionByName(canvas, "path", false);
-      setSelectedPaths(false);
-      obj = "";
-    }
-  }, [toolTraversible]);
-
-  useEffect(() => {
-    if (addNewFloor) {
-      if (toolActive === "Select") {
-        canvas.current.selection = true;
-      } else {
-        canvas.current.selection = false;
-      }
-    }
-  }, [toolActive, addNewFloor])
 
   const textStyleHandler = (type, value) => {
     const obj = canvas.current.getActiveObject();
@@ -6879,120 +3455,7 @@ const ViewFloor = () => {
     );
   };
 
-  useEffect(() => {
-    if (canvas.current && !selLocationDtls?.enc_id) {
-      removeFabricObjectsByName(canvas, "location");
-      removeFabricObjectsByName(canvas, "boundary");
-      removeFabricObjectsByName(canvas, "temp_loc");
-      renderLocations();
-      renderTraversiblePaths();
-    }
-  }, [locations, activeTab]);
 
-  useEffect(() => {
-    if (canvas.current && !selProductDtls?.enc_id) {
-      removeFabricObjectsByName(canvas, "product");
-      removeFabricObjectsByName(canvas, "temp_prod");
-      renderProducts();
-    }
-  }, [products, activeTab]);
-
-  useEffect(() => {
-    if (canvas.current && !selBeaconDtls?.enc_id) {
-      removeFabricObjectsByName(canvas, "beacon");
-      removeFabricObjectsByName(canvas, "temp_beacon");
-      renderBeacons();
-    }
-  }, [beacons, activeTab]);
-
-  useEffect(() => {
-    if (canvas.current && !selAmenityDtls?.enc_id) {
-      removeFabricObjectsByName(canvas, "amenity");
-      removeFabricObjectsByName(canvas, "temp_amenity");
-      renderAmenitys();
-    }
-  }, [amenities, activeTab]);
-
-  useEffect(() => {
-    if (canvas.current && !selSafetyDtls?.enc_id) {
-      removeFabricObjectsByName(canvas, "safety");
-      removeFabricObjectsByName(canvas, "temp_safety");
-      renderSafeties();
-    }
-  }, [safeties, activeTab]);
-
-  useEffect(() => {
-    if (canvas.current) {
-      removeFabricObjectsByName(canvas, "vertical");
-      renderVerticalTransport();
-    }
-  }, [verticalTransports, activeTab]);
-
-  useEffect(() => {
-    if (canvas.current) {
-      if (!addNewFloor) {
-        // to prevent rerender on tracing modifying.
-        removeFabricObjectsByName(canvas, "tracing");
-        removeFabricObjectsByName(canvas, "text");
-        renderTracings();
-        renderTracingCircles()
-        renderTexts();
-
-      }
-      removeFabricObjectsByName(canvas, "location");
-      removeFabricObjectsByName(canvas, "boundary");
-      renderLocations();
-
-      removeFabricObjectsByName(canvas, "product");
-      renderProducts();
-
-      removeFabricObjectsByName(canvas, "beacon");
-      renderBeacons();
-
-      removeFabricObjectsByName(canvas, "amenity");
-      renderAmenitys();
-
-      removeFabricObjectsByName(canvas, "safety");
-      renderSafeties();
-
-      removeFabricObjectsByName(canvas, "vertical");
-      renderVerticalTransport();
-
-      removeFabricObjectsBId(canvas, "short_path");
-      localStorage.removeItem("shortestPath")
-      
-    }
-  }, [tracings, activeTab, texts, tracingCircle]);
-
-  useEffect(() => {
-    if (canvas.current) {
-      // if (selFloorPlanDtls && !addNewFloor && activeTab == "floorDetails") {
-      // canvasBackgroundImageHandler(selFloorPlanDtls?.plan ?? null);
-      if (selFloorPlanDtls?.show_image == 1 && selFloorPlanDtls?.plan) {
-        // console.log(selFloorPlanDtls?.zoom, "dasdasdsa");
-        if (selFloorPlanDtls?.zoom) {
-          canvasBackgroundImageHandler(selFloorPlanDtls?.plan,selFloorPlanDtls?.zoom);
-        } else {
-          canvasBackgroundImageHandler(selFloorPlanDtls?.plan);
-        }
-      } else {
-        canvasBackgroundImageHandler(null);
-      }
-      // }
-
-      // if (!selFloorPlanDtls?.plan) {
-      if (addNewFloor) {
-        removeFabricObjectsByName(canvas, "product");
-        removeFabricObjectsByName(canvas, "location");
-        removeFabricObjectsByName(canvas, "boundary");
-        removeFabricObjectsByName(canvas, "amenity");
-        removeFabricObjectsByName(canvas, "beacon");
-        removeFabricObjectsByName(canvas, "safety");
-        removeFabricObjectsBId(canvas, "short_path");
-        localStorage.removeItem("shortestPath")
-      }
-    }
-  }, [selFloorPlanDtls]);
 
   function polygonPositionHandler(dim, finalMatrix, fabricObject) {
     var x = fabricObject.points[this.pointIndex].x - fabricObject.pathOffset.x,
@@ -7426,15 +3889,6 @@ const ViewFloor = () => {
     }
   }
 
-  useEffect(() => {
-    
-    if (selFloorPlanDtls?.plan && selFloorPlanDtls?.zoom && selFloorPlanDtls?.show_image == 1) {
-      canvasBackgroundImageHandler(
-        selFloorPlanDtls?.plan,
-        selFloorPlanDtls?.zoom
-      );
-    }
-  }, [selFloorPlanDtls]);
 
   const onChangeTracingMetadata = (value, type) => {
     let ppty = "";
@@ -8444,7 +4898,7 @@ const ViewFloor = () => {
 
   const handleEndDirectionclick = () => { 
     setSelTraversibleDetails();
-    setFloorID(selFloorPlanDtls?.enc_id);
+    // setFloorID(selFloorPlanDtls?.enc_id);
     removeFabricObjectsBId(canvas, "short_path");
     removeFabricObjectsByName(canvas, "highlight_node");
     removeFabricObjectsByName(canvas, "short_path_node");
@@ -8504,19 +4958,26 @@ const ViewFloor = () => {
   }
 
   const switchFloor = async (id, type) => {
-    setOverlay(true)
-    setToolTraversible("Draw");
-    const nextFloor = floorPlanSelect?.find((item) => id == item?.enc_id);
-    setDropDownFloor({
+    // setOverlay(true)
+    // setToolTraversible("Draw");
+    const nextFloor = floorList?.find((item) => id == item?.enc_id);
+    // setDropDownFloor({
+    //   value: nextFloor?.enc_id,
+    //   label: nextFloor?.floor_plan,
+    //   id: nextFloor?.enc_id,
+    //   plan: nextFloor?.plan,
+    //   dec_id: nextFloor?.dec_id,
+    // });
+    dispatch(setCurrentFloor({
       value: nextFloor?.enc_id,
       label: nextFloor?.floor_plan,
       id: nextFloor?.enc_id,
       plan: nextFloor?.plan,
       dec_id: nextFloor?.dec_id,
-    });
+    }))
     let returnValue;
-    returnValue = await switchFloorPlan(nextFloor?.enc_id, type);
-    handlePontsAndEdges(nextFloor?.enc_id)
+    // returnValue = await switchFloorPlan(nextFloor?.enc_id, type);
+    // handlePontsAndEdges(nextFloor?.enc_id)
     return returnValue;
   };
 
@@ -8638,16 +5099,6 @@ const ViewFloor = () => {
     return Object.values(uniqueObjects);
   }
 
-  useEffect(() => {
-    if (selTraversibleDetails?.post === true) {
-      uploadTraversibleData(
-        selFloorPlanDtls,
-        graph,
-        handleEnableDisable,
-        getProjectById
-      );
-    }
-  }, [selTraversibleDetails]);
 
   const onExitClick = () => {
     if (isDirty) {
@@ -8723,8 +5174,10 @@ const ViewFloor = () => {
         ...newValue,
         width: data?.width ? Number(data?.width) : null,
         height: data?.height ? Number(data?.height) : null,
+        location: [75.78044926997217, 11.258814157509704],
       };
-
+ 
+      dispatch(setProjectData(value))
       setProjectSettingData(value);
       setProjectSettings(value);
       setTracingIntialValue(value);
@@ -8850,7 +5303,7 @@ const ViewFloor = () => {
   };
 
   useEffect(() => {
-    handleEnableDisable();
+    // handleEnableDisable();
   }, [typeId, floorID]);
 
   const handleDiscard = async () => {
@@ -8864,12 +5317,12 @@ const ViewFloor = () => {
       handleEnableDisable();
       if (typeId == 1) {
         getProjectById();
-        setFloorID(null);
+        // setFloorID(null);
         getFloorDropdown("discard");
       }
       if (typeId > 1) {
         onSideBarIconClick(activeTab);
-        setFloorID(null);
+        // setFloorID(null);
 
         getFloorDropdown("discard");
         let floor;
@@ -9152,7 +5605,7 @@ const ViewFloor = () => {
                 getVerticalTransportList={getVerticalTransportList}
                 setProducts={setProducts}
                 products={products}
-                setFloorID={setFloorID}
+                setFloorID={()=>{}}
                 addNewFloor={addNewFloor}
                 setAddNewFloor={setAddNewFloor}
                 onSideBarIconClick={onSideBarIconClick}
@@ -9208,10 +5661,10 @@ const ViewFloor = () => {
                 savingTimer={savingTimer}
                 handleEnableDisable={handleEnableDisable}
                 getFloorPlanByid={getFloorPlanByid}
-                setFloorID={setFloorID}
+                setFloorID={()=>{}}
                 setDropDownFloor={setDropDownFloor}
                 getFloorDropdown={getFloorDropdown}
-                floorPlanSelect={floorPlanSelect}
+                floorPlanSelect={floorList}
                 getProjectById={getProjectById}
                 setCroppedImage={setCroppedImage}
                 croppedImage={croppedImage}
@@ -9256,13 +5709,13 @@ const ViewFloor = () => {
                 handleEnableDisable={handleEnableDisable}
                 totalPinsUsed={totalPinsUsed}
                 totalPinCount={totalPinCount}
-                setFloorID={setFloorID}
+                setFloorID={()=>{}}
                 locationList={locationList}
                 getFloorPlanByid={getFloorPlanByid}
                 setSearchTerm={setSearchTerm}
                 searchTerm={searchTerm}
                 setCommonSidebarVisible={setCommonSidebarVisible}
-                floorPlanSelect={floorPlanSelect}
+                floorPlanSelect={floorList}
                 setIsDirty={setIsDirty}
                 isDirty={isDirty}
                 setPanTool={setPanTool}
@@ -9305,7 +5758,7 @@ const ViewFloor = () => {
                 handleEnableDisable={handleEnableDisable}
                 totalPinsUsed={totalPinsUsed}
                 totalPinCount={totalPinCount}
-                setFloorID={setFloorID}
+                setFloorID={()=>{}}
                 productList={productList}
                 getFloorPlanByid={getFloorPlanByid}
                 setSearchTerm={setSearchTerm}
@@ -9344,7 +5797,7 @@ const ViewFloor = () => {
                 handleEnableDisable={handleEnableDisable}
                 totalPinsUsed={totalPinsUsed}
                 totalPinCount={totalPinCount}
-                setFloorID={setFloorID}
+                setFloorID={()=>{}}
                 beaconList={beaconList}
                 getFloorPlanByid={getFloorPlanByid}
                 setSearchTerm={setSearchTerm}
@@ -9385,7 +5838,7 @@ const ViewFloor = () => {
                 setSavingTimer={setSavingTimer}
                 savingTimer={savingTimer}
                 handleEnableDisable={handleEnableDisable}
-                setFloorID={setFloorID}
+                setFloorID={()=>{}}
                 amenityList={amenityList}
                 getFloorPlanByid={getFloorPlanByid}
                 setSearchTerm={setSearchTerm}
@@ -9422,7 +5875,7 @@ const ViewFloor = () => {
                 setSavingTimer={setSavingTimer}
                 savingTimer={savingTimer}
                 handleEnableDisable={handleEnableDisable}
-                setFloorID={setFloorID}
+                setFloorID={()=>{}}
                 safetyList={safetyList}
                 getFloorPlanByid={getFloorPlanByid}
                 setSearchTerm={setSearchTerm}
@@ -9459,7 +5912,7 @@ const ViewFloor = () => {
                 setActiveTab={setActiveTab}
                 showPath={showPath}
                 allVerticalTransports={allVerticalTransports}
-                setFloorID={setFloorID}
+                setFloorID={()=>{}}
                 handleEndDirectionclick={handleEndDirectionclick}
                 setPanTool={setPanTool}
                 canvas={canvas}
@@ -9479,7 +5932,7 @@ const ViewFloor = () => {
               ChangeSvgColorPassingBE={ChangeSvgColorPassingBE}
               onSelectVerticalTransport={onSelectVerticalTransport}
               allVerticalTransports={allVerticalTransports}
-              destinationData={floorPlanSelect?.find(
+              destinationData={floorList?.find(
                 (item) => item?.enc_id == selTraversibleDetails?.to_floor_id
               )}
               currentFloorVTS={verticalTransports}
@@ -9526,7 +5979,7 @@ const ViewFloor = () => {
                 isDirty={isDirty}
                 setPanTool={setPanTool}
                 setIsValid={setIsValid}
-                setFloorID={setFloorID}
+                setFloorID={()=>{}}
                 resetCanvasTransform={resetCanvasTransform}
                 setStoredObjects={setStoredObjects}
               />
@@ -9553,7 +6006,7 @@ const ViewFloor = () => {
                 setSavingTimer={setSavingTimer}
                 savingTimer={savingTimer}
                 handleEnableDisable={handleEnableDisable}
-                setFloorID={setFloorID}
+                setFloorID={()=>{}}
                 adList={adList}
                 getFloorPlanByid={getFloorPlanByid}
                 setSearchTerm={setSearchTerm}
@@ -9569,7 +6022,7 @@ const ViewFloor = () => {
           </>
         )}
 
-        <div className="bp-sub-2" style={{position:"relative"}} ref={canvasContainerRef}>
+        <div className="bp-sub-2" style={{position:"relative"}} ref={canvasContainerRef}> 
           {overlay && <Overlay projectSettings={projectSettings}/>}
           {activeTab === "floorDetails" && addNewFloor && (
             <FloorPlanDtls
@@ -9594,7 +6047,7 @@ const ViewFloor = () => {
               activeText={activeText}
               setProjectSettings={setProjectSettings}
               setPanTool={setPanTool}
-              resizeAndScaleCanvas={resizeAndScaleCanvas}
+              // resizeAndScaleCanvas={resizeAndScaleCanvas}
               setTextStyleValue={setTextStyleValue}
               onSelectReferanceImage={onSelectReferanceImage}
               importSvg={importSvg}
@@ -9650,7 +6103,7 @@ const ViewFloor = () => {
               height: "100%",
               overflow: "auto",
             }}
-            ref={drop}
+            ref={drop} 
             id="map-div"
             onClick={onMapDivClick}
           >
@@ -9666,7 +6119,7 @@ const ViewFloor = () => {
                 canvasCenter={canvasCenter}
                 currentZoom={currentZoom}
               /> */}
-              <MapComponent/>
+              <NewComponent/>
 
             </div>
 
@@ -9685,7 +6138,7 @@ const ViewFloor = () => {
             {!addNewFloor && (
               <div className={`bp-select-wrpr`}>
                 <CustomSelect
-                  options={floorPlanSelect.map((floor) => ({
+                  options={floorList.map((floor) => ({
                     value: floor.enc_id,
                     label: floor?.floor_plan,
                     id: floor?.enc_id,
@@ -9697,7 +6150,7 @@ const ViewFloor = () => {
                       ? onLevelDDChangeVT
                       : onLevelDDChange
                   }
-                  selectedOption={dropDownFloor}
+                  selectedOption={currentFloor}
                   value={floorID}
                   from="floorplan"
                 />

@@ -22,6 +22,7 @@ import { handleBlockEnter } from '../Helpers/constants/constant';
 import { deletePinApi, removePinApi } from '../Helpers/apis/otherApis';
 import { useDrag } from 'react-dnd';
 import UndraggedDiv from '../Helpers/modal/UndraggedDiv';
+import { useActiveTab } from '../../../components/map/components/hooks/useActiveTab';
 
 
 const ValidationSchema = Yup.object().shape({
@@ -60,6 +61,7 @@ const AmenitySideBar = ({
     onEditAmenity
 }) => {
 
+    useActiveTab('amenity');
     const [mapDivSize, setMapDivSize] = useState(window.innerHeight - 70)
     const [backClick, setBackClick] = useState(false);
     const [color, setColor] = useState(null);

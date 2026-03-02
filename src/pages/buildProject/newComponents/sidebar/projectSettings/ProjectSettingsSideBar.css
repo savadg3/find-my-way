@@ -1,0 +1,13 @@
+/* .bar{
+    padding: 0;
+}
+.backArrow{
+margin: 0;
+}
+.customScroll{
+    padding: 0 !important;
+} */
+
+.bar{
+    min-width: 410px;
+}

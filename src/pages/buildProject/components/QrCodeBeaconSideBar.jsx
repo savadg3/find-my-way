@@ -7,7 +7,7 @@ import { FaInfo } from 'react-icons/fa';
 import { IoMdClose } from 'react-icons/io'
 import { BeaconSvg } from "../CustomSvg";
 import { postRequest, getRequest, deleteRequest, getRequestForDownload } from '../../../hooks/axiosClient';
-import { encode, getCurrentUser } from '../../../helpers/utils';
+import { decode, encode, getCurrentUser } from '../../../helpers/utils';
 import { SetBackEndErrorsAPi } from '../../../hooks/setBEerror';
 import * as Yup from 'yup';
 import { toast } from "react-toastify";
@@ -24,7 +24,14 @@ import { GenerateQrModal,  ProPinModal } from '../Helpers/modal/proPinModal';
 import { useDrag } from 'react-dnd';
 import { removeFabricObjectsEncId } from '../Helpers/bringFabricObjects';
 import UndraggedDiv from '../Helpers/modal/UndraggedDiv';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
+import { useActiveTab } from '../../../components/map/components/hooks/useActiveTab';
+import { useSelector } from 'react-redux';
+import { setCurrentFloor, setEditingPinId, setPinsByCategory } from '../../../store/slices/projectItemSlice';
+import { useDispatch } from 'react-redux';
+import useFlyToPin from '../../../components/map/components/hooks/useFlyToPin';
+import { fetchPinData } from '../../../components/map/components/hooks/useLoadPins';
+// import { useMapContext } from '../../../components/map/components/contexts/MapContext';
 
 
 
@@ -44,7 +51,7 @@ messageContents += `Follow the displayed directions to reach your desired produc
 `;
 
 const QrcodeBeaconSideBar = ({
-    id,
+    // id,
     floorID,
     setAddNew,
     addNew,
@@ -59,7 +66,7 @@ const QrcodeBeaconSideBar = ({
     handleEnableDisable,
     totalPinsUsed,
     setFloorID,
-    beaconList,
+    // beaconList,
     getFloorPlanByid,
     searchTerm,
     setSearchTerm,
@@ -75,7 +82,23 @@ const QrcodeBeaconSideBar = ({
     onEditBeacon
 }) => {
 
+    useActiveTab('beacon'); 
+    const editingPinId = useSelector(state => state.api.editingPinId);
+    const allPins      = useSelector(state => state.api.allPins);
+    const pinCount     = useSelector(state => state.api.pinCount); 
+    const floorList    = useSelector(state => state.api.floorList); 
+    const flyToPin     = useFlyToPin();
+    const dispatch     = useDispatch();  
+    const beaconList   = allPins?.beacon ?? [] 
+    let { id }         = useParams()
+    id                 = id && decode(id);
+ 
 
+    useEffect(()=>{
+        if(!addNew && editingPinId){
+            dispatch(setEditingPinId(null))
+        }
+    },[addNew])
 
     const [mapDivSize, setMapDivSize] = useState(window.innerHeight - 100)
     const [planDetails, setPlanDetails] = useState();
@@ -91,40 +114,17 @@ const QrcodeBeaconSideBar = ({
     const [openPicker, setOpenPicker] = useState(null);
     const navigate = useNavigate()
 
-    const addBeaconClick = () => {
-        // if (totalPinsUsed?.used_locations == totalPinsUsed?.total_locations) {
-        //     PlanExpiryDetails(id, setPlanDetails, setModalPlan);
-        // } else if (totalPinsUsed?.used_locations == totalPinsUsed?.total_locations) {
-        //     PlanExpiryDetails(id, setPlanDetails, setModalPlan);
-        // } else if (totalPinsUsed?.used_locations == totalPinsUsed?.total_locations) {
-        //     PlanExpiryDetails(id, setPlanDetails, setModalPlan);
-        // } else {
-        //     addClick();
-        // }
+    const addBeaconClick = () => { 
         addClick();
         document.getElementById("beaconSubmitBtn")?.click();
     }
 
     const planCheck = () => {
-        if (totalPinsUsed?.used_locations == totalPinsUsed?.total_locations) {
+        if (pinCount?.used_locations == pinCount?.total_locations) {
             PlanExpiryDetails(id, setPlanDetails, setModalPlan);
-            setTimeout(() => {
-                removeFabricObjectsEncId(canvas, selBeaconDtls?.enc_id, 'beacon')
-            }, 2000);
-            setSavingTimer(false)
-            return
-        } else if (totalPinsUsed?.used_locations == totalPinsUsed?.total_locations) {
-            PlanExpiryDetails(id, setPlanDetails, setModalPlan);
-            setTimeout(() => {
-                removeFabricObjectsEncId(canvas, selBeaconDtls?.enc_id, 'beacon')
-            }, 2000);
-            setSavingTimer(false)
-
-        } else if (totalPinsUsed?.used_locations == totalPinsUsed?.total_locations) {
-            PlanExpiryDetails(id, setPlanDetails, setModalPlan);
-            setTimeout(() => {
-                removeFabricObjectsEncId(canvas, selBeaconDtls?.enc_id, 'beacon')
-            }, 2000);
+            // setTimeout(() => {
+            //     removeFabricObjectsEncId(canvas, selBeaconDtls?.enc_id, 'beacon')
+            // }, 2000);
             setSavingTimer(false)
             return
         } else {
@@ -161,8 +161,7 @@ const QrcodeBeaconSideBar = ({
             // check plan after bulk upload and drop pin
             planCheck()
             return
-        }
-        console.log(values, 'values')
+        } 
 
         let value = {
             customer_id: projectSettings?.enc_customer_id ?? getCurrentUser()?.user?.common_id,
@@ -201,7 +200,15 @@ const QrcodeBeaconSideBar = ({
                 } else {
                     setSelBeaconDtls()
                 }
-                getBeaconList(floorID)
+
+                let beacons = await fetchPinData(id, ['beacon']);
+                dispatch(
+                    setPinsByCategory({
+                        beacon : beacons?.beacon
+                    }
+                ));
+
+                // getBeaconList(floorID)
                 handleEnableDisable();
                 setIsDirty(false);
                 setTimeout(() => {
@@ -285,15 +292,20 @@ const QrcodeBeaconSideBar = ({
             icon: "warning",
             buttons: orderedButtons
         })
-            .then((value) => {
+            .then(async(value) => {
                 switch (value) {
                     case "Yes":
-                        deletePinApi(`qr-beacon/${row?.enc_id}`, setFloorID, floorID, getBeaconList, handleEnableDisable, projectSettings)
-                        setStoredObjects((prev) => {
-                            let updatedObjects = prev
-                            updatedObjects.delete(`${row?.enc_id}_${row?.fp_id}`)
-                            return updatedObjects
-                        })
+                        let beaconList = await deletePinApi(`qr-beacon/${row?.enc_id}`, setFloorID, floorID, getBeaconList, handleEnableDisable, projectSettings, id, ['beacon'])
+                        dispatch(
+                            setPinsByCategory({
+                                beacon : beaconList?.beacon
+                            }
+                        ));
+                        // setStoredObjects((prev) => {
+                        //     let updatedObjects = prev
+                        //     updatedObjects.delete(`${row?.enc_id}_${row?.fp_id}`)
+                        //     return updatedObjects
+                        // })
                         break;
                     case "Remove":
                         const para = {
@@ -301,12 +313,17 @@ const QrcodeBeaconSideBar = ({
                             id: row?.enc_id
                         }
 
-                        removePinApi(`remove-pin`, para, setFloorID, floorID, getBeaconList, handleEnableDisable, projectSettings)
-                        setStoredObjects((prev) => {
-                            let updatedObjects = prev
-                            updatedObjects.delete(`${row?.enc_id}_${row?.fp_id}`)
-                            return updatedObjects
-                        })
+                        let beaconLists = removePinApi(`remove-pin`, para, setFloorID, floorID, getBeaconList, handleEnableDisable, projectSettings, id, ['beacon'])
+                        dispatch(
+                             setPinsByCategory({
+                                beacon : beaconLists?.beacon
+                            }
+                        ));
+                        // setStoredObjects((prev) => {
+                        //     let updatedObjects = prev
+                        //     updatedObjects.delete(`${row?.enc_id}_${row?.fp_id}`)
+                        //     return updatedObjects
+                        // })
                         break;
                     default:
                         break;
@@ -316,8 +333,24 @@ const QrcodeBeaconSideBar = ({
 
 
     const editClick = (item) => {
+        // dispatch(setEditingPinId(2));
         setPrefilledMessage();
         setPanTool(false)
+
+        if (item?.positions) {
+            let floor = floorList.find(itm => itm.enc_id == item.fp_id)
+            dispatch(setCurrentFloor({
+                value: floor.enc_id,
+                label: floor?.floor_plan,
+                id: floor?.enc_id,
+                plan: floor?.plan,
+                dec_id: floor?.dec_id,
+            }));
+            dispatch(setEditingPinId(item.enc_id));  
+            flyToPin(JSON.parse(item?.positions));    
+        }
+
+
         if (item.position) {
             getFloorPlanByid(item?.fp_id, 'beacons', "0", "default", item);
         } else {
@@ -330,7 +363,7 @@ const QrcodeBeaconSideBar = ({
     const BeaconItems = ({ item, index, }) => {
         // console.log(item, 'item')
         const id = item.enc_id;
-        const canDrag = (item?.position === null)
+        const canDrag = (!item?.positions || item?.positions === null)
         const [{ isDragging }, drag, preview] = useDrag({
             type: 'BeaconPin',
             item: () => {

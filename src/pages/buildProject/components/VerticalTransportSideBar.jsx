@@ -20,6 +20,11 @@ import { GoPlus } from "react-icons/go";
 import ColorPicker from '../../../components/common/Colorpicker';
 import { getVerticalTransportIconDropDown } from '../Helpers/apis/getPins';
 import { handleBlockEnter } from '../Helpers/constants/constant';
+import { useActiveTab } from '../../../components/map/components/hooks/useActiveTab';
+import { useSelector } from 'react-redux';
+import { setEditingPinId } from '../../../store/slices/projectItemSlice';
+import { useDispatch } from 'react-redux';
+// import { useMapContext } from '../../../components/map/components/contexts/MapContext';
 
 
 const ValidationSchema = Yup.object().shape({
@@ -97,6 +102,16 @@ const VerticalTransportSideBar = ({
     setStoredObjects
 
 }) => {
+
+    useActiveTab('vertical_transport');
+     const dispatch = useDispatch();
+    const editingPinId = useSelector(state => state.api.editingPinId); 
+    useEffect(()=>{
+        if(!addNew && editingPinId){
+            dispatch(setEditingPinId(null))
+        }
+    },[addNew])
+    
     const [mapDivSize, setMapDivSize] = useState(window.innerHeight - 70);
     const [addNewPin, setAddNewPin] = useState(false)
     const [floorPlanSelect, setFloorPlanSelect] = useState([]);
@@ -191,7 +206,7 @@ const VerticalTransportSideBar = ({
 
     const addNewPins = (setFieldValue, values) => {
         const lastAddedPin = values?.connectionPins[values?.connectionPins.length - 1]
-        console.log(lastAddedPin)
+        
         if (values?.connectionPins.length > 0) {
             if (lastAddedPin?.value && lastAddedPin?.position) {
                 setFieldValue(`connectionPins[${values?.connectionPins.length}]`, '')
@@ -311,7 +326,7 @@ const VerticalTransportSideBar = ({
                         <p>{item?.vt_name}</p>
                     </div>
                     <div className='flex-grow-1' />
-                    <div className=' edit-square magical-words' onClick={() => { onEditVerticaltransport(item); setPanTool(false); }}  >
+                    <div className=' edit-square magical-words' onClick={() => {dispatch(setEditingPinId(8)); onEditVerticaltransport(item); setPanTool(false); }}  >
                         <BiSolidPencil fontSize={15} />
                     </div>
                 </div>

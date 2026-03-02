@@ -44,6 +44,26 @@ import AutoConnectComponent from '../pages/viewFloordummy';
 import { ProtectedRoute } from '../helpers/authGuard';
 import CanvasEditor from '../pages/Editor/CanvasEditor';
 import IdleLayout from './IdleLayout';
+import ProjectLayout from '../layouts/ProjectLayout';
+import SideBar from '../pages/buildProject/newComponents/sidebar/Sidebar';
+import ProjectSettingsSideBar from '../pages/buildProject/newComponents/sidebar/projectSettings/ProjectSettingsSideBar';
+import FloorPlan from '../pages/buildProject/newComponents/sidebar/floorplan/Floorplan';
+import FloorPlanView from '../pages/buildProject/newComponents/sidebar/floorplan/FloorPlanView';
+import LocationSidebar from '../pages/buildProject/newComponents/sidebar/location/Location';
+import EditLocation from '../pages/buildProject/newComponents/sidebar/location/EditLocation';
+import ProductSideBar from '../pages/buildProject/newComponents/sidebar/product/Product';
+import EditProduct from '../pages/buildProject/newComponents/sidebar/product/EditProduct';
+import BeaconSideBar from '../pages/buildProject/newComponents/sidebar/beacon/Beacon';
+import EditBeacon from '../pages/buildProject/newComponents/sidebar/beacon/EditBeacon';
+import AmenitySideBar from '../pages/buildProject/newComponents/sidebar/amenity/Amenity';
+import EditAmenity from '../pages/buildProject/newComponents/sidebar/amenity/EditAmenity';
+import SafetySideBar from '../pages/buildProject/newComponents/sidebar/safety/Safety';
+import EditSafety from '../pages/buildProject/newComponents/sidebar/safety/EditSafety';
+import VerticalSideBar from '../pages/buildProject/newComponents/sidebar/verticalTransport/Vertical';
+import EditVertical from '../pages/buildProject/newComponents/sidebar/verticalTransport/EditVertical';
+import Navigation from '../pages/buildProject/newComponents/sidebar/navigation/Navigation';
+import AdvertisingSideBar from '../pages/buildProject/newComponents/sidebar/advertising/Advertising';
+import EditAdvertising from '../pages/buildProject/newComponents/sidebar/advertising/EditAdvertising';
 
 
 
@@ -63,6 +83,35 @@ const AppRoutes = () => {
 
 
                     <Route path="register" element={<Register />} />
+                    
+                    {/* <Route path="/project/:id">
+                        <Route index element={<ProjectLayout />} />
+                        <Route path=":tab" element={<ProjectLayout />} >
+                            <Route path=":subid"/>
+                        </Route>
+                    </Route> */}
+                    <Route path="/project/:id" element={<ProjectLayout />}>
+                        <Route index element={<SideBar />} />
+                        <Route path="settings" element={<ProjectSettingsSideBar />} /> 
+                        <Route path="floor-plan" element={<FloorPlan />} />
+                        <Route path="floor-plan/:subid" element={<FloorPlanView />} />
+                        <Route path="location" element={<LocationSidebar />} />
+                        <Route path="location/:subid" element={<EditLocation />} />
+                        <Route path="product" element={<ProductSideBar />} />
+                        <Route path="product/:subid" element={<EditProduct />} />
+                        <Route path="beacon" element={<BeaconSideBar />} />
+                        <Route path="beacon/:subid" element={<EditBeacon />} />
+                        <Route path="amenity" element={<AmenitySideBar />} />
+                        <Route path="amenity/:subid" element={<EditAmenity />} />
+                        <Route path="safety" element={<SafetySideBar />} />
+                        <Route path="safety/:subid" element={<EditSafety />} />
+                        <Route path="vertical-transport" element={<VerticalSideBar />} />
+                        <Route path="vertical-transport/:subid" element={<EditVertical />} />
+                        <Route path="navigation" element={<Navigation />} />
+                        <Route path="advertisements" element={<AdvertisingSideBar />} />
+                        <Route path="advertisements/:subid" element={<EditAdvertising />} />
+                    </Route>
+
                     <Route
                         path="/"
                         element={<MainLayout />}
@@ -109,6 +158,7 @@ const AppRoutes = () => {
                             element={<ProtectedRoute component={Login} />}
                         />,
                     </Route>
+
                     <Route path="*" element={<Error/>} />
 
 

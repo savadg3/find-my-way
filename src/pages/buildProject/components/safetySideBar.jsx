@@ -7,7 +7,7 @@ import { FaInfo } from 'react-icons/fa';
 import { IoMdClose, IoMdEye, IoIosInformationCircleOutline } from 'react-icons/io';
 import DropdownWithIcons from '../IconDropdown';
 import { postRequest, getRequest, deleteRequest } from '../../../hooks/axiosClient';
-import { getCurrentUser } from '../../../helpers/utils';
+import { decode, getCurrentUser } from '../../../helpers/utils';
 import { SetBackEndErrorsAPi } from '../../../hooks/setBEerror';
 import * as Yup from 'yup';
 import { toast } from "react-toastify";
@@ -22,6 +22,14 @@ import { handleBlockEnter } from '../Helpers/constants/constant';
 import { deletePinApi, removePinApi } from '../Helpers/apis/otherApis';
 import { useDrag } from 'react-dnd';
 import UndraggedDiv from '../Helpers/modal/UndraggedDiv';
+import { useActiveTab } from '../../../components/map/components/hooks/useActiveTab';
+// import { useMapContext } from '../../../components/map/components/contexts/MapContext';
+import { useSelector } from 'react-redux';
+import { setEditingPinId, setPinsByCategory } from '../../../store/slices/projectItemSlice';
+import { useDispatch } from 'react-redux';
+import useFlyToPin from '../../../components/map/components/hooks/useFlyToPin';
+import { useParams } from 'react-router-dom';
+import { fetchPinData } from '../../../components/map/components/hooks/useLoadPins';
 
 
 const ValidationSchema = Yup.object().shape({
@@ -30,7 +38,7 @@ const ValidationSchema = Yup.object().shape({
 })
 
 const SafetySideBar = ({
-    id,
+    // id,
     floorID,
     setAddNew,
     addNew,
@@ -47,7 +55,7 @@ const SafetySideBar = ({
     handleEnableDisable,
     setFloorID,
     getFloorPlanByid,
-    safetyList,
+    // safetyList,
     searchTerm,
     setSearchTerm,
     setCommonSidebarVisible,
@@ -58,6 +66,24 @@ const SafetySideBar = ({
     onEditSafety
 }) => {
 
+    useActiveTab('safety'); 
+    const editingPinId = useSelector(state => state.api.editingPinId); 
+    const allPins      = useSelector(state => state.api.allPins);
+    const pinCount     = useSelector(state => state.api.pinCount); 
+    const floorList    = useSelector(state => state.api.floorList); 
+    const flyToPin     = useFlyToPin();
+    const dispatch     = useDispatch();  
+    const safetyList   = allPins?.safety ?? [] 
+    let { id }         = useParams()
+    id                 = id && decode(id);
+
+
+    useEffect(()=>{
+        if(!addNew && editingPinId){
+            dispatch(setEditingPinId(null))
+        }
+    },[addNew])
+    
     const [mapDivSize, setMapDivSize] = useState(window.innerHeight - 70)
     const [backClick, setBackClick] = useState(false);
     const [color, setColor] = useState(null);
@@ -81,7 +107,7 @@ const SafetySideBar = ({
     }
 
     const handleSafetySubmit = async (values, setFieldError) => {
-        console.log(values)
+        // console.log(values)
         setSavingTimer(true)
         let value = {
             customer_id: projectSettings?.enc_customer_id ?? getCurrentUser()?.user?.common_id,
@@ -118,7 +144,15 @@ const SafetySideBar = ({
                 } else {
                     setSelSafetyDtls()
                 }
-                getSafetyList(floorID)
+
+                let safetyitems = await fetchPinData(id, ['safety']);
+                console.log(safetyitems);
+                dispatch(
+                    setPinsByCategory({
+                        safety : safetyitems?.safety
+                    }
+                ));
+                // getSafetyList(floorID)
                 handleEnableDisable();
                 setIsDirty(false);
                 setTimeout(() => {
@@ -201,10 +235,16 @@ const SafetySideBar = ({
             icon: "warning",
             buttons: orderedButtons
         })
-            .then((value) => {
+            .then(async (value) => {
                 switch (value) {
                     case "Yes":
-                        deletePinApi(`safety/${row?.enc_id}`, setFloorID, floorID, getSafetyList, handleEnableDisable)
+                        let safety = await deletePinApi(`safety/${row?.enc_id}`, setFloorID, floorID, getSafetyList, handleEnableDisable, id, ["safety"])
+                        console.log(safety);
+                        dispatch(
+                            setPinsByCategory({
+                                safety : safety?.safety
+                            }
+                        ));
                         setStoredObjects((prev) => {
                             let updatedObjects = prev
                             updatedObjects.delete(`${row?.enc_id}_${row?.fp_id}`)
@@ -216,7 +256,13 @@ const SafetySideBar = ({
                             type: 5,
                             id: row?.enc_id
                         }
-                        removePinApi(`remove-pin`, para, setFloorID, floorID, getSafetyList, handleEnableDisable, projectSettings)
+                        let safetys = await removePinApi(`remove-pin`, para, setFloorID, floorID, getSafetyList, handleEnableDisable, projectSettings, id, ["safety"])
+                         console.log(safety);
+                        dispatch(
+                            setPinsByCategory({
+                                safety : safetys?.safety
+                            }
+                        ));
                         setStoredObjects((prev) => {
                             let updatedObjects = prev
                             updatedObjects.delete(`${row?.enc_id}_${row?.fp_id}`)
@@ -230,7 +276,21 @@ const SafetySideBar = ({
     }
 
     const editClick = (item) => {
+       
         setPanTool(false)
+
+        if (item?.positions) {
+            let floor = floorList.find(itm => itm.enc_id == item.fp_id)
+            dispatch(setCurrentFloor({
+                value: floor.enc_id,
+                label: floor?.floor_plan,
+                id: floor?.enc_id,
+                plan: floor?.plan,
+                dec_id: floor?.dec_id,
+            }));
+            dispatch(setEditingPinId(item.enc_id));  
+            flyToPin(JSON.parse(item?.positions));    
+        }
         if (item.position) {
             getFloorPlanByid(item?.fp_id, 'safety', "0", "default", item);
         } else {
@@ -240,7 +300,7 @@ const SafetySideBar = ({
 
     const SafetyItems = ({ item, index, }) => {
         const id = item.enc_id;
-        const canDrag = (item?.position === null)
+        const canDrag = (!item?.positions || item?.positions === null)
         const [{ isDragging }, drag, preview] = useDrag({
             type: 'SafetyPin',
             item: () => {

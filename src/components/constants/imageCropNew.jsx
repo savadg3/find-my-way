@@ -232,6 +232,7 @@ function ImageUploader({
       const blob = await fetch(croppedImageUrl).then((r) => r.blob());
       const base64String = await convertBlobToBase64(blob);
       const blobUrl = URL.createObjectURL(blob);
+      
       if (onSubmit) {
         onSubmit(blob, base64String, blobUrl);
 

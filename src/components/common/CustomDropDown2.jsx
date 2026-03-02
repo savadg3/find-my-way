@@ -46,9 +46,7 @@ const customStyles = {
 
 
 const CustomDropdown2 = ({ onChange, name, options, setCustomerValues, selectValue, setFieldValue, values }) => {
-    const [value, setValue] = useState('')
-    const defaultOption = options?.find(ele => selectValue?.pricing_id === ele?.dec_id)
-    // console.log({name, options, selectValue, values}, 'electValue.select')
+    const [value, setValue] = useState('') 
 
     useEffect(() => {
         if (!values?.from) {
@@ -68,15 +66,14 @@ const CustomDropdown2 = ({ onChange, name, options, setCustomerValues, selectVal
             }
 
         }
-    }, [values])
+    }, [values, options])
+    
 
     return (
         <Select
             options={options}
-            styles={customStyles}
-            // isSearchable={false}
-            name={name}
-            // defaultValue={defaultOption}
+            styles={customStyles} 
+            name={name} 
             placeholder='Select'
             onChange={(e) => {
                 onChange(e);
@@ -101,7 +98,7 @@ export const CustomDropdown3 = ({ options, onChange }) => {
             getOptionValue={(e) => e.id}
             onChange={(e) => {
                 setValue(e)
-                 onChange(e);
+                onChange(e);
             }}
             placeholder="Select"
         />

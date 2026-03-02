@@ -18,7 +18,7 @@ import PaymentForm from '../../../components/stripe/payment';
 import TagInputComp from '../../../components/tagInput/TagInputComp';
 import TextEditor from '../../../components/text-editor/TextEditor';
 import { environmentaldatas } from '../../../constant/defaultValues';
-import { getCurrentUser } from "../../../helpers/utils";
+import { decode, getCurrentUser } from "../../../helpers/utils";
 import { postRequest } from '../../../hooks/axiosClient';
 import { SetBackEndErrorsAPi } from '../../../hooks/setBEerror';
 import '../BuildProject.css';
@@ -32,8 +32,16 @@ import UndraggedDiv from '../Helpers/modal/UndraggedDiv';
 import AutosaveForm from './AutoSaveForm';
 import HourInputComp from './HourInputComp';
 import PromotionComp from './PromotionComp';
-import { LocationWebListItem } from './ProdSpecItem';
-
+import { WebListItem } from './ProdSpecItem';
+import { useActiveTab } from '../../../components/map/components/hooks/useActiveTab';
+// import { useMapContext } from '../../../components/map/components/contexts/MapContext';
+import { setEditingPinId } from '@/store/slices/projectItemSlice';
+import { useSelector } from 'react-redux';
+import { useDispatch } from 'react-redux';
+import { useParams } from 'react-router-dom';
+import { fetchPinData } from '../../../components/map/components/hooks/useLoadPins';
+import { setAllPins, setCurrentFloor, setPinsByCategory } from '../../../store/slices/projectItemSlice';
+import useFlyToPin from '../../../components/map/components/hooks/useFlyToPin';
 
 
 const { image_url } = environmentaldatas;
@@ -67,7 +75,8 @@ const LocationsSideBar = ({
     setSelLocationDtls,
     setLocations,
     selFloorPlanDtls,
-    id, floorID,
+    // id, 
+    floorID,
     projectSettings,
     addNew, setAddNew,
     hours,
@@ -84,7 +93,7 @@ const LocationsSideBar = ({
     handleEnableDisable,
     totalPinsUsed,
     setFloorID,
-    locationList,
+    // locationList,
     getFloorPlanByid,
     searchTerm,
     setSearchTerm,
@@ -99,6 +108,25 @@ const LocationsSideBar = ({
     setwebsiteLinks,
     websiteLinks
 }) => {
+
+
+    useActiveTab('location');
+    const editingPinId = useSelector(state => state.api.editingPinId);
+    const allPins      = useSelector(state => state.api.allPins);
+    const pinCount     = useSelector(state => state.api.pinCount); 
+    const floorList    = useSelector(state => state.api.floorList); 
+    const flyToPin     = useFlyToPin();
+    const dispatch     = useDispatch();
+    const locationList = allPins?.location ?? [] 
+    let { id }         = useParams()
+    id                 = id && decode(id);
+    
+    useEffect(()=>{
+        if(!addNew && editingPinId){
+            dispatch(setEditingPinId(null))
+        }
+    },[addNew])
+    
 
 
     const [isError, setIsError] = useState(false);
@@ -117,50 +145,24 @@ const LocationsSideBar = ({
     const [openPicker, setOpenPicker] = useState(null);
     const [maxContentLimit, setMaxContentLimit] = useState(false);
     const [prefilledMessage, setPrefilledMessage] = useState("");
-    useEffect(() => {
-        if (selLocationDtls?.description) {
-            console.log(selLocationDtls?.description,"selLocationDtls?.description");
+
+    useEffect(() => { 
+        if (selLocationDtls?.description) { 
             setPrefilledMessage(selLocationDtls.description);
         }
     }, [selLocationDtls]);
-
-
-    const addlocationClick = () => {
-        // if (totalPinsUsed?.used_locations == totalPinsUsed?.total_locations) {
-        //     PlanExpiryDetails(id, setPlanDetails, setModal);
-        //     return
-        // } else if (totalPinsUsed?.used_locations == totalPinsUsed?.total_locations) {
-        //     PlanExpiryDetails(id, setPlanDetails, setModal);
-
-        // } else if (totalPinsUsed?.used_locations == totalPinsUsed?.total_locations) {
-        //     PlanExpiryDetails(id, setPlanDetails, setModal);
-        //     return
-        // } else {
+     
+    const addlocationClick = () => { 
         locationClick();
-        document.getElementById("locationSubmitBtn")?.click();
-        // }
+        document.getElementById("locationSubmitBtn")?.click(); 
     };
 
-    const planCheck = () => {
-        if (totalPinsUsed?.used_locations == totalPinsUsed?.total_locations) {
+    const planCheck = () => { 
+        if (pinCount?.used_locations == pinCount?.total_locations) {
             PlanExpiryDetails(id, setPlanDetails, setModal);
-            setTimeout(() => {
-                removeFabricObjectsEncId(canvas, selLocationDtls?.enc_id, 'location')
-            }, 2000);
-            setSavingTimer(false)
-            return
-        } else if (totalPinsUsed?.used_locations == totalPinsUsed?.total_locations) {
-            PlanExpiryDetails(id, setPlanDetails, setModal);
-            setTimeout(() => {
-                removeFabricObjectsEncId(canvas, selLocationDtls?.enc_id, 'location')
-            }, 2000);
-            setSavingTimer(false)
-
-        } else if (totalPinsUsed?.used_locations == totalPinsUsed?.total_locations) {
-            PlanExpiryDetails(id, setPlanDetails, setModal);
-            setTimeout(() => {
-                removeFabricObjectsEncId(canvas, selLocationDtls?.enc_id, 'location')
-            }, 2000);
+            // setTimeout(() => {
+            //     removeFabricObjectsEncId(canvas, selLocationDtls?.enc_id, 'location')
+            // }, 2000);
             setSavingTimer(false)
             return
         } else {
@@ -196,12 +198,15 @@ const LocationsSideBar = ({
         }
     };
 
-    useEffect(() => {
-        // if (floorID) {
-        getLocationList(floorID);
-        // }
-    }, [floorID]);
+    // useEffect(() => {
+    //     console.log(2);
+    //     return
+    //     // if (floorID) {
+    //     getLocationList(floorID);
+    //     // }
+    // }, [floorID]);
 
+    //  fetchPinData(id, ['location']);
 
 
     const removeLocation = (location, canDrag) => {
@@ -250,15 +255,26 @@ const LocationsSideBar = ({
             buttons: orderedButtons
 
         })
-            .then((value) => {
+            .then(async (value) => {
                 switch (value) {
                     case "Yes":
-                        deletePinApi(`location/${location?.enc_id}`, setFloorID, floorID, getLocationList, handleEnableDisable, projectSettings)
-                        setStoredObjects((prev) => {
-                            let updatedObjects = prev
-                            updatedObjects.delete(`${location?.enc_id}_${location?.fp_id}`)
-                            return updatedObjects
-                        })
+                        let locationList = await deletePinApi(`location/${location?.enc_id}`, setFloorID, floorID, getLocationList, handleEnableDisable, projectSettings, id, ['location'])
+                        dispatch(
+                            setPinsByCategory({
+                                location : locationList?.location
+                            }
+                        ));
+
+
+                        // console.log(locationList, "locationList");
+                        // setStoredObjects((prev) => {
+                        //     let updatedObjects = prev
+                        //     updatedObjects.delete(`${location?.enc_id}_${location?.fp_id}`)
+                        //     return updatedObjects
+                        // })
+
+                        // let locationItem = await fetchPinData(id, ['location']);
+
                         break;
                     case "Remove":
                         const para = {
@@ -266,12 +282,25 @@ const LocationsSideBar = ({
                             id: location?.enc_id
                         }
 
-                        removePinApi(`remove-pin`, para, setFloorID, floorID, getLocationList, handleEnableDisable, projectSettings)
-                        setStoredObjects((prev) => {
-                            let updatedObjects = prev
-                            updatedObjects.delete(`${location?.enc_id}_${location?.fp_id}`)
-                            return updatedObjects
-                        })
+                        let locationListItem = await removePinApi(`remove-pin`, para, setFloorID, floorID, getLocationList, handleEnableDisable, projectSettings, id, ['location'])
+                        console.log(locationListItem,"locationListItem");
+                        dispatch(
+                            setPinsByCategory({
+                                location : locationListItem?.location
+                            }
+                        ));
+
+
+
+
+                        // console.log(locationListItem, "locationList");
+                        // setStoredObjects((prev) => {
+                        //     let updatedObjects = prev
+                        //     updatedObjects.delete(`${location?.enc_id}_${location?.fp_id}`)
+                        //     return updatedObjects
+                        // })
+
+                        // let removedLocationItem = await fetchPinData(id, ['location']);
                         break;
                     default:
                         break;
@@ -281,11 +310,9 @@ const LocationsSideBar = ({
     }
 
     const addLocation = async (values, setFieldError) => {
-        setSavingTimer(true)
-        // console.log(values, 'addLocation')
-        // if (values.position && !isError) {
-        if (values?.enc_id && values?.isDrop) {
-            // check plan after bulk upload and drop pin
+        setSavingTimer(true)   
+
+        if (values?.enc_id && values?.isDrop) { 
             planCheck()
             return
         }
@@ -308,19 +335,15 @@ const LocationsSideBar = ({
         });
 
         let value = {
-
             customer_id: customerId,
-            project_id: id,
-            // floor_plan_id: selFloorPlanDtls?.enc_id ?? floorID,
+            project_id: id, 
             floor_plan_id: values?.position === null ? null : (values?.enc_floor_plan_id ?? selFloorPlanDtls?.enc_id),
             location_name: values?.location_name ?? `! New location`,
             tags: values?.tags,
             contact: values?.contact,
-            product_code: values?.productCode,
-            // description: values?.description,
+            product_code: values?.productCode, 
             description: values?.message,
-            positions: values?.position ?? null,
-            // promotions: promotions.length > 0 ? JSON.stringify(promotions) : '',
+            positions: values?.position ?? null, 
             website: JSON.stringify(filteredwebsites),
             location_color: values.location_color ?? projectSettings?.location_color,
             boundary_color: isBoundary ? (values?.boundary_color ?? '#26A3DB') : null,
@@ -332,24 +355,29 @@ const LocationsSideBar = ({
                 value.is_published = '0';
             value.discard = '1';
             value.publish = '1';
-        } else {
-            console.log(values, 'addLocation')
+        } else { 
             value.promotions = JSON.stringify([])
-        }
-        // console.log(value)
-        try {
+        } 
+        try { 
             const reqUrl = `location`;
             const response = await postRequest(reqUrl, value);
             const data = response.response?.data ?? [];
             if (response.type === 1) {
-                boundaryAttributes = undefined
-                // setSelLocationDtls(prev => ({ ...prev, ...values, enc_id: data?.enc_id }))
+                boundaryAttributes = undefined 
                 if (values?.enc_id && isDirty) {
                     setSelLocationDtls((prev) => ({ ...prev, ...values, enc_id: data?.enc_id }));
                 } else {
                     setSelLocationDtls();
                 }
-                getLocationList(floorID);
+                // getLocationList(floorID);
+                let location = await fetchPinData(id, ['location']);
+
+                dispatch(
+                    setPinsByCategory({
+                        location : location?.location
+                    }
+                ));
+ 
                 handleEnableDisable()
                 setIsDirty(false)
 
@@ -368,12 +396,7 @@ const LocationsSideBar = ({
             }
         } catch (error) {
             setSavingTimer(false)
-        }
-        // }
-        // else if (!values.position) {
-        //     toast.error('Click on map to add pin');
-        //     return;
-        // }
+        } 
     }
 
     const postPromotion = async (promoArray) => {
@@ -566,10 +589,23 @@ const LocationsSideBar = ({
             search_name?.toLowerCase().includes(searchTerm.toLowerCase())
         );
     });
-
-    const editClick = (location) => {
+ 
+    const editClick = (location) => { 
         setPanTool(false)
-        if (location?.position) {
+        if (location?.positions) {
+            let floor = floorList.find(item => item.enc_id == location.fp_id)
+            dispatch(setCurrentFloor({
+                value: floor.enc_id,
+                label: floor?.floor_plan,
+                id: floor?.enc_id,
+                plan: floor?.plan,
+                dec_id: floor?.dec_id,
+            }));
+            dispatch(setEditingPinId(location.enc_id));  
+            flyToPin(JSON.parse(location?.positions));   
+            getFloorPlanByid(location?.fp_id, 'locations', "0", "default", location);
+        }
+        if (location?.position) { 
             getFloorPlanByid(location?.fp_id, 'locations', "0", "default", location);
         } else {
             onEditLocation(location)
@@ -579,14 +615,13 @@ const LocationsSideBar = ({
     const LocationItem = ({ location, index, }) => {
         const id = location.enc_id;
         // const canDrag = location?.position?.x === 0 && location?.position?.y === 0;
-        const canDrag = (location?.position === null)
+        const canDrag = (!location?.positions || location?.positions === null)
         const [{ isDragging }, drag, preview] = useDrag({
             type: 'LocationPin',
             item: () => {
                 return { index, id, location };
             },
-            canDrag: () => {
-                // Block dragging if the position is not (0, 0)
+            canDrag: () => { 
                 return canDrag && floorID;
             },
             collect: (monitor) => ({
@@ -623,7 +658,6 @@ const LocationsSideBar = ({
         )
     }
 
-
     const renderLocationItem = useCallback((location, index) => {
         return (
             <LocationItem
@@ -635,6 +669,7 @@ const LocationsSideBar = ({
             />
         )
     }, [])
+    
     const goBack = () => {
         // setAddNew(false)
         // setFloorID(floorID)
@@ -946,7 +981,7 @@ const LocationsSideBar = ({
                                                 <div className='pl-4 pr-4'>
                                                     {
                                                         values.websiteLink.map((sp, id) => (
-                                                            <LocationWebListItem
+                                                            <WebListItem
                                                                 key={id}
                                                                 spec={sp}
                                                                 index={id}

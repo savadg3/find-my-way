@@ -1,6 +1,3 @@
-/* eslint-disable no-unused-vars */
-/* eslint-disable no-undef */
-/* eslint-disable no-undef */
 import React, { useState } from 'react';
 import { Row, Card, CardTitle, Label, Col, Button, Spinner } from 'reactstrap';
 import { NavLink, useNavigate } from 'react-router-dom';
@@ -29,7 +26,7 @@ function Forgot() {
   const handleSubmitProfile = async (values) => {
     setLoading(true)
     try {
-      const response = await postRequest('forgot-password ', values);
+      const response = await postRequest('forgot-password', values);
       const loginData = response.response?.data ?? [];
       if (response.type === 2) {
         toast.error(response?.errormessage);
@@ -64,7 +61,6 @@ function Forgot() {
                       className="image-logo"
                     />
                   </div>
-                  <div className="timer2"><span className=""></span></div>
                   <CardTitle className=" text-center" style={{ marginBottom: '20px' }}>
                     <h5
                       style={{
@@ -87,7 +83,7 @@ function Forgot() {
                     {({ errors, values, touched, handleSubmit, handleChange }) => (
                       <form className="av-tooltip tooltip-label-bottom formGroups" onSubmit={handleSubmit}>
                         <div className='mb-3'>
-                          <Label for="exampleEmail1" className="form-labels">Email</Label><span class="asterisk">*</span>
+                          <Label for="exampleEmail1" className="form-labels">Email</Label><span className="asterisk">*</span>
                           <Field
                             className="form-control custom-input"
                             type="text"

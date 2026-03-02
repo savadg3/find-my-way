@@ -254,7 +254,7 @@ function ColorPicker({
     //     setDisplayColor(value);
     // }, [value]);
 
-    const handleSave = () => {
+    const handleSave = () => { 
         if (handleOkClick) {
             handleOkClick(color);
         }

@@ -1,6 +1,11 @@
+import { useSelector } from "react-redux";
+
 const TotalPinsDiv = ({ activeTab, totalPinsUsed, projectSettings, addNewFloor }) => {
-    let locationColor = projectSettings?.location_color ?? "#320101";
-    let productColor = projectSettings?.product_color ?? "#320101";
+    const pinCount  = useSelector(state => state.api.pinCount); 
+    const projectData  = useSelector(state => state.api.projectData); 
+
+    let locationColor = projectData?.location_color ?? "#320101";
+    let productColor = projectData?.product_color ?? "#320101";
 
     let locationIcon = `<svg width="20" height="25" xmlns="http://www.w3.org/2000/svg" fill="none">
 
@@ -32,15 +37,15 @@ const TotalPinsDiv = ({ activeTab, totalPinsUsed, projectSettings, addNewFloor }
                 dangerouslySetInnerHTML={{ __html: locationIcon }}
             ></div>
             <p className="label  ml-1 vertical-line-pindiv">
-                {totalPinsUsed?.used_locations ?? 0} /{" "}
-                {totalPinsUsed?.total_locations}{" "}
+                {pinCount?.used_locations ?? 0} /{" "}
+                {pinCount?.total_locations}{" "}
             </p>
             <div
                 className="icon ml-2"
                 dangerouslySetInnerHTML={{ __html: productIcon }}
             ></div>
             <p className="label  ml-1 ">
-                {totalPinsUsed?.used_products ?? 0} / {totalPinsUsed?.total_products}{" "}
+                {pinCount?.used_products ?? 0} / {pinCount?.total_products}{" "}
             </p>
         </div>
     );

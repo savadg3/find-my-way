@@ -1,0 +1,6 @@
+.pageDiv{
+    height: calc(100vh - 65px);
+    /* display: grid;
+    grid-template-columns: 255px 1fr; */
+    display: flex;
+}

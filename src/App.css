@@ -1,0 +1,42 @@
+.marker-wrapper {
+    transform-origin: bottom center;
+}
+
+.marker-pop {
+    animation: markerPop 300ms ease-out forwards;
+}
+.marker-wobble {
+    animation: markerPop 300ms ease-out forwards,wobble 1.5s ease-in-out 0.3s infinite;
+}
+
+@keyframes wobble {
+    0% {
+        transform: rotate(0deg);
+    }
+    20% {
+        transform: rotate(5deg);
+    }
+    50% {
+        transform: rotate(-5deg);
+    }
+    65% {
+        transform: rotate(1deg);
+    }
+    100% {
+        transform: rotate(0deg);
+    }
+}
+
+@keyframes markerPop {
+    0% {
+        transform: translateY(10px) scale(0.5);
+        opacity: 0;
+    }
+    60% {
+        transform: translateY(-2px) scale(1.05);
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(0) scale(1);
+    }
+}

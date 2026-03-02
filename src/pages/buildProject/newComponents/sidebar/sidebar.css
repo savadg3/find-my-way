@@ -1,0 +1,86 @@
+/* BPCommonSideBar.css */
+
+.bp-sidebar {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 100%;
+    min-width: 255px; 
+    position: relative;
+    box-sizing: border-box;
+    padding: 0 5px;
+    height: calc(100vh - 65px);
+    overflow-y: scroll; 
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    gap: 30px;
+}
+
+.bp-sidebar::-webkit-scrollbar {
+    display: none;
+}
+
+
+.bp-sidebar__nav {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px;
+    margin-top: 20px;
+}
+
+
+.sidebar-nav-item { 
+    gap: 12px;
+    width: 100%; 
+    border: none; 
+    font-family: inherit; 
+    cursor: pointer;
+    transition: 0.5s ease;  
+    
+    color: #26a3db ;
+    background-color: #DFF1FA ;
+    font-size: 1rem ;
+    padding: 6px 6px ;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    
+}
+
+.sidebar-nav-item:hover, .sidebar-nav-item:focus-visible,.sidebar-nav-item--active  {
+    color: #ffffff ;
+    background-color: #26a3db ; 
+    outline: none;
+} 
+
+.sidebar-nav-item__label {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+
+.bp-sidebar__footer {
+    padding: 10px 12px;
+}
+
+.sidebar-help-link { 
+    color: #6A6D73 ;
+    background-color: #F5F6F7 ;
+    font-size: 1rem ;
+    padding: 6px 6px ;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: 0.5s ease;    
+}
+
+.sidebar-help-link:hover, .sidebar-help-link:focus-visible {
+    background-color: #5c636a ; 
+    color: white ;   
+    outline: 0;
+} 

@@ -2,6 +2,7 @@ import React, { useContext, useEffect, useState } from 'react'
 import { Navigate, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import NavBar from '../components/NavBar'
 import { AppContext } from '../providers/ContextProvider'
+import { ProjectHeaderProvider } from '../pages/buildProject/Helpers/pageDiv/ProjectHeaderContext'
 
 const MainLayout = () => {
 
@@ -90,7 +91,9 @@ const MainLayout = () => {
                 < NavBar />
             }
             <div className='main-div' >
-                <Outlet />
+                <ProjectHeaderProvider>
+                    <Outlet />
+                </ProjectHeaderProvider>
             </div>
         </div>
     )

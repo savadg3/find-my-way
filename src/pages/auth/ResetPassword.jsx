@@ -114,12 +114,12 @@ const Reset = () => {
                             onSubmit={handleSubmit}
                           >
                             <div className="marginBottom">
-                              <Label for="new_password" className="form-labels">New Password</Label><span class="asterisk">*</span>
+                              <Label for="new_password" className="form-labels">New Password</Label><span className="asterisk">*</span>
                               <div className="d-flex">
                                 <Field
                                   id="new_password"
                                   className="form-control custom-input"
-                                  type={isRevealPwd ? "text" : "Password"}
+                                  type={isRevealPwd ? "text" : "password"}
                                   name="password"
                                   placeholder="Enter new password"
                                   value={values?.password}
@@ -134,30 +134,17 @@ const Reset = () => {
                                     style={{
                                       border: "none",
                                       backgroundColor: "transparent",
-                                      outline: "none", // Add this line to remove the focus outline
                                     }}
-                                    tabIndex="0" // Add this line to make the span focusable
-                                    onBlur={(e) => e.target.blur()} // Add this line to remove focus when span loses focus
-
                                   >
-                                    {!isRevealPwd && (
+                                    {isRevealPwd ? (
                                       <FaEyeSlash
                                         title="Hide password"
-                                        onClick={() =>
-                                          setIsRevealPwd(
-                                            (prevState) => !prevState
-                                          )
-                                        }
+                                        onClick={() => setIsRevealPwd((prev) => !prev)}
                                       />
-                                    )}
-                                    {isRevealPwd && (
+                                    ) : (
                                       <FaEye
-                                        title="Show Password"
-                                        onClick={() =>
-                                          setIsRevealPwd(
-                                            (prevState) => !prevState
-                                          )
-                                        }
+                                        title="Show password"
+                                        onClick={() => setIsRevealPwd((prev) => !prev)}
                                       />
                                     )}
                                   </span>
@@ -170,12 +157,12 @@ const Reset = () => {
                               ) : null}
                             </div>
                             <div className="marginBottom">
-                              <Label for="confirm_password" className="form-labels">Confirm Password</Label><span class="asterisk">*</span>
+                              <Label for="confirm_password" className="form-labels">Confirm Password</Label><span className="asterisk">*</span>
                               <div className="d-flex">
                                 <Field
                                   id="confirm_password"
                                   className="form-control custom-input"
-                                  type={isRevealPwdConfirm ? "text" : "Password"}
+                                  type={isRevealPwdConfirm ? "text" : "password"}
                                   name="password_confirmation"
                                   placeholder="Enter confirm password"
                                   value={values?.password_confirmation}
@@ -190,30 +177,17 @@ const Reset = () => {
                                     style={{
                                       border: "none",
                                       backgroundColor: "transparent",
-                                      outline: "none", // Add this line to remove the focus outline
                                     }}
-                                    tabIndex="0" // Add this line to make the span focusable
-                                    onBlur={(e) => e.target.blur()} // Add this line to remove focus when span loses focus
-
                                   >
-                                    {!isRevealPwdConfirm && (
+                                    {isRevealPwdConfirm ? (
                                       <FaEyeSlash
                                         title="Hide password"
-                                        onClick={() =>
-                                          setIsRevealPwdConfirm(
-                                            (prevState) => !prevState
-                                          )
-                                        }
+                                        onClick={() => setIsRevealPwdConfirm((prev) => !prev)}
                                       />
-                                    )}
-                                    {isRevealPwdConfirm && (
+                                    ) : (
                                       <FaEye
-                                        title="Show Password"
-                                        onClick={() =>
-                                          setIsRevealPwdConfirm(
-                                            (prevState) => !prevState
-                                          )
-                                        }
+                                        title="Show password"
+                                        onClick={() => setIsRevealPwdConfirm((prev) => !prev)}
                                       />
                                     )}
                                   </span>

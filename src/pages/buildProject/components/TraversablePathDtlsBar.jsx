@@ -142,18 +142,21 @@ const TraversableSideBar = ({
         paddingBottom: "20px"
       }}
     >
+
       <Row className="backRow">
+
         <Col md={8}>
           <h1>Navigation Path </h1>
         </Col>
-        {/* {addNew && ( */}
+
         <Col md={4}>
           <div className="backArrow float-right">
             <BsArrowLeftShort onClick={goBack} />
           </div>
         </Col>
-        {/* )} */}
+
       </Row>
+
       <Formik
         initialValues={{
           from: "",

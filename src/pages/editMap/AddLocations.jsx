@@ -71,8 +71,7 @@ const MainComp = () => {
                 const delta = monitor.getDifferenceFromInitialOffset()
                 const left = (item.left + delta.x)
                 const top = (item.top + delta.y)
-                moveBox(item.id, left, top)
-                console.log('herer')
+                moveBox(item.id, left, top) 
                 return undefined
             },
         }),

@@ -136,7 +136,7 @@ const PSSideBar = ({
     const onSubmit = async (values, setFieldError) => {
         setTriedToSubmit(true)
         setSavingTimer(true)
-        canvasBackGroundColor(values?.background_color, canvas)
+        // canvasBackGroundColor(values?.background_color, canvas)
 
 
         const formdata = new FormData();
@@ -417,9 +417,26 @@ const PSSideBar = ({
                                                     <BorderWidthComp label='Navigation Path Thickness' value={values['navigation_thick'] ?? 3} name={'navigation_thick'} onChange={handleChange} />
                                                 </Col>
                                             </Row>
+
+                                            {[
+                                                { label: 'Navigation Button Text Colour', name: 'nav_btn_text_color' },
+                                                { label: 'Navigation Button Colour', name: 'nav_btn_color' },
+                                            ].map(item =>
+                                                <ColorPicker label={item.label} value={values[item.name] ?? '#1a91d3'} name={item.name}
+                                                    onChange={(newColor) => {
+                                                        console.log(newColor);
+                                                        setColor(newColor)
+                                                    }
+                                                    }
+                                                    setFieldValue={setFieldValue} isOpen={openPicker === item.name}
+                                                    setOpenPicker={setOpenPicker} onClick={() => handlePickerClick(item.name)}
+                                                    color={color ?? values[item.name]} setColor={setColor}
+                                                />
+                                            )}
+
                                             {[
                                                 { label: 'Map Background Colour', name: 'background_color' },
-                                                { label: 'Navigation Button Colour', name: 'nav_btn_color' },
+                                                // { label: 'Navigation Button Colour', name: 'nav_btn_color' },
                                             ].map(item =>
                                                 <ColorPicker label={item.label} value={values[item.name] ?? '#1a91d3'} name={item.name}
                                                     onChange={(newColor) => {
@@ -434,7 +451,7 @@ const PSSideBar = ({
                                             )}
 
 
-                                            <div className='color-input-wrpr' style={{ marginBottom: '18.75px' }}>
+                                            {/* <div className='color-input-wrpr' style={{ marginBottom: '18.75px' }}>
                                                 <p className={`label color-labels mr-2 `} style={{ fontWeight: '400' }}>{"Navigation Button Text Colour"}</p>
                                                 
                                                 <CommonDropdown
@@ -465,7 +482,7 @@ const PSSideBar = ({
                                                         </div>
                                                     )}
                                                 />
-                                            </div>
+                                            </div> */}
 
                                             
 

@@ -4,12 +4,20 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import BaseMap from './Map/BaseMap';
 import MapMarkers from './Map/Overlays/MapMarkers';
 import { demoBuildingData, demoMarkersGeoJSON, floorDataResponse, ProjectData } from '../mapData';
+import MapDrawing from './Map/Overlays/MapDrawing';
+import { useDispatch } from 'react-redux';
+import { useSelector } from 'react-redux';
+import { setIsConnectionEnabled, setPlacedLocation } from '../../../store/slices/verticalPlacementSlice';
 
 const MapComponent = () => {
     const mapRef = useRef(null);
-    const [isMapReady, setIsMapReady] = useState(false);
-    const [markersData, setMarkersData] = useState(demoMarkersGeoJSON);
+    const [isMapReady, setIsMapReady] = useState(false); 
     const [projectData, setProjectData] = useState(ProjectData);
+
+    const dispatch = useDispatch()
+    const isConnectionEnabled = useSelector((state) => state.vertical.isConnectionEnabled);
+    const isConnectionEnabledRef = useRef(isConnectionEnabled);
+
 
     useEffect(() => {
         const checkMapRef = setInterval(() => {
@@ -21,10 +29,27 @@ const MapComponent = () => {
 
         return () => clearInterval(checkMapRef);
     }, []);
-
-    const handleMapLoad = useCallback(() => {
-       
-    }, []); 
+    
+    useEffect(() => {
+        isConnectionEnabledRef.current = isConnectionEnabled;
+    }, [isConnectionEnabled]);
+    
+    const handleMapLoad = useCallback((map) => {
+        const clickHandler = (e) => {
+            const { lng, lat } = e.lngLat;
+    
+            if (isConnectionEnabledRef.current) {
+                dispatch(setIsConnectionEnabled(false));
+                dispatch(setPlacedLocation({ lng, lat }));
+            }
+        };
+    
+        map.on('click', clickHandler);
+    
+        return () => {
+            map.off('click', clickHandler);
+        };
+    }, [dispatch]);
     
     return (
         <div className="app">  
@@ -42,10 +67,7 @@ const MapComponent = () => {
 
             {isMapReady && mapRef.current && (
                 <>
-                    <MapMarkers 
-                        map={mapRef.current} 
-                        geojson={markersData} 
-                    />
+                    <MapMarkers />
 
                     {/* <BuildingOverlay
                         map={mapRef.current}
@@ -53,6 +75,8 @@ const MapComponent = () => {
                         // selectedFloor={selectedFloor}
                         // onFeatureClick={onFeatureClick}
                     /> */}
+
+                    <MapDrawing map={mapRef.current} />
 
                 </>
             )}

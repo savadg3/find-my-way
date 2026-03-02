@@ -19,10 +19,9 @@ import LogoIco from "../../assets/icons/Logo.svg";
 import { SetBackEndErrorsAPi } from '../../hooks/setBEerror';
 import "./auth.css";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
-import axios from 'axios';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
-import "yup-phone"; // This adds phone number validation
+import "yup-phone"; 
 import InputMask from 'react-input-mask';
 import { environmentaldatas } from "../../constant/defaultValues";
 
@@ -91,14 +90,18 @@ const Register = () => {
   const [ip, setIP] = useState('');
 
   const getIP = async () => {
-    const res = await axios.get('https://geolocation-db.com/json/')
-    setIP(res.data.IPv4)
-
+    try {
+      const res = await fetch('https://api.ipify.org?format=json');
+      const data = await res.json();
+      setIP(data.ip);
+    } catch (error) {
+      console.error('Failed to fetch IP address:', error);
+    }
   }
 
   useEffect(() => {
-    getIP()
-  })
+    getIP();
+  }, [])
 
   const handleCheckboxChange = (e, setFieldValue) => {
     if (e.target.checked) {
@@ -143,7 +146,7 @@ const Register = () => {
                   <Formik
                     initialValues={initialFormValues}
                     validationSchema={SignupSchema}
-                    onSubmit={(values, setFieldError) => {
+                    onSubmit={(values, { setFieldError }) => {
                       registerHandler(values, setFieldError);
                     }}
                   >
@@ -159,7 +162,7 @@ const Register = () => {
                     }) => (
                       <form
                         className="av-tooltip tooltip-label-bottom formGroups"
-                        onSubmit={(e) => handleSubmit(e, setFieldError)}
+                        onSubmit={handleSubmit}
                       >
                         <div >
                           <Label for="first_name" className="form-labels">Name</Label><span className="asterisk">*</span>
@@ -204,7 +207,7 @@ const Register = () => {
                             <Field
                               id="password"
                               className="form-control custom-input"
-                              type={isRevealPwd ? "text" : "Password"}
+                              type={isRevealPwd ? "text" : "password"}
                               name="password"
                               placeholder="Enter password"
                               value={values?.password}
@@ -221,24 +224,15 @@ const Register = () => {
                                   backgroundColor: "transparent",
                                 }}
                               >
-                                {!isRevealPwd && (
+                                {isRevealPwd ? (
                                   <FaEyeSlash
                                     title="Hide password"
-                                    onClick={() =>
-                                      setIsRevealPwd(
-                                        (prevState) => !prevState
-                                      )
-                                    }
+                                    onClick={() => setIsRevealPwd((prev) => !prev)}
                                   />
-                                )}
-                                {isRevealPwd && (
+                                ) : (
                                   <FaEye
-                                    title="Show Password"
-                                    onClick={() =>
-                                      setIsRevealPwd(
-                                        (prevState) => !prevState
-                                      )
-                                    }
+                                    title="Show password"
+                                    onClick={() => setIsRevealPwd((prev) => !prev)}
                                   />
                                 )}
                               </span>
@@ -256,9 +250,9 @@ const Register = () => {
                             <Field
                               id="confirm_password"
                               className="form-control custom-input"
-                              type={isRevealconPwd ? "text" : "Password"}
+                              type={isRevealconPwd ? "text" : "password"}
                               name="confirm_password"
-                              placeholder="Enter password"
+                              placeholder="Enter confirm password"
                               value={values?.confirm_password}
                               onChange={handleChange}
                             />
@@ -273,24 +267,15 @@ const Register = () => {
                                   backgroundColor: "transparent",
                                 }}
                               >
-                                {!isRevealconPwd && (
+                                {isRevealconPwd ? (
                                   <FaEyeSlash
                                     title="Hide password"
-                                    onClick={() =>
-                                      setIsRevealconPwd(
-                                        (prevState) => !prevState
-                                      )
-                                    }
+                                    onClick={() => setIsRevealconPwd((prev) => !prev)}
                                   />
-                                )}
-                                {isRevealconPwd && (
+                                ) : (
                                   <FaEye
-                                    title="Show Password"
-                                    onClick={() =>
-                                      setIsRevealconPwd(
-                                        (prevState) => !prevState
-                                      )
-                                    }
+                                    title="Show password"
+                                    onClick={() => setIsRevealconPwd((prev) => !prev)}
                                   />
                                 )}
                               </span>
@@ -335,7 +320,7 @@ const Register = () => {
                           </div> */}
                           <div className="input-group" style={{ padding: '0px',border:'none' }}>
                             <div className="input-group-prepend"><span className="input-group-text">+61</span></div>
-                            <InputMask mask='9999 999 999' maskChar={null} onBlur={(e) => console.log(e.target.value.replace(/ /g, ''))}
+                            <InputMask mask='9999 999 999' maskChar={null}
                               className="form-control"
                               placeholder="Please Type"
                               name="contact"

@@ -78,7 +78,7 @@ export default ProdSpecItem
 
 
 
-export const LocationWebListItem = ({
+export const WebListItem = ({
   spec,
   index,
   setSpecifications,

@@ -24,8 +24,7 @@ const ProjectLinksModalComponent = ({ modal, toggle, setModal, panel }) => {
 
 
     const onChangeBeacon = (e) => {
-        setValue(e)
-        console.log(e);
+        setValue(e) 
     }
 
 

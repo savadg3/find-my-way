@@ -1,6 +1,7 @@
 import swal from "sweetalert";
 import { deleteRequest, getRequest, postRequest } from "../../../../hooks/axiosClient";
 import { toast } from "react-toastify";
+import { fetchPinData } from "../../../../components/map/components/hooks/useLoadPins";
 
 const totalPinCountApi = async (id, setTotalPinsUsed) => {
     try {
@@ -50,7 +51,7 @@ const revertPackage = async (id) => {
     try {
         const reqUrl = `revert-package/${id}`;
         const response = await getRequest(reqUrl);
-        console.log('package-reverted-succesfully')
+        // console.log('package-reverted-succesfully')
     } catch (error) {
         ////console.log(error);
     }
@@ -88,8 +89,7 @@ const discardClick = (handleDiscard) => {
     });
 };
 
-const publishClick = (publishYesClick, projectSettings) => {
-    console.log(projectSettings, 'projectSettings')
+const publishClick = (publishYesClick, projectSettings) => { 
     if (projectSettings?.logo == null) {
         toast.error("Please upload the project logo for publishing.");
     } else if (!projectSettings?.error_reporting_email) {
@@ -150,36 +150,66 @@ const uploadTraversibleData = async (selFloorPlanDtls, graph, handleEnableDisabl
     getProjectById()
 };
 
-const PlanExpiryDetails = async (id, setPlanDetails, setModalPlan) => {
+const PlanExpiryDetails = async (id, setModalPlan) => {
     try {
         const reqUrl = `plan-expiry/${id}`;
         const response = await getRequest(reqUrl);
-        console.log(response, 'delete')
+        // console.log(response, 'delete')
 
         const data = response.data ?? [];
-        setPlanDetails(data)
-        console.log(data, 'plan-expiry');
+        // setPlanDetails(data)
+        // console.log(data, 'plan-expiry');
         setModalPlan(true);
+
+        return data
     } catch (error) {
-        ////console.log(error);
+        console.log(error);
     }
 }
 
-const deletePinApi = async (api, setFloorID, floorID, getProductList, handleEnableDisable, projectSettings) => {
+// const deletePinApi = async (api, setFloorID, floorID, getProductList, handleEnableDisable, projectSettings, id,categories=[]) => {
+//     try {
+//         const response = await deleteRequest(api);
+//         const data = response.data ?? [];
+//         // console.log(data, 'data')
+//         toast.success(data?.message);
+//         let floor_id
+//         setFloorID((prev) => {
+//             floor_id = prev;
+//             return prev;
+//         });
+//         getProductList(floor_id ?? floorID);
+//         handleEnableDisable();
+//         if (projectSettings) {
+//             revertPackage(projectSettings?.enc_id)
+//         }
+
+//         if(categories.length > 0){
+//             return fetchPinData(id, categories);
+//         }
+//     } catch (error) {
+//         console.log(error);
+//     }
+// }
+const deletePinApi = async (api, projectSettings, id,categories=[]) => {
     try {
         const response = await deleteRequest(api);
         const data = response.data ?? [];
         // console.log(data, 'data')
         toast.success(data?.message);
-        let floor_id
-        setFloorID((prev) => {
-            floor_id = prev;
-            return prev;
-        });
-        getProductList(floor_id ?? floorID);
-        handleEnableDisable();
+        // let floor_id
+        // setFloorID((prev) => {
+        //     floor_id = prev;
+        //     return prev;
+        // });
+        // getProductList(floor_id ?? floorID);
+        // handleEnableDisable();
         if (projectSettings) {
             revertPackage(projectSettings?.enc_id)
+        }
+
+        if(categories.length > 0){
+            return fetchPinData(id, categories);
         }
     } catch (error) {
         console.log(error);
@@ -217,25 +247,55 @@ const deleteSubPinApi = async (id,setFloorID,floorID, getProductList, handleEnab
 };
 
 
-const removePinApi = async (api, para, setFloorID, floorID, getProductList, handleEnableDisable, projectSettings) => {
+// const removePinApi = async (api, para, setFloorID, floorID, getProductList, handleEnableDisable, projectSettings, id, categories=[]) => {
+
+//     try {
+//         const response = await postRequest(api, para);
+//         console.log(response);
+//         const data = response.response?.data ?? [];
+//         toast.success(data?.message);
+//         let floor_id
+//         setFloorID((prev) => {
+//             floor_id = prev;
+//             return prev;
+//         });
+//         // getProductList(floor_id ?? floorID); 
+//         handleEnableDisable();
+//         if (projectSettings) {
+//             revertPackage(projectSettings?.enc_id)
+//         }
+//         if(categories.length > 0){
+//             return fetchPinData(id, categories);
+//         }
+//         return data
+//     } catch (e) {
+//         console.log(e,"error");
+//     }
+
+// }
+const removePinApi = async (api, para, projectSettings, id, categories=[]) => {
 
     try {
         const response = await postRequest(api, para);
         console.log(response);
         const data = response.response?.data ?? [];
         toast.success(data?.message);
-        let floor_id
-        setFloorID((prev) => {
-            floor_id = prev;
-            return prev;
-        });
-        getProductList(floor_id ?? floorID);
-        handleEnableDisable();
+        // let floor_id
+        // setFloorID((prev) => {
+        //     floor_id = prev;
+        //     return prev;
+        // });
+        // getProductList(floor_id ?? floorID); 
+        // handleEnableDisable();
         if (projectSettings) {
             revertPackage(projectSettings?.enc_id)
         }
+        if(categories.length > 0){
+            return fetchPinData(id, categories);
+        }
+        return data
     } catch (e) {
-        clg
+        console.log(e,"error");
     }
 
 }

@@ -15,7 +15,6 @@ import { postRequest } from '../../hooks/axiosClient';
 import { setCurrentUser, encode } from '../../helpers/utils';
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import axios from 'axios';
 import LogoIco from "../../assets/icons/Logo.svg";
 import "./auth.css";
 import TimeoutModal from "./TimeoutModal";
@@ -38,13 +37,14 @@ const Login = () => {
   const [showTime, setShowTime] = useState(false);
   const [loginAttempts, setLoginAttempts] = useState(0);
   const [modal, setModal] = useState(false);
-  const toggle = () => setModal(!modal);
   const [ip, setIP] = useState('');
+  const toggle = () => setModal((prev) => !prev);
 
   const getIP = async () => {
     try {
-      const res = await axios.get('https://geolocation-db.com/json/');
-      setIP(res.data.IPv4);
+      const res = await fetch('https://api.ipify.org?format=json');
+      const data = await res.json();
+      setIP(data.ip);
     } catch (error) {
       console.error('Failed to fetch the IP address:', error);
     }
@@ -110,16 +110,17 @@ const Login = () => {
   }
 
   useEffect(() => {
-    getIP()
-    localStorage.removeItem('current_user')
-    const preventNavigation = (e) => {
-      e.preventDefault();
-      e.returnValue = "You are not allowed to leave this page.";
-    };
-    window.onbeforeunload = preventNavigation;
-    return () => {
-      window.onbeforeunload = null;
-    };
+    getIP();
+    localStorage.removeItem('current_user');
+
+    // const preventNavigation = (e) => {
+    //   e.preventDefault();
+    //   e.returnValue = "You are not allowed to leave this page.";
+    // };
+    // window.onbeforeunload = preventNavigation;
+    // return () => {
+    //   window.onbeforeunload = null;
+    // };
   }, []);
 
   return (
@@ -195,7 +196,7 @@ const Login = () => {
                             <Field
                               id="password"
                               className="form-control custom-input"
-                              type={isRevealPwd ? "text" : "Password"}
+                              type={isRevealPwd ? "text" : "password"}
                               name="password"
                               placeholder="Enter password"
                               value={values?.password}
@@ -212,24 +213,15 @@ const Login = () => {
                                   backgroundColor: "transparent",
                                 }}
                               >
-                                {!isRevealPwd && (
+                                {isRevealPwd ? (
                                   <FaEyeSlash
                                     title="Hide password"
-                                    onClick={() =>
-                                      setIsRevealPwd(
-                                        (prevState) => !prevState
-                                      )
-                                    }
+                                    onClick={() => setIsRevealPwd((prev) => !prev)}
                                   />
-                                )}
-                                {isRevealPwd && (
+                                ) : (
                                   <FaEye
-                                    title="Show Password"
-                                    onClick={() =>
-                                      setIsRevealPwd(
-                                        (prevState) => !prevState
-                                      )
-                                    }
+                                    title="Show password"
+                                    onClick={() => setIsRevealPwd((prev) => !prev)}
                                   />
                                 )}
                               </span>

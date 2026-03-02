@@ -1,11 +1,14 @@
 import React, { useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
+import { useDispatch } from 'react-redux';
+import { setMapContainer } from '../../../../store/slices/mapSlice';
 
 const BaseMap = forwardRef(
-    ({ config, onMapLoad, className = 'w-full h-screen' }, ref) => {
+    ({ config, onMapLoad, className = 'w-full h-screen',isBoundActive = true }, ref) => {
         const mapContainer = useRef(null);
         const map = useRef(null);
+        const dispatch = useDispatch()
         
         useImperativeHandle(ref, () => ({
             getMap: () => map.current
@@ -21,21 +24,25 @@ const BaseMap = forwardRef(
                 ...config
             };
             
-            const bounds = getBoundsFromCenter(defaultConfig.center, 0.5);
+            const bounds = getBoundsFromCenter(defaultConfig.center, 0.25);
             
             const newMap = new maplibregl.Map({
                 container: mapContainer.current,
                 style: defaultConfig.style,
                 center: defaultConfig.center,
-                zoom: defaultConfig.zoom,
-                maxBounds: bounds
+                zoom: defaultConfig.zoom, 
+                ...(isBoundActive && {
+                    maxBounds:bounds,
+                }),
             });
             
             map.current = newMap;
+            dispatch(setMapContainer(newMap))
+
             
             newMap.on('load', () => {
                 if (onMapLoad) onMapLoad(newMap);
-                
+                if(!isBoundActive) return
                 const layers = newMap.getStyle().layers;
                 
                 layers.forEach(layer => {  
@@ -70,7 +77,7 @@ const BaseMap = forwardRef(
             ];
         }
         
-        return <div ref={mapContainer} className={className} />;
+        return <div ref={mapContainer} className={`${className} base-map`} />;
     }
 );
 

@@ -5,8 +5,7 @@ const getProduct = async (floorID, id, setProducts, setProductList,) => {
         const response = await getRequest(`product-list/${id}`);
         const response2 = await getRequest(`product-list/${id}?type=2`);
         let data = response.data ?? [];
-        let data2 = response2.data ?? [];
-        // console.log(data2,data2.length, "data2data2data2");
+        let data2 = response2.data ?? []; 
         if (data2.length > 0) {
             data.forEach(item => {
                 if (Array.isArray(item.group_details)) {
@@ -14,19 +13,15 @@ const getProduct = async (floorID, id, setProducts, setProductList,) => {
                 }
             });
         }
-        data = [...data,...data2]
-        // console.log({response2,data2,data,response},"response2,data2")
+        data = [...data,...data2] 
         const modifiedData = data.map((el) => ({
-            ...el,
-            // position: el?.positions ? JSON.parse(el?.positions) : "",
-            // position: el?.positions ? JSON.parse(el?.positions) : { x: 0, y: 0 },
+            ...el, 
             position: el?.positions ? JSON.parse(el?.positions) : null,
             search_name: `${el?.product_name}${el?.floor_plan ? ` (${el.floor_plan})` : ''}`
         }));
         const currentFloorPins = modifiedData?.filter(
             (item) => floorID == item?.fp_id
-        );
-        // console.log(floorID, 'modifiedData')
+        ); 
         setProducts(currentFloorPins);
         setProductList(modifiedData);
     } catch (error) {
@@ -41,19 +36,18 @@ const getLocation = async (floorID, id, setLocations, setLocationList) => {
         const response = await getRequest(reqUrl);
         const data = response.data ?? [];
         const modifiedData = data.map((el) => ({
-            ...el,
-            // position: el?.positions ? JSON.parse(el?.positions) : "",
-            // position: el?.positions ? JSON.parse(el?.positions) : { x: 0, y: 0 },
+            ...el, 
             position: el?.positions ? JSON.parse(el?.positions) : null,
             search_name: `${el?.location_name} (${el?.floor_plan})`
         }));
 
-        const currentFloorPins = modifiedData?.filter(
-            (item) => floorID == item?.fp_id
-        );
-        // console.log(currentFloorPins, 'modifiedData')
-        setLocations(currentFloorPins);
-        setLocationList(modifiedData);
+        // const currentFloorPins = modifiedData?.filter(
+        //     (item) => floorID == item?.fp_id
+        // ); 
+        // setLocations(currentFloorPins);
+        // setLocationList(modifiedData);
+
+        // return {currentFloorPins,modifiedData};
     } catch (error) {
          console.log(error);
     }
@@ -64,8 +58,7 @@ const getBeacon = async (floorID, id, setBeacons, setBeaconList) => {
         const response = await getRequest(`list-QrBeacon/${id}`);
         const data = response.data ?? [];
         const modifiedData = data.map((el) => ({
-            ...el,
-            // position: el?.positions ? JSON.parse(el?.positions) : "",
+            ...el, 
             position: el?.positions ? JSON.parse(el?.positions) : null,
             search_name: `${el?.beacon_name} (${el?.floor_plan})`
         }));
@@ -84,8 +77,7 @@ const getAmenity = async (floorID, id, setAmenities, setAmenityList) => {
         const response = await getRequest(`list-amenity/${id}`);
         const data = response.data ?? [];
         const modifiedData = data.map((el) => ({
-            ...el,
-            // position: el?.positions ? JSON.parse(el?.positions) : "",
+            ...el, 
             position: el?.positions ? JSON.parse(el?.positions) : null,
             search_name: `${el?.amenity_name} (${el?.floor_plan})`
         }));
@@ -104,8 +96,7 @@ const getSafety = async (floorID, id, setSafeties, setSafetyList) => {
         const response = await getRequest(`list-safety/${id}`);
         const data = response?.data ?? [];
         const modifiedData = data.map((el) => ({
-            ...el,
-            // position: el?.positions ? JSON.parse(el?.positions) : "",
+            ...el, 
             position: el?.positions ? JSON.parse(el?.positions) : null,
             search_name: `${el?.safety_name} (${el?.floor_plan})`
         }));
@@ -126,8 +117,7 @@ const getVerticalTransport = async (floorID, setVerticalTransportlist) => {
         const modifiedData = data.map((el) => ({
             ...el,
             position: el?.positions ? JSON.parse(el?.positions) : ""
-        }));
-        // console.log(modifiedData, "list");
+        })); 
         setVerticalTransportlist(modifiedData);
     } catch (error) {
          console.log(error);

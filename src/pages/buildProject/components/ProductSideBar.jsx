@@ -6,11 +6,11 @@ import { BiSolidPencil } from 'react-icons/bi'
 import { FaChevronDown, FaEdit, FaInfo, FaMapMarkerAlt, FaTimes } from 'react-icons/fa';
 import { HiDotsVertical } from "react-icons/hi";
 import { IoMdCheckmark, IoMdClose } from 'react-icons/io'
-import ProdSpecItem, { LocationWebListItem } from './ProdSpecItem'
+import ProdSpecItem, { WebListItem } from './ProdSpecItem'
 import { ProductSvg } from "../CustomSvg";
 import TagInputComp from '../../../components/tagInput/TagInputComp';
 import { postRequest, getRequest, deleteRequest } from '../../../hooks/axiosClient';
-import { getCurrentUser } from '../../../helpers/utils';
+import { decode, getCurrentUser } from '../../../helpers/utils';
 import { SetBackEndErrorsAPi } from '../../../hooks/setBEerror';
 import * as Yup from 'yup';
 import { toast } from "react-toastify";
@@ -33,8 +33,15 @@ import { removeFabricObjectsEncId } from '../Helpers/bringFabricObjects';
 import UndraggedDiv from '../Helpers/modal/UndraggedDiv';
 import { Dropdown, DropdownToggle, DropdownMenu, DropdownItem } from 'reactstrap';
 import { getEmptyImage } from 'react-dnd-html5-backend';
-import CommonDropdown from '../../../components/common/CommonDropdown';
-import { useAppDispatch } from '../../../hooks/useAppDispatch';
+import CommonDropdown from '../../../components/common/CommonDropdown'; 
+import { useActiveTab } from '../../../components/map/components/hooks/useActiveTab';
+// import { useMapContext } from '../../../components/map/components/contexts/MapContext';
+import { setCurrentFloor, setEditingPinId, setPinsByCategory } from '../../../store/slices/projectItemSlice';
+import { useSelector } from 'react-redux';
+import { useDispatch } from 'react-redux';
+import useFlyToPin from '../../../components/map/components/hooks/useFlyToPin';
+import { useParams } from 'react-router-dom';
+import { fetchPinData } from '../../../components/map/components/hooks/useLoadPins';
 
 
 const { image_url } = environmentaldatas;
@@ -70,7 +77,8 @@ const ProductSideBar = ({
     selProductDtls,
     setSelProductDtls,
     selFloorPlanDtls,
-    id, floorID,
+    // id,
+     floorID,
     projectSettings,
     addNew, setAddNew,
     getProductList,
@@ -84,7 +92,7 @@ const ProductSideBar = ({
     handleEnableDisable,
     totalPinsUsed,
     setFloorID,
-    productList,
+    // productList,
     getFloorPlanByid,
     searchTerm,
     setSearchTerm,
@@ -120,8 +128,24 @@ const ProductSideBar = ({
         // position: { x: 0, y: 0 },
         ...selProductDtls
     }
+ 
+    useActiveTab('product');
+    const editingPinId = useSelector(state => state.api.editingPinId);
+    const allPins      = useSelector(state => state.api.allPins);
+    const pinCount     = useSelector(state => state.api.pinCount); 
+    const floorList    = useSelector(state => state.api.floorList); 
+    const flyToPin     = useFlyToPin();
+    const dispatch     = useDispatch();  
+    const productList  = allPins?.product ?? [] 
+    let { id }         = useParams()
+    id                 = id && decode(id);
 
-    const dispatch = useAppDispatch();
+    useEffect(()=>{
+        if(!addNew && editingPinId){
+            dispatch(setEditingPinId(null))
+        }
+    },[addNew])
+
 
     const imgInputRef = useRef()
     const fileInputRef = useRef()
@@ -154,12 +178,10 @@ const ProductSideBar = ({
 
     const accordianListOpen = useRef([])
 
+
+
     const addProductClick = () => {
-        if (totalPinsUsed?.used_products == totalPinsUsed?.total_products) {
-            PlanExpiryDetails(id, setPlanDetails, setModalPlan);
-        } else if (totalPinsUsed?.used_products == totalPinsUsed?.total_products) {
-            PlanExpiryDetails(id, setPlanDetails, setModalPlan);
-        } else if (totalPinsUsed?.used_products == totalPinsUsed?.total_products) {
+        if (pinCount?.used_products == pinCount?.total_products) {
             PlanExpiryDetails(id, setPlanDetails, setModalPlan);
         } else {
             addClick();
@@ -168,25 +190,11 @@ const ProductSideBar = ({
     }
 
     const planCheck = () => {
-        if (totalPinsUsed?.used_products == totalPinsUsed?.total_products) {
+        if (pinCount?.used_products == pinCount?.total_products) {
             PlanExpiryDetails(id, setPlanDetails, setModalPlan);
-            setTimeout(() => {
-                removeFabricObjectsEncId(canvas, selProductDtls?.enc_id, 'product')
-            }, 2000);
-            setSavingTimer(false)
-            return
-        } else if (totalPinsUsed?.used_products == totalPinsUsed?.total_products) {
-            PlanExpiryDetails(id, setPlanDetails, setModalPlan);
-            setTimeout(() => {
-                removeFabricObjectsEncId(canvas, selProductDtls?.enc_id, 'product')
-            }, 2000);
-            setSavingTimer(false)
-
-        } else if (totalPinsUsed?.used_products == totalPinsUsed?.total_products) {
-            PlanExpiryDetails(id, setPlanDetails, setModalPlan);
-            setTimeout(() => {
-                removeFabricObjectsEncId(canvas, selProductDtls?.enc_id, 'product')
-            }, 2000);
+            // setTimeout(() => {
+            //     removeFabricObjectsEncId(canvas, selProductDtls?.enc_id, 'product')
+            // }, 2000);
             setSavingTimer(false)
             return
         } else {
@@ -223,9 +231,9 @@ const ProductSideBar = ({
         }
     };
 
-    useEffect(() => {
-        getProductList(floorID)
-    }, [floorID])
+    // useEffect(() => {
+    //     getProductList(floorID)
+    // }, [floorID])
 
     const addProduct = async (values, setFieldError) => {
 
@@ -333,6 +341,13 @@ const ProductSideBar = ({
                 } else {
                     setSelProductDtls();
                 }
+
+                let product = await fetchPinData(id, ['product']);
+                dispatch(
+                    setPinsByCategory({
+                        product : product?.product
+                    }
+                ));
 
                 if (values?.assignDetails) {
                     let { customer_id, project_id, prev_id, product_id, type } = values?.assignDetails
@@ -511,7 +526,7 @@ const ProductSideBar = ({
         });
     }
 
-    const deleteClick = async (row, canDrag = false, subpin = false) => {
+    const deleteClick = (row, canDrag = false, subpin = false) => {
         const buttons = {
             cancel: {
                 text: "Cancel",
@@ -547,15 +562,20 @@ const ProductSideBar = ({
             icon: "warning",
             buttons: orderedButtons
         })
-            .then((value) => {
+            .then(async (value) => {
                 switch (value) {
                     case "Yes":
 
                         if (subpin) {
                             deleteSubPinApi(row?.id,setFloorID, floorID, getProductList, handleEnableDisable, projectSettings)
                         } else {
-                            deletePinApi(`product/${row?.enc_id}`, setFloorID, floorID, getProductList, handleEnableDisable, projectSettings)
+                            let productList = await deletePinApi(`product/${row?.enc_id}`, setFloorID, floorID, getProductList, handleEnableDisable, projectSettings, id, ['product'])
                         
+                            dispatch(
+                                setPinsByCategory({
+                                    product : productList?.product
+                                }
+                            ));
                             const index = accordianListOpen.current.indexOf(row?.enc_id);
                             if (index !== -1) {
                                 accordianListOpen.current.splice(index, 1);
@@ -574,12 +594,18 @@ const ProductSideBar = ({
                             id: row?.enc_id
                         }
 
-                        removePinApi(`remove-pin`, para, setFloorID, floorID, getProductList, handleEnableDisable, projectSettings)
-                        setStoredObjects((prev) => {
-                            let updatedObjects = prev
-                            updatedObjects.delete(`${row?.enc_id}_${row?.fp_id}`)
-                            return updatedObjects
-                        })
+                        let productList = await removePinApi(`remove-pin`, para, setFloorID, floorID, getProductList, handleEnableDisable, projectSettings, id, ['product'])
+                        dispatch(
+                            setPinsByCategory({
+                                product : productList?.product
+                            }
+                        ));
+
+                        // setStoredObjects((prev) => {
+                        //     let updatedObjects = prev
+                        //     updatedObjects.delete(`${row?.enc_id}_${row?.fp_id}`)
+                        //     return updatedObjects
+                        // })
                         break;
                     default:
                         break;
@@ -617,9 +643,22 @@ const ProductSideBar = ({
         postImages([trimmedImageUrl], 'delete')
     }
 
-    const editClick = (product, type = false) => {
+    const editClick = (product, type = false) => { 
         setPanTool(false)
-        if (product?.position) {
+        if (product?.positions) {
+            let floor = floorList.find(item => item.enc_id == product.fp_id)
+            dispatch(setCurrentFloor({
+                value: floor.enc_id,
+                label: floor?.floor_plan,
+                id: floor?.enc_id,
+                plan: floor?.plan,
+                dec_id: floor?.dec_id,
+            }));
+            dispatch(setEditingPinId(product.enc_id));  
+            flyToPin(JSON.parse(product?.positions));    
+        }
+
+        if (product?.position) { 
             getFloorPlanByid(product?.fp_id, 'products', "0", "default", product);
         } else {
             onEditProduct(product,type)
@@ -853,7 +892,7 @@ const ProductSideBar = ({
     };
 
     const ProductItem = ({ product, index, }) => {
-        const canDrag = (product?.position === null);
+        const canDrag = (!product?.positions || product?.positions === null);
         const id = product.enc_id;
         const [{ isDragging }, drag, preview] = useDrag({
             type: 'productpin',
@@ -892,12 +931,9 @@ const ProductSideBar = ({
                 product_name:pin.name,
                 customer_id:projectSettings?.enc_customer_id ?? getCurrentUser()?.user?.common_id,
                 project_id: id,
-            }
+            } 
 
-            console.log(payload,toGroup,"payload,toGrouppayload,toGroup");
-            // return
-            try {
-                // let response = await postRequest(`group-product`,payload )
+            try { 
                 let response = await postRequest(`product`,payload )
                 if (response?.type == 1) {
                     getProductList(floorID)
@@ -905,12 +941,7 @@ const ProductSideBar = ({
                 }
             } catch (error) {
                 console.log(error); 
-            }
-            // fromGroup.group_details = fromGroup.group_details.filter(p => p.id !== pin.id);
-
-            // toGroup.group_details.push(pin);
-
-            // console.log({newData},"newData,filteredData")
+            } 
            
         };
 
@@ -1017,7 +1048,7 @@ const ProductSideBar = ({
     const goBack = () => {
         setSearchTerm('');
         if (addNew) {
-            console.log(isDirty, 'isDirty')
+            // console.log(isDirty, 'isDirty')
             if (isDirty) {
                 setBackClick(true)
                 document.getElementById("productSubmitBtn")?.click();
@@ -1337,7 +1368,7 @@ const ProductSideBar = ({
                                                     {/* {websiteLinks.map((sp, id) => <ProdSpecItem spec={sp} index={id} setSpecifications={setwebsiteLinks} specifications={websiteLinks} name='websiteLink' setFieldValue={setFieldValue} setIsDirty={setIsDirty} />)} */}
                                                     {
                                                         values.websiteLink.map((sp, id) => (
-                                                            <LocationWebListItem
+                                                            <WebListItem
                                                                 key={id}
                                                                 spec={sp}
                                                                 index={id}

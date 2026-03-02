@@ -3,11 +3,12 @@ import TagsInput from 'react-tagsinput'
 
 import 'react-tagsinput/react-tagsinput.css'
 import './tagInput.css'
+import { sanitizeTags } from '../../pages/buildProject/newComponents/utils/pinServices' 
 const TagInputComp = ({ tags, setTags }) => {
 
     return (
         <TagsInput
-            value={tags}
+            value={sanitizeTags(tags)}
             onChange={setTags}
             className='form-control'
             addKeys={[13]}

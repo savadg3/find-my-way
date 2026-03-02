@@ -6,7 +6,7 @@
 }
 
 .view-project-header {
-  padding: 5px 8px;
+  padding: 5px 1rem;
   background-color: white;
   border-bottom: 1px solid #DDDDDD;
   height: 50px;
@@ -80,7 +80,8 @@
   color: #1d1b1b;
   font-weight: 500;
   float: right;
-  position: relative;
+  /* position: relative; */
+  position: absolute;
   z-index: 99;
   /* top: 35px; */
   right: 25px;
@@ -238,6 +239,20 @@
   justify-content: center;
   color: #26a3db;
   background-color: #F0F8FC;
+  cursor: pointer;
+}
+.select-logo.project{
+  position: relative;
+}
+.select-logo.project input[type="file"]{
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 2;
+  display: block !important;
+  opacity: 0;
   cursor: pointer;
 }
 
@@ -601,7 +616,7 @@
 .delete-logo-icon {
   position: absolute;
   top: 0;
-  right: 16px;
+  right: 0px;
   cursor: pointer;
   font-weight: 600;
 }
@@ -1765,6 +1780,23 @@ transform: none;  */
 .loading span:nth-child(8) { animation-delay: 0.7s; }
 .loading span:nth-child(9) { animation-delay: 0.8s; }
 .loading span:nth-child(10) { animation-delay: 0.9s; }
+
+.pin-drag-drop-div{
+  /* display: flex;
+  align-items: center;
+  justify-content: center; */
+  height : calc(100% - 50px)
+}
+
+.location-container{
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 58px;
+  z-index: 99;
+  max-width: 500px; 
+  margin: auto;
+}
 
 
 @keyframes loading {

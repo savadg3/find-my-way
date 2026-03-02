@@ -4,7 +4,6 @@ import { Formik } from 'formik';
 import { NavLink, useParams, useNavigate } from 'react-router-dom';
 import * as Yup from 'yup';
 import { postRequest, getRequest } from '../../hooks/axiosClient';
-import axios from 'axios'
 import Hashids from 'hashids';
 import OtpComponent from './otp';
 import LogoIco from "../../assets/icons/Logo.svg";
@@ -32,8 +31,13 @@ const TwoFactorCode = () => {
     const [loading, setLoading] = useState(false);
 
     const getData = async () => {
-        const res = await axios.get('https://geolocation-db.com/json/')
-        setIP(res.data.IPv4)
+        try {
+            const res = await fetch('https://api.ipify.org?format=json');
+            const data = await res.json();
+            setIP(data.ip);
+        } catch (error) {
+            console.error('Failed to fetch IP address:', error);
+        }
     }
 
     useEffect(() => {
@@ -113,14 +117,8 @@ const TwoFactorCode = () => {
                                         Email two factor authentication
                                     </h5>
                                 </CardTitle>
-                                <h4 className="f-20 f-w-600"></h4>
                                 <p className='text-center f-16'>Your verification code has been sent to
-                                    {/* //for demo */}
                                     <span style={{ color: "#26a3db" }}>{getCurrentUser()?.user?.mobile ? ` *****${getCurrentUser().user.mobile.slice(-4)}` : ''}</span>.
-                                    
-                                    {/* // for live */}
-                                     {/* <span style={{ color: "#26a3db" }}>{getCurrentUser()?.user?.email}</span>.   */}
-                                     
                                     {" "}Please enter it below to login to the dashboard</p>
                                 
                                 <Formik

@@ -13,8 +13,7 @@ export function SetBackEndErrorsAPi(data, setFieldError, type = 0) {
       if (fields.includes(key)) {
         setFieldError?.setFieldError(key, errorMsg);
       }
-    });
-    // toast.error('Invalid details.');
+    }); 
   } else if (errormessage) {
     toast.error(data.errormessage);
   }

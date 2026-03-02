@@ -60,8 +60,7 @@ const DropdownWithIcons = ({ name, options, selDtls, setSelDtls, setFieldValue, 
             value={selectedOption}
             // defaultValue={options?.find(el => selDtls?.icon_id == el?.dec_id)}
             placeholder='Select'
-            onChange={(e) => {
-                console.log(e)
+            onChange={(e) => { 
                 setFieldValue('icon_path', e.path), setFieldValue('icon', e.enc_id), setFieldValue('icon_id', e.enc_id); setSelectedOption(e);
 
                 if (vericalTransport == 1) {

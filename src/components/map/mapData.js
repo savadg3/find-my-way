@@ -8213,10 +8213,44 @@ export const BuildingData = {
 
 
 
-
+// api - project/{id}
+// project/155
 export const ProjectData = {
-  projectName : "Indoor Navigation",
-  location : [75.7804, 11.2588]
+  // "location": [153.0278190319704, -27.467322438114287],
+  "location": [75.78044926997217, 11.258814157509704],
+  "enc_id": 155,
+  "enc_customer_id": 13,
+  "project_name": "savad floorplan test",
+  "logo": null,
+  "background_color": "#F6F7F3",
+  "fill_color": "#EFEEEC",
+  "border_thick": 3,
+  "border_color": "#D3D3D3",
+  "inactive_color": "#B2B2B2",
+  "location_color": "#26A3DB",
+  "product_color": "#F2C538",
+  "start_color": "#5FD827",
+  "beacon_color": "#26A3DB",
+  "amenity_color": "#9440C6",
+  "safety_color": "#ED1C24",
+  "level_change_color": "#374046",
+  "navigation_color": "#E52525",
+  "nav_btn_color": null,
+  "nav_btn_text_color": null,
+  "navigation_thick": 3,
+  "is_published": 0,
+  "status": 1,
+  "is_paid": 0,
+  "error_reporting_email": null,
+  "published_date": null,
+  "recurring_date": null,
+  "is_free": 1,
+  "is_basic": 0,
+  "is_additional": 0,
+  "additional_count": 0,
+  "is_pass_protected": false,
+  "vt_details": [],
+  "fp_details": []
 }
 
 export const FloorList = [
@@ -8325,159 +8359,220 @@ export const floorDataResponse = {
 }
 
 
-export const demoMarkersGeoJSON = {
-  "type": "FeatureCollection",
-  "features": [
-    {
-      "type": "Feature",
-      "properties": {
-        "category": "location",
-        "title": "Main Entrance",
-        "iconPath": "/icons/location/entrance.svg",
-        "iconSize": [30, 30],
-        "description": "Main entry point to the building"
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [75.77973749437209 , 11.258567192627964]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "category": "beacon",
-        "subType": "strong",
-        "title": "Beacon A1",
-        "iconPath": "/icons/beacon/beacon.svg",
-        "iconSize": [25, 25],
-        "description": "Navigation beacon with strong signal"
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [75.78020956315851 , 11.25864084921831]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "category": "amenity",
-        "subType": "restroom",
-        "title": "Restroom - Ground Floor",
-        "iconPath": "/icons/amenity/restroom.svg",
-        "iconSize": [28, 28],
-        "description": "Clean and accessible restroom facility"
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [75.78032489814612 , 11.258417248796505]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "category": "amenity",
-        "subType": "food_court",
-        "title": "Food Court",
-        "iconPath": "/icons/amenity/food.svg",
-        "iconSize": [28, 28],
-        "description": "Various food options available"
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [75.77982744021458 , 11.258189516968073]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "category": "safety",
-        "subType": "fire_extinguisher",
-        "title": "Fire Extinguisher A1",
-        "iconPath": "/icons/safety/fire_extinguisher.svg",
-        "iconSize": [25, 25],
-        "description": "Emergency fire safety equipment"
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [75.7801961521144 , 11.258909169495027]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "category": "safety",
-        "subType": "first_aid",
-        "title": "First Aid Station",
-        "iconPath": "/icons/safety/first_aid.svg",
-        "iconSize": [25, 25],
-        "description": "Medical emergency supplies"
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [11.258909169495027, 11.258867080056461]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "category": "product",
-        "title": "Product Display - Zone A",
-        "iconPath": "/icons/product/display.svg",
-        "iconSize": [32, 32],
-        "description": "Featured products showcase"
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [75.78029271163857, 11.258154189254398]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "category": "vertical_transport",
-        "subType": "elevator",
-        "title": "Elevator 1",
-        "iconPath": "/icons/vertical_transport/elevator.svg",
-        "iconSize": [30, 30],
-        "description": "Access to all floors"
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [75.78005667724534 , 11.258325177984418]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "category": "vertical_transport",
-        "subType": "escalator",
-        "title": "Escalator to Level 2",
-        "iconPath": "/icons/vertical_transport/escalator.svg",
-        "iconSize": [30, 30],
-        "description": "Moving staircase to upper level"
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [75.77966239251964 , 11.258333069769364]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "category": "location",
-        "title": "Information Desk",
-        "iconPath": "/icons/location/info.svg",
-        "iconSize": [30, 30],
-        "description": "Customer service and information"
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [75.77982868947836 , 11.258840774153981]
-      }
-    }
-  ]
-};
- 
+export const demoMarkersGeoJSON = 
+// {}
+// {
+//   "type": "FeatureCollection",
+//   "features": [
+//     {
+//       "type": "Feature",
+//       "properties": {
+//         'id':1,
+//         "category": "location",
+//         "title": "Main Entrance",
+//         "iconPath": "/icons/location/entrance.svg",
+//         "iconSize": [30, 30],
+//         "description": "Main entry point to the building"
+//       },
+//       "geometry": {
+//         "type": "Point",
+//         "coordinates": [75.77973749437209 , 11.258567192627964]
+//       }
+//     },
+//     {
+//       "type": "Feature",
+//       "properties": {
+//         'id':2,
+//         "category": "beacon",
+//         "subType": "strong",
+//         "title": "Beacon A1",
+//         "iconPath": "/icons/beacon/beacon.svg",
+//         "iconSize": [25, 25],
+//         "description": "Navigation beacon with strong signal"
+//       },
+//       "geometry": {
+//         "type": "Point",
+//         "coordinates": [75.78020956315851 , 11.25864084921831]
+//       }
+//     },
+//     {
+//       "type": "Feature",
+//       "properties": {
+//         'id':3,
+//         "category": "amenity",
+//         "subType": "restroom",
+//         "title": "Restroom - Ground Floor",
+//         "iconPath": "/icons/amenity/restroom.svg",
+//         "iconSize": [28, 28],
+//         "description": "Clean and accessible restroom facility"
+//       },
+//       "geometry": {
+//         "type": "Point",
+//         "coordinates": [75.78032489814612 , 11.258417248796505]
+//       }
+//     },
+//     {
+//       "type": "Feature",
+//       "properties": {
+//         'id':4,
+//         "category": "amenity",
+//         "subType": "food_court",
+//         "title": "Food Court",
+//         "iconPath": "/icons/amenity/food.svg",
+//         "iconSize": [28, 28],
+//         "description": "Various food options available"
+//       },
+//       "geometry": {
+//         "type": "Point",
+//         "coordinates": [75.77982744021458 , 11.258189516968073]
+//       }
+//     },
+//     {
+//       "type": "Feature",
+//       "properties": {
+//         'id':5,
+//         "category": "safety",
+//         "subType": "fire_extinguisher",
+//         "title": "Fire Extinguisher A1",
+//         "iconPath": "/icons/safety/fire_extinguisher.svg",
+//         "iconSize": [25, 25],
+//         "description": "Emergency fire safety equipment"
+//       },
+//       "geometry": {
+//         "type": "Point",
+//         "coordinates": [75.7801961521144 , 11.258909169495027]
+//       }
+//     },
+//     {
+//       "type": "Feature",
+//       "properties": {
+//         'id':6,
+//         "category": "safety",
+//         "subType": "first_aid",
+//         "title": "First Aid Station",
+//         "iconPath": "/icons/safety/first_aid.svg",
+//         "iconSize": [25, 25],
+//         "description": "Medical emergency supplies"
+//       },
+//       "geometry": {
+//         "type": "Point",
+//         "coordinates": [11.258909169495027, 11.258867080056461]
+//       }
+//     },
+//     {
+//       "type": "Feature",
+//       "properties": {
+//         'id':7,
+//         "category": "product",
+//         "title": "Product Display - Zone A",
+//         "iconPath": "/icons/product/display.svg",
+//         "iconSize": [32, 32],
+//         "description": "Featured products showcase"
+//       },
+//       "geometry": {
+//         "type": "Point",
+//         "coordinates": [75.78029271163857, 11.258154189254398]
+//       }
+//     },
+//     {
+//       "type": "Feature",
+//       "properties": {
+//         'id':8,
+//         "category": "vertical_transport",
+//         "subType": "elevator",
+//         "title": "Elevator 1",
+//         "iconPath": "/icons/vertical_transport/elevator.svg",
+//         "iconSize": [30, 30],
+//         "description": "Access to all floors"
+//       },
+//       "geometry": {
+//         "type": "Point",
+//         "coordinates": [75.78005667724534 , 11.258325177984418]
+//       }
+//     },
+//     {
+//       "type": "Feature",
+//       "properties": {
+//         'id':9,
+//         "category": "vertical_transport",
+//         "subType": "escalator",
+//         "title": "Escalator to Level 2",
+//         "iconPath": "/icons/vertical_transport/escalator.svg",
+//         "iconSize": [30, 30],
+//         "description": "Moving staircase to upper level"
+//       },
+//       "geometry": {
+//         "type": "Point",
+//         "coordinates": [75.77966239251964 , 11.258333069769364]
+//       }
+//     },
+//     {
+//       "type": "Feature",
+//       "properties": {
+//         'id':10,
+//         "category": "location",
+//         "title": "Information Desk",
+//         "iconPath": "/icons/location/info.svg",
+//         "iconSize": [30, 30],
+//         "description": "Customer service and information"
+//       },
+//       "geometry": {
+//         "type": "Point",
+//         "coordinates": [75.77982868947836 , 11.258840774153981]
+//       }
+//     }
+//   ]
+// };
+
+[
+  {
+    "category" : "location",
+    "enc_id": 4069,
+    "location_name": "! New location",
+    "positions": "{\"x\": 75.78006705510748, \"y\": 11.25875758837445}",
+    "tags": null,
+    "description": null,
+    "monday_open": 0,
+    "monday_start": null,
+    "monday_end": null,
+    "tuesday_open": 0,
+    "tuesday_start": null,
+    "tuesday_end": null,
+    "wednesday_open": 0,
+    "wednesday_start": null,
+    "wednesday_end": null,
+    "thursday_open": 0,
+    "thursday_start": null,
+    "thursday_end": null,
+    "friday_open": 0,
+    "friday_start": null,
+    "friday_end": null,
+    "saturday_open": 0,
+    "saturday_start": null,
+    "saturday_end": null,
+    "sunday_open": 0,
+    "sunday_start": null,
+    "sunday_end": null,
+    "contact": null,
+    "website": "[]",
+    "promotions": "[]",
+    "location_color": "#26A3DB",
+    "boundary_color": null,
+    "boundary_attributes": null,
+    "is_published": 0,
+    "discard": 1,
+    "publish": 1,
+    "display_index": 20,
+    "status": 1,
+    "is_copy": 0,
+    "created_at": "2026-02-10T06:25:54.000000Z",
+    "updated_at": "2026-02-10T07:58:25.000000Z",
+    "deleted_at": null,
+    "floor_plan": "Level 1",
+    "fp_id": 409
+  }
+]
+
 export const demoBuildingData = {
   "type": "FeatureCollection",
   "features": [ 
