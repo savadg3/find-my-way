@@ -1,15 +1,8 @@
 // useImageImport.js
-// Hook that opens a file picker and dispatches addItem to imageOverlaySlice.
-// Supports: PNG, JPG, GIF, WebP, SVG
-// Usage:
-//   const { openImagePicker, openSVGPicker } = useImageImport(map);
-
 import { useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { addItem } from '../../../../../store/slices/imageOverlaySlice'; 
-
-// Default size on import — 200px wide, aspect-ratio preserved
-const DEFAULT_WIDTH = 200;
+import { addItem } from '../../../../../store/slices/imageOverlaySlice';
+import { buildCoordinates, DEFAULT_METRES, svgToDataURL } from './imageOverlayUtils';
 
 const readFileAsDataURL = (file) =>
   new Promise((resolve, reject) => {
@@ -38,26 +31,24 @@ const getSVGDimensions = (svgText) => {
   const parser = new DOMParser();
   const doc    = parser.parseFromString(svgText, 'image/svg+xml');
   const svg    = doc.querySelector('svg');
-  if (!svg) return { w: 200, h: 200 };
-
+  if (!svg) return { w: 1, h: 1 };
   const vb = svg.getAttribute('viewBox');
   if (vb) {
-    const [, , w, h] = vb.split(/\s+|,/).map(Number);
-    return { w, h };
+    const parts = vb.trim().split(/[\s,]+/).map(Number);
+    return { w: parts[2], h: parts[3] };
   }
   return {
-    w: parseFloat(svg.getAttribute('width'))  || 200,
-    h: parseFloat(svg.getAttribute('height')) || 200,
+    w: parseFloat(svg.getAttribute('width'))  || 1,
+    h: parseFloat(svg.getAttribute('height')) || 1,
   };
 };
 
-// Opens an invisible file <input> and returns the selected File
 const pickFile = (accept) =>
   new Promise((resolve) => {
     const input    = document.createElement('input');
     input.type     = 'file';
     input.accept   = accept;
-    input.onchange = () => resolve(input.files[0] ?? null);
+    input.onchange = () => resolve(input.files?.[0] ?? null);
     input.click();
   });
 
@@ -65,8 +56,7 @@ export default function useImageImport() {
   const dispatch = useDispatch();
   const map      = useSelector((s) => s.map.mapContainer);
 
-  // Map centre as the default drop position
-  const getCenter = useCallback(() => {
+  const getMapCenter = useCallback(() => {
     if (!map) return [0, 0];
     const c = map.getCenter();
     return [c.lng, c.lat];
@@ -76,35 +66,32 @@ export default function useImageImport() {
     const file = await pickFile('image/png,image/jpeg,image/gif,image/webp');
     if (!file) return;
 
-    const src  = await readFileAsDataURL(file);
-    const { w, h } = await getImageDimensions(src);
-    const aspect = h / w;
+    const src         = await readFileAsDataURL(file);
+    const { w, h }    = await getImageDimensions(src);
+    const aspectRatio = w / h;
+    const [lng, lat]  = getMapCenter();
+    const widthM      = DEFAULT_METRES;
+    const heightM     = widthM / aspectRatio;
+    const coordinates = buildCoordinates(lng, lat, widthM, heightM, 0);
 
-    dispatch(addItem({
-      type:   'image',
-      src,
-      lngLat: getCenter(),
-      width:  DEFAULT_WIDTH,
-      height: Math.round(DEFAULT_WIDTH * aspect),
-    }));
-  }, [dispatch, getCenter]);
+    dispatch(addItem({ type: 'image', src, coordinates, aspectRatio, rotation: 0 }));
+  }, [dispatch, getMapCenter]);
 
   const openSVGPicker = useCallback(async () => {
     const file = await pickFile('image/svg+xml,.svg');
     if (!file) return;
 
-    const src  = await readFileAsText(file);
-    const { w, h } = getSVGDimensions(src);
-    const aspect = h / w;
+    const svgText     = await readFileAsText(file);
+    const { w, h }    = getSVGDimensions(svgText);
+    const aspectRatio = w / h;
+    const src         = svgToDataURL(svgText);  // blob URL MapLibre can load
+    const [lng, lat]  = getMapCenter();
+    const widthM      = DEFAULT_METRES;
+    const heightM     = widthM / aspectRatio;
+    const coordinates = buildCoordinates(lng, lat, widthM, heightM, 0);
 
-    dispatch(addItem({
-      type:   'svg',
-      src,
-      lngLat: getCenter(),
-      width:  DEFAULT_WIDTH,
-      height: Math.round(DEFAULT_WIDTH * aspect),
-    }));
-  }, [dispatch, getCenter]);
+    dispatch(addItem({ type: 'svg', src, coordinates, aspectRatio, rotation: 0 }));
+  }, [dispatch, getMapCenter]);
 
   return { openImagePicker, openSVGPicker };
 }

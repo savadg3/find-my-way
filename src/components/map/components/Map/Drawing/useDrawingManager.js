@@ -30,13 +30,14 @@ import {
     defaultProps,
 } from './drawingUtils';
 
-import { SOURCES, LAYERS } from './DrawingLayer';
+import { SOURCES, LAYERS, drawingSourceRef } from './DrawingLayer';
 
-// ── Helper: update the preview source directly (no Redux round-trip needed) ──
-const setPreviewData = (map, geojson) => {
-    const src = map?.getSource(SOURCES.preview);
-    if (src) src.setData(geojson);
-};
+// ── Imperative source helpers — zero React/Redux, zero blink ─────────────────
+// setShapesOnly: geometry only, no annotation rebuild — use during drag
+// setShapesFull: geometry + vertex dots + edge labels — use on commit
+const setPreviewData  = (_map, geojson)       => drawingSourceRef.setPreviewData?.(geojson);
+const setShapesOnly   = (shapes, selectedIds) => drawingSourceRef.setShapesOnly?.(shapes, selectedIds);
+const setShapesFull   = (shapes, selectedIds) => drawingSourceRef.setShapesFull?.(shapes, selectedIds);
 
 export default function useDrawingManager({
     activeTool,
@@ -45,6 +46,7 @@ export default function useDrawingManager({
     strokeWidth,
     fillColor,
     
+    
     fontFamily, 
     fontSize, 
     bold, 
@@ -52,8 +54,15 @@ export default function useDrawingManager({
 }) {
     const dispatch   = useDispatch();
     const map        = useSelector((s) => s.map.mapContainer);
-    const shapes     = useSelector((s) => s.drawing.shapes);
-    const selectedIds= useSelector((s) => s.drawing.selectedIds);
+    
+    const shapes      = useSelector((s) => s.drawing.shapes);
+    const selectedIds = useSelector((s) => s.drawing.selectedIds);
+    
+    // Always-current refs — readable inside event callbacks without re-binding
+    const shapesRef       = useRef(shapes);
+    const selectedIdsRef  = useRef(selectedIds);
+    useEffect(() => { shapesRef.current      = shapes;      }, [shapes]);
+    useEffect(() => { selectedIdsRef.current = selectedIds; }, [selectedIds]);
     
     // Keep refs so event callbacks always see latest values without re-binding
     const stateRef = useRef({});
@@ -99,6 +108,11 @@ export default function useDrawingManager({
         
         return [...new Set(ids)];
     }, [map]);
+    
+    // ── Deselect drawing shapes when tool changes ───────────────────────────
+    useEffect(() => {
+        dispatch(clearSelection());
+    }, [activeTool, dispatch]);
     
     // ── Main effect: bind / unbind listeners when tool changes ───────────────
     useEffect(() => {
@@ -501,134 +515,159 @@ export default function useDrawingManager({
                         coords[0] = lngLat;
                     }
                     
-                    dispatch(updateShape({
-                        id: parentId,
-                        geometry: {
-                            ...shape.geometry,
-                            coordinates: [coords],
-                        },
-                    }));
-                    return;
-                }
+                    // Update MapLibre source imperatively — zero React/Redux, zero blink
+                    const newGeometry   = { ...shape.geometry, coordinates: [coords] };
+                    const updatedShapes = shapesRef.current.map((s) =>
+                        s.id === parentId ? { ...s, geometry: newGeometry } : s
+                );
+                drawingSourceRef.isDragging = true;
+                setShapesOnly(updatedShapes, selectedIdsRef.current);
+                vertexDragRef.liveGeometry = { id: parentId, geometry: newGeometry };
+                return;
+            }
+            
+            // Whole-shape drag
+            if (dragRef.current.active) {
+                dragRef.current.moved = true;
+                const { startLngLat, shapeIds, origGeometries } = dragRef.current;
+                const dlng = lngLat[0] - startLngLat[0];
+                const dlat = lngLat[1] - startLngLat[1];
                 
-                // Whole-shape drag
-                if (dragRef.current.active) {
-                    dragRef.current.moved = true;
-                    const { startLngLat, shapeIds, origGeometries } = dragRef.current;
-                    const dlng = lngLat[0] - startLngLat[0];
-                    const dlat = lngLat[1] - startLngLat[1];
-                    
-                    shapeIds.forEach((id) => {
-                        const orig = origGeometries[id];
-                        if (!orig) return;
-                        dispatch(updateShape({ id, geometry: translateGeometry(orig, dlng, dlat) }));
-                    });
-                    return;
-                }
-                
-                // Hover cursor — show grab on shapes, crosshair on vertices
-                const vertex = vertexHitTest(e.point);
-                if (vertex) {
-                    setCursor('crosshair');
-                    return;
-                }
-                const ids = hitTest(e.point);
-                setCursor(ids.length > 0 ? 'move' : 'default');
-            };
-            
-            // ── MouseUp ──────────────────────────────────────────────────────────
-            const handleMouseUp = () => {
-                if (vertexDragRef.active) {
-                    vertexDragRef.active      = false;
-                    vertexDragRef.parentId    = null;
-                    vertexDragRef.vertexIndex = null;
-                    map.dragPan.enable();
-                    setCursor('default');
-                    return;
-                }
-                if (dragRef.current.active) {
-                    map.dragPan.enable();
-                    setTimeout(() => {
-                        dragRef.current = { active: false, moved: false };
-                    }, 10);
-                }
-            };
-            
-            on('click',     handleClick);
-            on('mousedown', handleMouseDown);
-            on('mousemove', handleMouseMove);
-            on('mouseup',   handleMouseUp);
-            
-            // Delete key
-            const handleKey = (e) => {
-                if (e.key === 'Delete' || e.key === 'Backspace') {
-                    const { selectedIds } = stateRef.current;
-                    if (selectedIds.length > 0) dispatch(removeShapes(selectedIds));
-                }
-            };
-            window.addEventListener('keydown', handleKey);
-            cleanups.push(() => window.removeEventListener('keydown', handleKey));
+                // Update MapLibre source imperatively — zero React/Redux, zero blink
+                const geomUpdates = {};
+                shapeIds.forEach((id) => {
+                    const orig = origGeometries[id];
+                    if (!orig) return;
+                    geomUpdates[id] = translateGeometry(orig, dlng, dlat);
+                });
+                const updatedShapes = shapesRef.current.map((s) =>
+                    geomUpdates[s.id] ? { ...s, geometry: geomUpdates[s.id] } : s
+            );
+            drawingSourceRef.isDragging = true;
+            setShapesOnly(updatedShapes, selectedIdsRef.current);
+            dragRef.current.liveGeomUpdates = geomUpdates;
+            return;
         }
         
-        // ──────────────────────────────────────────────────────────────────────
-        return () => cleanups.forEach((fn) => fn());
-    }, [map, activeTool, activeShape, dispatch, hitTest, setCursor]);
-    
-    // ── Sync toolbar changes to selected shapes in real-time ────────────────
-    // Only fires when the user actively changes a toolbar value while shapes
-    // are selected — not on tool switch (selectedIds would be empty then).
-    const prevToolbarRef = useRef({});
-    useEffect(() => {
-        if (selectedIds.length === 0) return;
-        const prev = prevToolbarRef.current;
-        
-        // Detect which properties actually changed so we only update those
-        const changed = {};
-        if (strokeColor !== prev.strokeColor) changed.strokeColor = strokeColor;
-        if (strokeWidth !== prev.strokeWidth) changed.strokeWidth = strokeWidth;
-        if (fillColor   !== prev.fillColor)   changed.fillColor   = fillColor;
-        if (fontFamily  !== prev.fontFamily)  changed.fontFamily  = fontFamily;
-        if (fontSize    !== prev.fontSize)    changed.fontSize    = fontSize;
-        if (bold        !== prev.bold)        changed.bold        = bold;
-        if (textAlign   !== prev.textAlign)   changed.textAlign   = textAlign;
-        
-        if (Object.keys(changed).length > 0) {
-            dispatch(updateSelectedShapes(changed));
+        // Hover cursor — show grab on shapes, crosshair on vertices
+        const vertex = vertexHitTest(e.point);
+        if (vertex) {
+            setCursor('crosshair');
+            return;
         }
-        
-        prevToolbarRef.current = { strokeColor, strokeWidth, fillColor, fontFamily, fontSize, bold, textAlign };
-    }, [strokeColor, strokeWidth, fillColor, fontFamily, fontSize, bold, textAlign]);
+        const ids = hitTest(e.point);
+        setCursor(ids.length > 0 ? 'move' : 'default');
+    };
     
-    // ── When selection changes, sync toolbar state FROM selected shape ────────
-    // So toolbar reflects the selected shape's existing styles.
-    useEffect(() => {
-        if (selectedIds.length === 0) return;
-        const { shapes } = stateRef.current;
-        const shape = shapes.find((s) => s.id === selectedIds[0]);
-        if (!shape) return;
-        const p = shape.properties;
+    // ── MouseUp ──────────────────────────────────────────────────────────
+    const handleMouseUp = () => {
+        // Clear drag gate FIRST so DrawingLayer effect can run after commit
+        drawingSourceRef.isDragging = false;
         
-        // Import setters from drawingToolbarSlice — dispatch to sync toolbar UI
-        // Only update if value differs to avoid infinite loops
-        const updates = [
-            ['strokeColor', p.strokeColor],
-            ['strokeWidth', p.strokeWidth],
-            ['fillColor',   p.fillColor],
-            ['fontFamily',  p.fontFamily],
-            ['fontSize',    p.fontSize],
-            ['bold',        p.bold],
-            ['textAlign',   p.textAlign],
-        ].filter(([, v]) => v !== undefined);
-        
-        updates.forEach(([key, value]) => {
-            dispatch({ type: `drawingToolbar/set${key.charAt(0).toUpperCase() + key.slice(1)}`, payload: value });
-        });
-    }, [selectedIds]);
+        // ── Vertex drag commit ─────────────────────────────────────────
+        if (vertexDragRef.active) {
+            if (vertexDragRef.liveGeometry) {
+                dispatch(updateShape(vertexDragRef.liveGeometry));
+            }
+            vertexDragRef.active       = false;
+            vertexDragRef.parentId     = null;
+            vertexDragRef.vertexIndex  = null;
+            vertexDragRef.liveGeometry = null;
+            map.dragPan.enable();
+            setCursor('default');
+            return;
+        }
+        // ── Shape drag commit ──────────────────────────────────────────
+        if (dragRef.current.active) {
+            const { liveGeomUpdates } = dragRef.current;
+            if (liveGeomUpdates) {
+                Object.entries(liveGeomUpdates).forEach(([id, geometry]) => {
+                    dispatch(updateShape({ id, geometry }));
+                });
+            }
+            map.dragPan.enable();
+            setTimeout(() => {
+                dragRef.current = { active: false, moved: false, liveGeomUpdates: null };
+            }, 10);
+        }
+    };
     
-    // ── Keep stateRef.inProgress up-to-date for freehand handler ────────────
-    // (inProgress lives in Redux; we just need it accessible in closures above)
-    const inProgress = useSelector((s) => s.drawing.inProgress);
-    useEffect(() => {
-        stateRef.current.inProgress = inProgress;
-    }, [inProgress]);
+    on('click',     handleClick);
+    on('mousedown', handleMouseDown);
+    on('mousemove', handleMouseMove);
+    on('mouseup',   handleMouseUp);
+    
+    // Delete key
+    const handleKey = (e) => {
+        if (e.key === 'Delete' || e.key === 'Backspace') {
+            const { selectedIds } = stateRef.current;
+            if (selectedIds.length > 0) dispatch(removeShapes(selectedIds));
+        }
+    };
+    window.addEventListener('keydown', handleKey);
+    cleanups.push(() => window.removeEventListener('keydown', handleKey));
+}
+
+// ──────────────────────────────────────────────────────────────────────
+return () => cleanups.forEach((fn) => fn());
+}, [map, activeTool, activeShape, dispatch, hitTest, setCursor]);
+
+// ── Sync toolbar changes to selected shapes in real-time ────────────────
+// Only fires when the user actively changes a toolbar value while shapes
+// are selected — not on tool switch (selectedIds would be empty then).
+const prevToolbarRef = useRef({});
+useEffect(() => {
+    if (selectedIds.length === 0) return;
+    const prev = prevToolbarRef.current;
+    
+    // Detect which properties actually changed so we only update those
+    const changed = {};
+    if (strokeColor !== prev.strokeColor) changed.strokeColor = strokeColor;
+    if (strokeWidth !== prev.strokeWidth) changed.strokeWidth = strokeWidth;
+    if (fillColor   !== prev.fillColor)   changed.fillColor   = fillColor;
+    if (fontFamily  !== prev.fontFamily)  changed.fontFamily  = fontFamily;
+    if (fontSize    !== prev.fontSize)    changed.fontSize    = fontSize;
+    if (bold        !== prev.bold)        changed.bold        = bold;
+    if (textAlign   !== prev.textAlign)   changed.textAlign   = textAlign;
+    
+    if (Object.keys(changed).length > 0) {
+        dispatch(updateSelectedShapes(changed));
+    }
+    
+    prevToolbarRef.current = { strokeColor, strokeWidth, fillColor, fontFamily, fontSize, bold, textAlign };
+}, [strokeColor, strokeWidth, fillColor, fontFamily, fontSize, bold, textAlign]);
+
+// ── When selection changes, sync toolbar state FROM selected shape ────────
+// So toolbar reflects the selected shape's existing styles.
+useEffect(() => {
+    if (selectedIds.length === 0) return;
+    const { shapes } = stateRef.current;
+    const shape = shapes.find((s) => s.id === selectedIds[0]);
+    if (!shape) return;
+    const p = shape.properties;
+    
+    // Import setters from drawingToolbarSlice — dispatch to sync toolbar UI
+    // Only update if value differs to avoid infinite loops
+    const updates = [
+        ['strokeColor', p.strokeColor],
+        ['strokeWidth', p.strokeWidth],
+        ['fillColor',   p.fillColor],
+        ['fontFamily',  p.fontFamily],
+        ['fontSize',    p.fontSize],
+        ['bold',        p.bold],
+        ['textAlign',   p.textAlign],
+    ].filter(([, v]) => v !== undefined);
+    
+    updates.forEach(([key, value]) => {
+        dispatch({ type: `drawingToolbar/set${key.charAt(0).toUpperCase() + key.slice(1)}`, payload: value });
+    });
+}, [selectedIds]);
+
+// ── Keep stateRef.inProgress up-to-date for freehand handler ────────────
+const inProgress = useSelector((s) => s.drawing.inProgress);
+useEffect(() => {
+    stateRef.current.inProgress = inProgress;
+}, [inProgress]);
+
+// ── Keep stateRef.inProgress up-to-date ─────────────────────────────────
 }

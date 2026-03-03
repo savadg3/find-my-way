@@ -1,6 +1,11 @@
-// DrawingLayer.jsx  (refactored + vertex dots + edge labels + selection fix)
+// DrawingLayer.jsx
+// Registers MapLibre sources + layers for drawing shapes.
+// ALL data updates go through drawingSourceRef imperatively —
+// this component has NO useSelector on shapes/selectedIds,
+// so it NEVER re-renders due to drawing state changes.
+
 import { useEffect, useRef } from 'react';
-import { useSelector } from 'react-redux';
+import { useSelector }       from 'react-redux';
 import { shapesToGeoJSON, emptyCollection } from './drawingUtils';
 
 export const SOURCES = {
@@ -13,33 +18,33 @@ export const LAYERS = {
   stroke:         'drawing-stroke',
   selectedFill:   'drawing-selected-fill',
   selectedStroke: 'drawing-selected-stroke',
-  vertices:       'drawing-vertices',           // blue corner dots
-  verticesFirst:  'drawing-vertices-first',     // red snap-target dot (preview)
-  edgeLabels:     'drawing-edge-labels',        // "8.22 m" text on each side
+  vertices:       'drawing-vertices',
+  edgeLabels:     'drawing-edge-labels',
   previewLine:    'drawing-preview-line',
   previewFill:    'drawing-preview-fill',
-  previewVertex:  'drawing-preview-vertex',     // dots while drawing
-  previewEdge:    'drawing-preview-edge',       // live length labels while drawing
+  previewVertex:  'drawing-preview-vertex',
+  previewEdge:    'drawing-preview-edge',
   text:           'drawing-text',
 };
 
-// Shorthand MapLibre expression to read a feature property
 const prop = (name) => ['get', name];
 
+// ── Imperative handle ─────────────────────────────────────────────────────────
+// The ONLY way data gets into MapLibre sources.
+// DrawingLayer wires these on mount. useDrawingManager calls them directly.
+export const drawingSourceRef = {
+  setShapesData:  null,   // (shapes, selectedIds) => void
+  setPreviewData: null,   // (geojson) => void
+  isDragging:     false,
+};
+
 export default function DrawingLayer() {
-  const map         = useSelector((s) => s.map.mapContainer);
-  const shapes      = useSelector((s) => s.drawing.shapes);
-  const selectedIds = useSelector((s) => s.drawing.selectedIds);
-  const inProgress  = useSelector((s) => s.drawing.inProgress);
+  const map = useSelector((s) => s.map.mapContainer);
+  // NOTE: deliberately NOT selecting shapes or selectedIds here.
+  // All data flows through drawingSourceRef imperatively from useDrawingManager
+  // and the one-time sync in useDrawingSync (see below).
+  const initialised = useRef(false);
 
-  const initialised    = useRef(false);
-  const shapesRef      = useRef(shapes);
-  const selectedIdsRef = useRef(selectedIds);
-
-  useEffect(() => { shapesRef.current      = shapes;      }, [shapes]);
-  useEffect(() => { selectedIdsRef.current = selectedIds; }, [selectedIds]);
-
-  // ── 1. Register sources + layers once ────────────────────────────────────
   useEffect(() => {
     if (!map) return;
 
@@ -47,256 +52,123 @@ export default function DrawingLayer() {
       if (initialised.current) return;
       initialised.current = true;
 
-      // ── Sources ──────────────────────────────────────────────────────────
+      // ── Sources ────────────────────────────────────────────────────────
       map.addSource(SOURCES.shapes, {
         type:      'geojson',
         data:      emptyCollection(),
-        promoteId: 'id',   // required: makes queryRenderedFeatures return feature ids
+        promoteId: 'id',
       });
       map.addSource(SOURCES.preview, {
         type: 'geojson',
         data: emptyCollection(),
       });
 
-      // ── Committed shape layers ────────────────────────────────────────────
-
-      // Polygon fill
-      map.addLayer({
-        id:     LAYERS.fill,
-        type:   'fill',
-        source: SOURCES.shapes,
+      // ── Layers ────────────────────────────────────────────────────────
+      map.addLayer({ id: LAYERS.fill, type: 'fill', source: SOURCES.shapes,
         filter: ['==', ['geometry-type'], 'Polygon'],
-        paint: {
-          'fill-color':   prop('fillColor'),
-          'fill-opacity': ['coalesce', prop('opacity'), 1],
-        },
+        paint: { 'fill-color': prop('fillColor'), 'fill-opacity': ['coalesce', prop('opacity'), 1] },
       });
-
-      // Selected polygon highlight
-      map.addLayer({
-        id:     LAYERS.selectedFill,
-        type:   'fill',
-        source: SOURCES.shapes,
-        filter: ['all',
-          ['==', ['geometry-type'], 'Polygon'],
-          ['==', prop('selected'), true],
-        ],
-        paint: {
-          'fill-color':   'rgba(255,200,0,0.20)',
-          'fill-opacity': 1,
-        },
+      map.addLayer({ id: LAYERS.selectedFill, type: 'fill', source: SOURCES.shapes,
+        filter: ['all', ['==', ['geometry-type'], 'Polygon'], ['==', prop('selected'), true]],
+        paint: { 'fill-color': 'rgba(255,200,0,0.20)', 'fill-opacity': 1 },
       });
-
-      // Stroke / outline
-      map.addLayer({
-        id:     LAYERS.stroke,
-        type:   'line',
-        source: SOURCES.shapes,
-        filter: ['all',
-          ['!=', ['geometry-type'], 'Point'],
-          ['!', ['has', 'edgeIndex']],    // exclude edge-label points
-          ['!', ['has', 'vertexIndex']],  // exclude vertex points
-        ],
-        paint: {
-          'line-color':   prop('strokeColor'),
-          'line-width':   prop('strokeWidth'),
-          'line-opacity': ['coalesce', prop('opacity'), 1],
-        },
+      map.addLayer({ id: LAYERS.stroke, type: 'line', source: SOURCES.shapes,
+        filter: ['all', ['!=', ['geometry-type'], 'Point'], ['!', ['has', 'edgeIndex']], ['!', ['has', 'vertexIndex']]],
+        paint: { 'line-color': prop('strokeColor'), 'line-width': prop('strokeWidth'), 'line-opacity': ['coalesce', prop('opacity'), 1] },
       });
-
-      // Selected stroke — dashed orange
-      map.addLayer({
-        id:     LAYERS.selectedStroke,
-        type:   'line',
-        source: SOURCES.shapes,
-        filter: ['all',
-          ['!=', ['geometry-type'], 'Point'],
-          ['==', prop('selected'), true],
-          ['!', ['has', 'edgeIndex']],
-          ['!', ['has', 'vertexIndex']],
-        ],
-        paint: {
-          'line-color':     '#f5a623',
-          'line-width':     ['+', prop('strokeWidth'), 2],
-          'line-dasharray': [4, 2],
-        },
+      map.addLayer({ id: LAYERS.selectedStroke, type: 'line', source: SOURCES.shapes,
+        filter: ['all', ['!=', ['geometry-type'], 'Point'], ['==', prop('selected'), true], ['!', ['has', 'edgeIndex']], ['!', ['has', 'vertexIndex']]],
+        paint: { 'line-color': '#f5a623', 'line-width': ['+', prop('strokeWidth'), 2], 'line-dasharray': [4, 2] },
       });
-
-      // Vertex dots — only visible when parent shape is selected
-      map.addLayer({
-        id:     LAYERS.vertices,
-        type:   'circle',
-        source: SOURCES.shapes,
-        filter: ['all',
-          ['has', 'vertexIndex'],
-          ['==', prop('selected'), true],
-        ],
-        paint: {
-          'circle-radius':       5,
-          'circle-color':        '#3b5bdb',
-          'circle-stroke-width': 1.5,
-          'circle-stroke-color': '#ffffff',
-        },
+      map.addLayer({ id: LAYERS.vertices, type: 'circle', source: SOURCES.shapes,
+        filter: ['all', ['has', 'vertexIndex'], ['==', prop('selected'), true]],
+        paint: { 'circle-radius': 5, 'circle-color': '#3b5bdb', 'circle-stroke-width': 1.5, 'circle-stroke-color': '#ffffff' },
       });
-
-      // Edge length labels — only visible when parent shape is selected
-      map.addLayer({
-        id:     LAYERS.edgeLabels,
-        type:   'symbol',
-        source: SOURCES.shapes,
-        filter: ['all',
-          ['has', 'edgeIndex'],
-          ['==', prop('selected'), true],
-        ],
-        layout: {
-          'text-field':            prop('label'),
-          'text-font':             ['Open Sans Regular'],
-          'text-size':             11,
-          'text-allow-overlap':    true,
-          'text-ignore-placement': true,
-          'text-anchor':           'center',
-        },
-        paint: {
-          'text-color':       '#222222',
-          'text-halo-color':  '#ffffff',
-          'text-halo-width':  1.5,
-        },
+      map.addLayer({ id: LAYERS.edgeLabels, type: 'symbol', source: SOURCES.shapes,
+        filter: ['all', ['has', 'edgeIndex'], ['==', prop('selected'), true]],
+        layout: { 'text-field': prop('label'), 'text-font': ['Open Sans Regular'], 'text-size': 11, 'text-allow-overlap': true, 'text-ignore-placement': true, 'text-anchor': 'center' },
+        paint: { 'text-color': '#222222', 'text-halo-color': '#ffffff', 'text-halo-width': 1.5 },
       });
-
-      // Text tool labels
-      map.addLayer({
-        id:     LAYERS.text,
-        type:   'symbol',
-        source: SOURCES.shapes,
-        filter: ['all',
-          ['==', ['geometry-type'], 'Point'],
-          ['==', prop('shapeType'), 'text'],
-        ],
-        layout: {
-          'text-field':            prop('text'),
-          'text-font':             ['Open Sans Regular'],
-          'text-size':             prop('fontSize'),
-          'text-justify':          prop('textAlign'),
-          'text-anchor':           'top-left',
-          'text-allow-overlap':    true,
-        },
-        paint: {
-          'text-color':       prop('strokeColor'),
-          'text-halo-color':  '#fff',
-          'text-halo-width':  1.5,
-        },
+      map.addLayer({ id: LAYERS.text, type: 'symbol', source: SOURCES.shapes,
+        filter: ['all', ['==', ['geometry-type'], 'Point'], ['==', prop('shapeType'), 'text']],
+        layout: { 'text-field': prop('text'), 'text-font': ['Open Sans Regular'], 'text-size': prop('fontSize'), 'text-justify': prop('textAlign'), 'text-anchor': 'top-left', 'text-allow-overlap': true },
+        paint: { 'text-color': prop('strokeColor'), 'text-halo-color': '#fff', 'text-halo-width': 1.5 },
       });
-
-      // ── Preview layers (in-progress drawing) ─────────────────────────────
-
-      // Preview polygon/line stroke
-      map.addLayer({
-        id:     LAYERS.previewLine,
-        type:   'line',
-        source: SOURCES.preview,
+      map.addLayer({ id: LAYERS.previewLine, type: 'line', source: SOURCES.preview,
         filter: ['!=', ['geometry-type'], 'Point'],
-        paint: {
-          'line-color':     '#1a73e8',
-          'line-width':     2,
-          'line-dasharray': [4, 3],
-          'line-opacity':   0.9,
-        },
+        paint: { 'line-color': '#1a73e8', 'line-width': 2, 'line-dasharray': [4, 3], 'line-opacity': 0.9 },
       });
-
-      // Preview polygon fill
-      map.addLayer({
-        id:     LAYERS.previewFill,
-        type:   'fill',
-        source: SOURCES.preview,
+      map.addLayer({ id: LAYERS.previewFill, type: 'fill', source: SOURCES.preview,
         filter: ['==', ['geometry-type'], 'Polygon'],
-        paint: {
-          'fill-color':   '#1a73e8',
-          'fill-opacity': 0.10,
-        },
+        paint: { 'fill-color': '#1a73e8', 'fill-opacity': 0.10 },
       });
-
-      // Preview vertex dots (blue = normal, red = first/snap-target)
-      map.addLayer({
-        id:     LAYERS.previewVertex,
-        type:   'circle',
-        source: SOURCES.preview,
+      map.addLayer({ id: LAYERS.previewVertex, type: 'circle', source: SOURCES.preview,
         filter: ['==', prop('vertexPreview'), true],
-        paint: {
-          'circle-radius':       5,
-          'circle-color': [
-            'case', ['==', prop('isFirst'), true], '#e03131', '#3b5bdb',
-          ],
-          'circle-stroke-width': 1.5,
-          'circle-stroke-color': '#ffffff',
-        },
+        paint: { 'circle-radius': 5, 'circle-color': ['case', ['==', prop('isFirst'), true], '#e03131', '#3b5bdb'], 'circle-stroke-width': 1.5, 'circle-stroke-color': '#ffffff' },
       });
-
-      // Preview edge length labels
-      map.addLayer({
-        id:     LAYERS.previewEdge,
-        type:   'symbol',
-        source: SOURCES.preview,
+      map.addLayer({ id: LAYERS.previewEdge, type: 'symbol', source: SOURCES.preview,
         filter: ['==', prop('edgeLabel'), true],
-        layout: {
-          'text-field':            prop('label'),
-          'text-font':             ['Open Sans Regular'],
-          'text-size':             11,
-          'text-allow-overlap':    true,
-          'text-ignore-placement': true,
-          'text-anchor':           'center',
-        },
-        paint: {
-          'text-color':      '#222222',
-          'text-halo-color': '#ffffff',
-          'text-halo-width': 1.5,
-        },
+        layout: { 'text-field': prop('label'), 'text-font': ['Open Sans Regular'], 'text-size': 11, 'text-allow-overlap': true, 'text-ignore-placement': true, 'text-anchor': 'center' },
+        paint: { 'text-color': '#222222', 'text-halo-color': '#ffffff', 'text-halo-width': 1.5 },
       });
 
-      // Seed immediately with current Redux state
-      map.getSource(SOURCES.shapes)
-        ?.setData(shapesToGeoJSON(shapesRef.current, selectedIdsRef.current));
+      // ── Wire imperative handle ─────────────────────────────────────────
+      drawingSourceRef.setShapesData = (shapes, selectedIds) => {
+        map.getSource(SOURCES.shapes)?.setData(shapesToGeoJSON(shapes, selectedIds));
+      };
+      drawingSourceRef.setPreviewData = (geojson) => {
+        map.getSource(SOURCES.preview)?.setData(geojson);
+      };
     };
 
-    // Re-init after style reload (floor/style change resets all sources+layers)
     const handleStyleData = () => {
       initialised.current = false;
+      // Re-wire after style reload
+      drawingSourceRef.setShapesData  = null;
+      drawingSourceRef.setPreviewData = null;
       init();
     };
 
-    if (map.isStyleLoaded()) {
-      init();
-    } else {
-      map.once('load', init);
-    }
-
+    if (map.isStyleLoaded()) init();
+    else map.once('load', init);
     map.on('styledata', handleStyleData);
 
     return () => {
       map.off('styledata', handleStyleData);
+      drawingSourceRef.setShapesData  = null;
+      drawingSourceRef.setPreviewData = null;
+      initialised.current = false;
       Object.values(LAYERS).forEach((l) => {
-        try { if (map.getLayer(l))  map.removeLayer(l);  } catch (e) { console.warn('[DrawingLayer] removeLayer:', l, e); }
+        try { if (map.getLayer(l))  map.removeLayer(l);  } catch (e) { console.warn(e); }
       });
       Object.values(SOURCES).forEach((s) => {
-        try { if (map.getSource(s)) map.removeSource(s); } catch (e) { console.warn('[DrawingLayer] removeSource:', s, e); }
+        try { if (map.getSource(s)) map.removeSource(s); } catch (e) { console.warn(e); }
       });
-      initialised.current = false;
     };
   }, [map]);
 
-  // ── 2. Sync shapes → MapLibre on Redux change ─────────────────────────────
-  useEffect(() => {
-    if (!map || !initialised.current) return;
-    map.getSource(SOURCES.shapes)
-      ?.setData(shapesToGeoJSON(shapes, selectedIds));
-  }, [map, shapes, selectedIds]);
+  return null;
+}
 
-  // ── 3. Clear preview when drawing committed / cancelled ───────────────────
+// ── DrawingSync ───────────────────────────────────────────────────────────────
+// Separate tiny component that ONLY pushes Redux state into MapLibre.
+// Isolated here so DrawingLayer itself never re-renders from data changes.
+// Import and mount this alongside <DrawingLayer /> in MapComponent.
+export function DrawingSync() {
+  const shapes      = useSelector((s) => s.drawing.shapes);
+  const selectedIds = useSelector((s) => s.drawing.selectedIds);
+  const inProgress  = useSelector((s) => s.drawing.inProgress);
+
   useEffect(() => {
-    if (!map || !initialised.current) return;
+    if (drawingSourceRef.isDragging) return;   // drag handler owns the source
+    drawingSourceRef.setShapesData?.(shapes, selectedIds);
+  }, [shapes, selectedIds]);
+
+  useEffect(() => {
     if (!inProgress) {
-      map.getSource(SOURCES.preview)?.setData(emptyCollection());
+      drawingSourceRef.setPreviewData?.(emptyCollection());
     }
-  }, [map, inProgress]);
+  }, [inProgress]);
 
   return null;
 }

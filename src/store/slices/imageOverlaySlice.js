@@ -1,19 +1,21 @@
 // imageOverlaySlice.js
-// Stores images/SVGs placed on the map as HTML marker overlays.
-
 import { createSlice } from '@reduxjs/toolkit';
 import { v4 as uuid } from 'uuid';
 
-// Each item shape:
+// Each item:
 // {
-//   id:        string,
-//   type:      'image' | 'svg',
-//   src:       string,          // data URL (base64) or SVG markup string
-//   lngLat:    [lng, lat],      // anchor position on map
-//   width:     number,          // px at zoom=0 reference — we store metres equivalent
-//   height:    number,
-//   rotation:  number,          // degrees
-//   selected:  boolean,
+//   id:          string,
+//   type:        'image' | 'svg',
+//   src:         string,       // base64 data URL (image) or blob URL (svg)
+//   coordinates: [             // 4 corners in lngLat — MapLibre image source format
+//     [lng, lat],  // top-left
+//     [lng, lat],  // top-right
+//     [lng, lat],  // bottom-right
+//     [lng, lat],  // bottom-left
+//   ],
+//   rotation:    number,       // degrees — applied by rotating the coordinates
+//   selected:    boolean,
+//   aspectRatio: number,       // w/h — preserved during resize
 // }
 
 const initialState = {
@@ -33,15 +35,15 @@ const imageOverlaySlice = createSlice({
       if (idx !== -1) state.items[idx] = { ...state.items[idx], ...payload };
     },
     removeItem(state, { payload }) {
-      state.items      = state.items.filter((i) => i.id !== payload);
+      state.items     = state.items.filter((i) => i.id !== payload);
       if (state.selectedId === payload) state.selectedId = null;
     },
     selectItem(state, { payload }) {
-      state.items      = state.items.map((i) => ({ ...i, selected: i.id === payload }));
+      state.items     = state.items.map((i) => ({ ...i, selected: i.id === payload }));
       state.selectedId = payload;
     },
     clearItemSelection(state) {
-      state.items      = state.items.map((i) => ({ ...i, selected: false }));
+      state.items     = state.items.map((i) => ({ ...i, selected: false }));
       state.selectedId = null;
     },
   },
