@@ -172,7 +172,6 @@ import { RiRestartLine } from "react-icons/ri";
 import { IoImageOutline } from "react-icons/io5";
 import MapComponent from "../../components/map/components/Map";
 import LocationMapComponent from "../../components/map/components/ChooseLocationMap";
-import NewComponent from "./NewComponent";
 import { useSelector } from "react-redux";
 import { useDispatch } from "react-redux"; 
 import { useLoadPins } from "../../components/map/components/hooks/useLoadPins";
@@ -6119,7 +6118,7 @@ const ViewFloor = () => {
                 canvasCenter={canvasCenter}
                 currentZoom={currentZoom}
               /> */}
-              <NewComponent/>
+              {/* <NewComponent/> */}
 
             </div>
 

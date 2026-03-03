@@ -19,8 +19,7 @@ import { toast } from 'react-toastify';
 import { setPlacedLocation } from '../../../../../store/slices/verticalPlacementSlice';
 
 const EditVertical = () => {
-    // useActiveTab('vertical');  
-    useActiveTab('location');  
+    useActiveTab('vertical_transport');  
 
     const dispatch     = useDispatch();
     const navigate     = useNavigate();
@@ -38,6 +37,7 @@ const EditVertical = () => {
     const [planDetails, setPlanDetails]       = useState(null);
     const [planModal, setPlanModal]           = useState(false);
     const [verticalIcons, setVerticalIcons] = useState([]);
+    const [newPinAdded, setNewPinAdded] = useState(false);
  
     useEffect(() => { 
         if(decodedSubid == 0 && subid == 0){
@@ -86,6 +86,7 @@ const EditVertical = () => {
         dispatch(setPlacedLocation(false));
 
         handleAutoSave()
+        setNewPinAdded(true)
     }, [placedLocation]);
   
     const fetchIcons = async (id) =>{
@@ -98,6 +99,8 @@ const EditVertical = () => {
         setIsDirty,
         setPlanModal,
         setPlanDetails,
+        setNewPinAdded,
+        newPinAdded
     }); 
 
     const addNewPins = (setFieldValue, values) => {
@@ -197,6 +200,7 @@ const EditVertical = () => {
                                         // removePin={removePin}
                                         autoSaveOnChange={handleAutoSave}
                                         debouncedAutoSave={debouncedAutoSave}
+                                        setNewPinAdded={setNewPinAdded}
                                     />
                                 </div>
                             </div>

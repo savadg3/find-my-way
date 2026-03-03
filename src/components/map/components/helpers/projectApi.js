@@ -13,6 +13,16 @@ export const PinCountApi = async (id) => {
     }
 };
 
+export const GetFloorData = async (id) => { 
+    try {
+        const response = await getRequest(`floor-plan/${id}`);
+        const data = response.data ?? [];
+        return data
+    } catch (error) {
+        console.log(error);
+    }
+};
+
 export const updatePinPosition = async (value) => {
     
     try {
@@ -24,7 +34,7 @@ export const updatePinPosition = async (value) => {
     }
 }
 
-export const getTypeFromCategory = (category) => {
+export const getTypeFromCategory = (category) => { 
     switch (category) {
         case 'location':
         return 1;
@@ -37,6 +47,8 @@ export const getTypeFromCategory = (category) => {
         case 'safety':
         return 5;
         case 'vertical':
+        return 6;
+        case 'vertical_transport':
         return 6;
         default:
         return null;

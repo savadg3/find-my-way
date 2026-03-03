@@ -3,7 +3,7 @@ import TagsInput from 'react-tagsinput'
 
 import 'react-tagsinput/react-tagsinput.css'
 import './tagInput.css'
-import { sanitizeTags } from '../../pages/buildProject/newComponents/utils/pinServices' 
+import { sanitizeTags } from '../../pages/buildProject/properties/utils/pinServices' 
 const TagInputComp = ({ tags, setTags }) => {
 
     return (

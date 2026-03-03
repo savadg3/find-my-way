@@ -52,7 +52,7 @@ const CustomDropdown2 = ({ onChange, name, options, setCustomerValues, selectVal
         if (!values?.from) {
             setValue('')
         }
-        // console.log(options,selectValue,values)
+        
         if (values?.type_id) {
             const defaultOption = options?.find(ele => (selectValue === ele?.enc_id) && (values?.type == ele?.type));
             if (defaultOption) {
@@ -87,20 +87,26 @@ const CustomDropdown2 = ({ onChange, name, options, setCustomerValues, selectVal
 export default CustomDropdown2;
 
 
-export const CustomDropdown3 = ({ options, onChange }) => {
+export const CustomDropdown3 = ({ options, onChange, selectedValue }) => {
     const [value, setValue] = useState('');
+
+    useEffect(()=>{
+        if(!selectedValue) return
+        setValue(selectedValue)
+    },[selectedValue])
+
     return (
         <Select
             options={options}
             value={value}
             styles={customStyles}
-            getOptionLabel={(e) => e.label}
-            getOptionValue={(e) => e.id}
+            // getOptionLabel={(e) => e.label}
+            // getOptionValue={(e) => e.id}
             onChange={(e) => {
-                setValue(e)
+                // setValue(e)
                 onChange(e);
             }}
-            placeholder="Select"
+            placeholder="Select Floor"
         />
     );
 };

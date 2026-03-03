@@ -9,11 +9,12 @@ import {
     publishClick,
 } from "../apis/otherApis";
 import { decode } from "../../../../helpers/utils";
-import { setCurrentFloor, setFloorList, setPinCount, setProjectData } from "../../../../store/slices/projectItemSlice";
+import { setCurrentFloor, setFloorList, setPinCount, setPinsByCategory, setProjectData } from "../../../../store/slices/projectItemSlice";
 import { useDispatch } from "react-redux";
 import { environmentaldatas } from "../../../../constant/defaultValues";
 import { useLoadPins } from "../../../../components/map/components/hooks/useLoadPins";
-import { PinCountApi } from "../../../../components/map/components/helpers/projectApi";
+import { PinCountApi, GetFloorData } from "../../../../components/map/components/helpers/projectApi";
+import { useSelector } from "react-redux";
 
 const ProjectHeaderContext = createContext(null);
 
@@ -23,23 +24,25 @@ export const ProjectHeaderProvider = ({ children }) => {
     const navigate      = useNavigate();
     const dispatch      = useDispatch();
     const { image_url } = environmentaldatas;
+
+    const currentFloor = useSelector((state) => state.api.currentFloor);
     
     const { loading : pinLoading, error } = useLoadPins(decodedId);
     
-    
-    /* ── project data ── */
     const [projectSettings, setProjectSettings] = useState({});
     const [projectSettingData, setProjectSettingData] = useState({});
     
-    /* ── header UI state ── */
     const [savingTimer, setSavingTimer] = useState(false);
     const [isPublish, setIsPublish] = useState("");
     const [isDiscard, setIsDiscard] = useState("");
     const [isDirty, setIsDirty] = useState(false);
     
-    /* ── edit-project-name modal ── */
     const [modal, setModal] = useState(false);
     const [showpassfield, setshowpassfield] = useState(false);
+
+    useEffect(()=>{
+        
+    },[currentFloor])
     
     const toggle = (type) => {
         if (type === "passprotect") {
@@ -50,7 +53,6 @@ export const ProjectHeaderProvider = ({ children }) => {
         setModal((prev) => !prev);
     };
     
-    /* ── fetch project ── */
     const getProjectById = useCallback(async () => {
         try {
             const response = await getRequest(`project/${decodedId}`);
@@ -88,7 +90,6 @@ export const ProjectHeaderProvider = ({ children }) => {
         }
     }, [decodedId]);
     
-    /* ── enable / disable (publish + discard button state) ── */
     const handleEnableDisable = useCallback(() => {
         EnableDisable(decodedId, setIsPublish, setIsDiscard);
     }, [decodedId]);
@@ -97,8 +98,25 @@ export const ProjectHeaderProvider = ({ children }) => {
         let pinCount = await PinCountApi(decodedId) 
         dispatch(setPinCount(pinCount)); 
     }, [decodedId]);
+
+    const fetchFloorData = useCallback( async () => {  
+
+        if(!currentFloor) return
+
+        let getFloorData = await GetFloorData(currentFloor.enc_id) 
+        let verticalItem = (getFloorData?.vertical_transports || []).map((item) => ({
+            ...item,
+            category:"vertical_transport",
+            title:getFloorData?.vt_name ?? ''
+        }))
+        
+        dispatch(
+            setPinsByCategory({
+                vertical_transport : verticalItem
+            }
+        ));
+    }, [currentFloor]);
     
-    /* ── discard ── */
     const handleDiscard = async () => {
         try {
             const reqUrl = `discard-project`;
@@ -117,7 +135,6 @@ export const ProjectHeaderProvider = ({ children }) => {
         discardClick(handleDiscard);
     };
     
-    /* ── publish ── */
     const publishYesClick = async () => {
         try {
             const reqUrl = `publish-project`;
@@ -136,7 +153,6 @@ export const ProjectHeaderProvider = ({ children }) => {
         publishClick(publishYesClick, projectSettings);
     };
     
-    /* ── exit ── */
     const onExitClick = () => {
         if (isDirty) {
             swal({
@@ -157,13 +173,16 @@ export const ProjectHeaderProvider = ({ children }) => {
         }
     };
     
-    /* ── bootstrap on mount ── */
     useEffect(() => {
         getProjectById();
         getFloorList()
         handleEnableDisable();
         handleTotalPinCount()
     }, [decodedId]);
+
+    useEffect(() => {
+        fetchFloorData(); 
+    }, [currentFloor]);
     
     const value = { 
         projectSettings,

@@ -36,9 +36,12 @@ export const useBuildVerticalPayload = ({ decodedId }) => {
     return build;
 };
 
-const extractConnections = (pins = []) =>
-  pins.map(item => ({
-    id : item?.id ?? 0,
-    floor_plan_id: item?.value,
-    positions: item?.position || null, 
-}));
+const extractConnections = (pins = []) =>{
+    let nomalizedPins =  pins.map(item => ({
+        id : item?.id ?? 0,
+        floor_plan_id: item?.value,
+        positions: item?.position || null, 
+    }))
+
+    return nomalizedPins.filter(item => item.positions !== null)
+ };

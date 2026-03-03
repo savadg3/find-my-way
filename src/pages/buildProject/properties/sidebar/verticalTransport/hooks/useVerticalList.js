@@ -5,6 +5,7 @@ import swal from 'sweetalert';
 import { encode, decode } from '../../../../../../helpers/utils';
 import { setPinsByCategory, setEditingPinId } from '../../../../../../store/slices/projectItemSlice';
 import { deletePinApi, removePinApi } from '../../../../Helpers/apis/otherApis';  
+import { fetchFloorData } from '../../../../../../components/map/components/hooks/useLoadPins';
 
 export const useVerticalList = () => {
     const dispatch    = useDispatch();
@@ -12,8 +13,9 @@ export const useVerticalList = () => {
     const { id }      = useParams();
     const decodedId   = decode(id);
  
-    const projectData = useSelector((state) => state.api.projectData);
-    const allPins     = useSelector((state) => state.api.allPins);
+    const projectData  = useSelector((state) => state.api.projectData);
+    const allPins      = useSelector((state) => state.api.allPins);
+    const currentFloor = useSelector((s) => s.api.currentFloor);
 
     const verticalList = allPins?.vertical ?? [];   
 
@@ -52,13 +54,9 @@ export const useVerticalList = () => {
             .then(async (value) => {
                 if (value === 'Yes') {
                     const updated = await deletePinApi(`vertical-transport/${vertical.enc_id}`, projectData, decodedId, ['vertical']);
+                    fetchFloorData(dispatch,currentFloor)
                     dispatch(setPinsByCategory({ vertical: updated?.vertical }));
-                }
-
-                if (value === 'Remove') {
-                    const updated = await removePinApi('remove-pin', { type: 6, id: vertical.enc_id }, projectData, decodedId, ['vertical']);
-                    dispatch(setPinsByCategory({ vertical: updated?.vertical }));
-                }
+                } 
             });
     }, [dispatch, projectData, decodedId]);
 

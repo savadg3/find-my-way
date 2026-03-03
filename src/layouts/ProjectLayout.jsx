@@ -4,7 +4,7 @@ import { AppContext } from '../providers/ContextProvider'
 import { ProjectHeaderProvider } from '../pages/buildProject/Helpers/pageDiv/ProjectHeaderContext' 
 import ProjectHeaderDiv from '../pages/buildProject/Helpers/pageDiv/headerDiv'
 import './layout.css' 
-import NewComponent from '../pages/buildProject/NewComponent'
+import RightSideComponent from '../pages/buildProject/properties/rightSideComponent/RightSideComponent'
 
 const ProjectLayout = () => {
 
@@ -33,7 +33,7 @@ const ProjectLayout = () => {
             <div className='pageDiv' id='pageDiv' > 
                     <Outlet /> 
                 <div style={{width:"100%"}}> 
-                    <NewComponent/>
+                    <RightSideComponent/>
                 </div>
             </div>
         </ProjectHeaderProvider>

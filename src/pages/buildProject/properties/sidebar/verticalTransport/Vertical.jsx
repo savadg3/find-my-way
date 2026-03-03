@@ -17,7 +17,7 @@ import { Col, Row } from 'reactstrap';
 const VerticalSideBar = () => {
     const { id } = useParams()
 
-    useActiveTab('vertical');
+    useActiveTab('vertical_transport');
     
     const dispatch    = useDispatch();
     const navigate    = useNavigate(); 

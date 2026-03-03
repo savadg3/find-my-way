@@ -8,14 +8,21 @@ import MapDrawing from './Map/Overlays/MapDrawing';
 import { useDispatch } from 'react-redux';
 import { useSelector } from 'react-redux';
 import { setIsConnectionEnabled, setPlacedLocation } from '../../../store/slices/verticalPlacementSlice';
+import { fetchFloorData } from './hooks/useLoadPins';
+import { useParams } from 'react-router-dom';
+import DrawingLayer from './Map/Drawing/DrawingLayer';
+import DrawingManager from './Map/Drawing/DrawingManager';
+import ImageOverlayManager from './Map/Image/Imageoverlaymanager';
 
 const MapComponent = () => {
-    const mapRef = useRef(null);
-    const [isMapReady, setIsMapReady] = useState(false); 
+    const mapRef                        = useRef(null);
+    const [isMapReady, setIsMapReady]   = useState(false); 
     const [projectData, setProjectData] = useState(ProjectData);
 
-    const dispatch = useDispatch()
-    const isConnectionEnabled = useSelector((state) => state.vertical.isConnectionEnabled);
+    const dispatch               = useDispatch()
+    const params               = useParams()
+    const currentFloor           = useSelector((state) => state.api.currentFloor);
+    const isConnectionEnabled    = useSelector((state) => state.vertical.isConnectionEnabled);
     const isConnectionEnabledRef = useRef(isConnectionEnabled);
 
 
@@ -40,7 +47,7 @@ const MapComponent = () => {
     
             if (isConnectionEnabledRef.current) {
                 dispatch(setIsConnectionEnabled(false));
-                dispatch(setPlacedLocation({ lng, lat }));
+                dispatch(setPlacedLocation({ x : lng, y : lat }));                 
             }
         };
     
@@ -49,7 +56,7 @@ const MapComponent = () => {
         return () => {
             map.off('click', clickHandler);
         };
-    }, [dispatch]);
+    }, [dispatch, currentFloor]);
     
     return (
         <div className="app">  
@@ -76,7 +83,13 @@ const MapComponent = () => {
                         // onFeatureClick={onFeatureClick}
                     /> */}
 
+                    <DrawingLayer />
+
+                    <DrawingManager />
+
                     <MapDrawing map={mapRef.current} />
+
+                    <ImageOverlayManager />
 
                 </>
             )}

@@ -12,6 +12,7 @@ const initialState = {
     beacon:[],
     amenity:[],
     safety:[],
+    vertical:[],
     vertical_transport:[],
   }, 
   floorList : [],
@@ -45,7 +46,7 @@ const projectItemSlice = createSlice({
       state.allPins = action.payload;
     },
     setPinsByCategory(state, action) { 
-      Object.assign(state.allPins, action.payload);
+      Object.assign(state.allPins, action.payload); 
     },
     setPinCount(state, action) { 
       state.pinCount = action.payload;

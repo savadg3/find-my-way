@@ -58,8 +58,7 @@ const CustomDropdown = ({ name, options, setCustomerValues, selectValue, setFiel
         defaultOption = ((selectValue?.enc_id) || (selectValue?.id) || (selectValue?.notification_id)) ? options?.find(ele => selectValue?.status === ele?.value) : options[0]
     }
 
-    const handleSelect = (e) => {
-        console.log(e);
+    const handleSelect = (e) => { 
         if (from == 'pricing') {
             setFieldValue('pricing_id', e?.dec_id)
             setFieldValue('enc_pricing', e?.enc_id)

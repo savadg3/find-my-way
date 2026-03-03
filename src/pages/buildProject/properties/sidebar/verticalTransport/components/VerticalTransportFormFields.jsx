@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Field, FieldArray } from 'formik';
 import { GoPlus } from 'react-icons/go';
 import { IoMdClose } from 'react-icons/io';
@@ -12,6 +12,7 @@ import DropdownWithIcons from '../../../../IconDropdown';
 import { useDispatch } from 'react-redux';
 import { setCurrentFloor } from '../../../../../../store/slices/projectItemSlice';
 import { setIsConnectionEnabled } from '../../../../../../store/slices/verticalPlacementSlice';
+import { fetchFloorData } from '../../../../../../components/map/components/hooks/useLoadPins';
 
 
 const customStyles = {
@@ -132,6 +133,7 @@ const VerticalTransportFormFields = ({
     addNewPins, 
     autoSaveOnChange,
     debouncedAutoSave,
+    setNewPinAdded
 }) => {
     const dispatch          = useDispatch()
     const handlePickerClick = (name) => setOpenPicker(name);
@@ -139,29 +141,40 @@ const VerticalTransportFormFields = ({
     const currentFloor      = useSelector((s) => s.api.currentFloor);
     const floorList         = useSelector((s) => s.api.floorList);
 
+    useEffect(() => {
+        return () => {
+            dispatch(setIsConnectionEnabled(false));
+        };
+    }, [dispatch]);
+
     const filteredList = React.useMemo(() => {
         const usedIds = new Set(values.connectionPins.map(pin => pin.value));
         return floorList.filter(item => !usedIds.has(item.enc_id));
     }, [floorList, values.connectionPins]);
      
 
-    const lastPin         = values.connectionPins?.[values.connectionPins.length - 1];
-    // console.log(values.connectionPins,lastPin);
+    const lastPin         = values.connectionPins?.[values.connectionPins.length - 1]; 
     const shouldShowAlert = (lastPin?.value && !lastPin?.position)
 
-    const removePin = (index, data, setFieldValue) => {
+    const removePin = (index, data, setFieldValue) => { 
         const updatedPins = [...data]; 
         updatedPins.splice(index, 1); 
         setFieldValue(`connectionPins`, updatedPins);
-        setselVerticalDtls(prev => ({ ...prev, connectionPins: updatedPins }))
+        setselVerticalDtls(prev => ({ ...prev, connectionPins: updatedPins })) 
 
         if (updatedPins?.length > 0) {
             const lastselFloor = updatedPins[updatedPins?.length - 1] 
             dispatch(setCurrentFloor(currentFloor ?? lastselFloor))
         }
 
-        if (values?.enc_id) { 
-            console.log("auto save");
+        
+        if (values?.enc_id) {  
+            debouncedAutoSave()
+
+            const deletedFrom = data[index]
+            if(deletedFrom?.value == currentFloor?.enc_id){ 
+                setNewPinAdded(true)
+            }
         }
     };
 
@@ -289,10 +302,8 @@ const VerticalTransportFormFields = ({
                                             onLevelChange={(selected) => { 
                                                 let selectedFloor = filteredList.find(item => item?.enc_id == selected?.value)
                                                 dispatch(setCurrentFloor(selectedFloor))
-                                                dispatch(setIsConnectionEnabled(true))
-
-                                                setselVerticalDtls((prev) => { 
-                                                    
+                                                dispatch(setIsConnectionEnabled(true)) 
+                                                setselVerticalDtls((prev) => {   
                                                     return {
                                                         ...prev,
                                                         vt_name: values?.vt_name,

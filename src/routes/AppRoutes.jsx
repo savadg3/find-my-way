@@ -45,25 +45,25 @@ import { ProtectedRoute } from '../helpers/authGuard';
 import CanvasEditor from '../pages/Editor/CanvasEditor';
 import IdleLayout from './IdleLayout';
 import ProjectLayout from '../layouts/ProjectLayout';
-import SideBar from '../pages/buildProject/newComponents/sidebar/Sidebar';
-import ProjectSettingsSideBar from '../pages/buildProject/newComponents/sidebar/projectSettings/ProjectSettingsSideBar';
-import FloorPlan from '../pages/buildProject/newComponents/sidebar/floorplan/Floorplan';
-import FloorPlanView from '../pages/buildProject/newComponents/sidebar/floorplan/FloorPlanView';
-import LocationSidebar from '../pages/buildProject/newComponents/sidebar/location/Location';
-import EditLocation from '../pages/buildProject/newComponents/sidebar/location/EditLocation';
-import ProductSideBar from '../pages/buildProject/newComponents/sidebar/product/Product';
-import EditProduct from '../pages/buildProject/newComponents/sidebar/product/EditProduct';
-import BeaconSideBar from '../pages/buildProject/newComponents/sidebar/beacon/Beacon';
-import EditBeacon from '../pages/buildProject/newComponents/sidebar/beacon/EditBeacon';
-import AmenitySideBar from '../pages/buildProject/newComponents/sidebar/amenity/Amenity';
-import EditAmenity from '../pages/buildProject/newComponents/sidebar/amenity/EditAmenity';
-import SafetySideBar from '../pages/buildProject/newComponents/sidebar/safety/Safety';
-import EditSafety from '../pages/buildProject/newComponents/sidebar/safety/EditSafety';
-import VerticalSideBar from '../pages/buildProject/newComponents/sidebar/verticalTransport/Vertical';
-import EditVertical from '../pages/buildProject/newComponents/sidebar/verticalTransport/EditVertical';
-import Navigation from '../pages/buildProject/newComponents/sidebar/navigation/Navigation';
-import AdvertisingSideBar from '../pages/buildProject/newComponents/sidebar/advertising/Advertising';
-import EditAdvertising from '../pages/buildProject/newComponents/sidebar/advertising/EditAdvertising';
+import SideBar from '../pages/buildProject/properties/sidebar/Sidebar';
+import ProjectSettingsSideBar from '../pages/buildProject/properties/sidebar/projectSettings/ProjectSettingsSideBar';
+import FloorPlan from '../pages/buildProject/properties/sidebar/floorplan/Floorplan';
+import FloorPlanView from '../pages/buildProject/properties/sidebar/floorplan/FloorPlanView';
+import LocationSidebar from '../pages/buildProject/properties/sidebar/location/Location';
+import EditLocation from '../pages/buildProject/properties/sidebar/location/EditLocation';
+import ProductSideBar from '../pages/buildProject/properties/sidebar/product/Product';
+import EditProduct from '../pages/buildProject/properties/sidebar/product/EditProduct';
+import BeaconSideBar from '../pages/buildProject/properties/sidebar/beacon/Beacon';
+import EditBeacon from '../pages/buildProject/properties/sidebar/beacon/EditBeacon';
+import AmenitySideBar from '../pages/buildProject/properties/sidebar/amenity/Amenity';
+import EditAmenity from '../pages/buildProject/properties/sidebar/amenity/EditAmenity';
+import SafetySideBar from '../pages/buildProject/properties/sidebar/safety/Safety';
+import EditSafety from '../pages/buildProject/properties/sidebar/safety/EditSafety';
+import VerticalSideBar from '../pages/buildProject/properties/sidebar/verticalTransport/Vertical';
+import EditVertical from '../pages/buildProject/properties/sidebar/verticalTransport/EditVertical';
+import Navigation from '../pages/buildProject/properties/sidebar/navigation/Navigation';
+import AdvertisingSideBar from '../pages/buildProject/properties/sidebar/advertising/Advertising';
+import EditAdvertising from '../pages/buildProject/properties/sidebar/advertising/EditAdvertising';
 
 
 
@@ -83,13 +83,7 @@ const AppRoutes = () => {
 
 
                     <Route path="register" element={<Register />} />
-                    
-                    {/* <Route path="/project/:id">
-                        <Route index element={<ProjectLayout />} />
-                        <Route path=":tab" element={<ProjectLayout />} >
-                            <Route path=":subid"/>
-                        </Route>
-                    </Route> */}
+
                     <Route path="/project/:id" element={<ProjectLayout />}>
                         <Route index element={<SideBar />} />
                         <Route path="settings" element={<ProjectSettingsSideBar />} /> 

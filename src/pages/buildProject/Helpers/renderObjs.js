@@ -825,6 +825,7 @@ const renderVT = (canvas, verticalTransports, projectSettings, activeTab,
     addNewVertical, selVerticalDtls, verticalFloorId,
     checkConditionDrag
 ) => {
+    console.log(verticalTransports,"verticalTransports");
     if (verticalTransports.length > 0) {
         let tmpVerticals = [...verticalTransports];
         tmpVerticals.forEach((item, idx) => {
