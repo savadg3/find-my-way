@@ -231,8 +231,6 @@ function RightSideComponent() {
     // any URL normalisation React Router applies, unlike manual string splitting.
     const isNavigation = !!useMatch('/project/:id/navigation');
     const isFloorplan  = !!useMatch('/project/:id/floor-plan/:subid');
-    
-    console.log({isNavigation,isFloorplan},"isNavigation,isFloorplan");
 
     const handleDrop = useHandleDrop({ projectData, currentFloor, dispatch });
 
