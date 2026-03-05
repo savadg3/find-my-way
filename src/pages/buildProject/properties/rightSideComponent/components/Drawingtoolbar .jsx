@@ -1,5 +1,5 @@
 // DrawingToolbar.jsx  (updated — dispatches to drawingToolbarSlice)
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import './toolbar.css';
 import {
@@ -7,6 +7,8 @@ import {
   setFillColor, setStrokeColor, setStrokeWidth,
   setFontFamily, setFontSize, setBold, setTextAlign,
 } from '../../../../../store/slices/drawingToolbarSlice';
+import { removeShapes } from '../../../../../store/slices/drawingSlice';
+import { removeItem }   from '../../../../../store/slices/imageOverlaySlice';
 import useImageImport from "../../../../../components/map/components/Map/Image/Useimageimport";
 // import useImageImport from './useImageImport';
 
@@ -44,6 +46,12 @@ const ImportSVGIcon = () => (
 const PlusIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
     <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+  </svg>
+);
+const TrashIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
+    <path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
   </svg>
 );
 const ChevronDown = () => (
@@ -168,6 +176,26 @@ export default function DrawingToolbar() {
   const dispatch = useDispatch();
   const { openImagePicker, openSVGPicker } = useImageImport();
 
+  // Activate pen by default when entering the floorplan page; deactivate on leave.
+  // Mirrors the same pattern used by ConnectionToolbar so DrawingManager no-ops
+  // (activeTool === null → no listeners bound) when away from the floorplan page.
+  useEffect(() => {
+    dispatch(setActiveTool('pen'));
+    return () => {
+      dispatch(setActiveTool(null));
+    };
+  }, [dispatch]);
+
+  // Selection state — used to show/hide the delete button
+  const selectedIds      = useSelector((s) => s.drawing.selectedIds);
+  const selectedImageId  = useSelector((s) => s.imageOverlay.selectedId);
+  const hasSelection     = selectedIds.length > 0 || selectedImageId !== null;
+
+  const handleDelete = () => {
+    if (selectedIds.length > 0)   dispatch(removeShapes(selectedIds));
+    if (selectedImageId !== null) dispatch(removeItem(selectedImageId));
+  };
+
   // Read all toolbar state from Redux
   const activeTool  = useSelector((s) => s.drawingToolbar.activeTool);
   const activeShape = useSelector((s) => s.drawingToolbar.activeShape);
@@ -237,6 +265,21 @@ export default function DrawingToolbar() {
           <PlusIcon />
           <span>Reference Image</span>
         </button>
+
+        {hasSelection && (
+          <>
+            <div className="divider" />
+            <button
+              className="ref-btn"
+              title="Delete selected"
+              onClick={handleDelete}
+              style={{ color: '#e03131' }}
+            >
+              <TrashIcon />
+              <span>Delete</span>
+            </button>
+          </>
+        )}
       </div>
 
       {showShapeBar && (

@@ -4,7 +4,7 @@
 import { createSlice } from '@reduxjs/toolkit';
 
 const initialState = {
-  activeTool:  'pen',
+  activeTool:  null,   // null = inactive (drawing only enabled while DrawingToolbar is mounted)
   activeShape: 'freehand',
   fillColor:   '#646464',
   strokeColor: '#D3D3D3',
