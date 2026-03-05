@@ -1,8 +1,10 @@
 // useImageImport.js
 import { useCallback } from 'react';
+import { v4 as uuid } from 'uuid';
 import { useDispatch, useSelector } from 'react-redux';
-import { addItem } from '../../../../../store/slices/imageOverlaySlice';
-import { buildCoordinates, DEFAULT_METRES, svgToDataURL } from './imageOverlayUtils';
+import { addItem, selectItem } from '../../../../../store/slices/imageOverlaySlice';
+import { setActiveTool } from '../../../../../store/slices/drawingToolbarSlice';
+import { buildCoordinates, DEFAULT_METRES, svgToPNGDataURL } from './imageOverlayUtils';
 
 const readFileAsDataURL = (file) =>
   new Promise((resolve, reject) => {
@@ -74,7 +76,14 @@ export default function useImageImport() {
     const heightM     = widthM / aspectRatio;
     const coordinates = buildCoordinates(lng, lat, widthM, heightM, 0);
 
-    dispatch(addItem({ type: 'image', src, coordinates, aspectRatio, rotation: 0 }));
+    // Pre-generate the id so we can reference it for auto-selection.
+    // React batches all three dispatches into one render, and the tool-change
+    // effect in ImageOverlayManager is guarded to NOT clear selection when the
+    // tool changes TO 'select', so the selectItem dispatch wins.
+    const id = uuid();
+    dispatch(addItem({ type: 'image', src, coordinates, aspectRatio, rotation: 0, id }));
+    dispatch(setActiveTool('select'));
+    dispatch(selectItem(id));
   }, [dispatch, getMapCenter]);
 
   const openSVGPicker = useCallback(async () => {
@@ -84,13 +93,18 @@ export default function useImageImport() {
     const svgText     = await readFileAsText(file);
     const { w, h }    = getSVGDimensions(svgText);
     const aspectRatio = w / h;
-    const src         = svgToDataURL(svgText);  // blob URL MapLibre can load
+    // Rasterise the SVG to a PNG data URL so MapLibre's WebGL pipeline can load it.
+    // blob: SVG URLs fail silently in gl.texImage2D (canvas taint / unsupported MIME).
+    const src         = await svgToPNGDataURL(svgText, w, h);
     const [lng, lat]  = getMapCenter();
     const widthM      = DEFAULT_METRES;
     const heightM     = widthM / aspectRatio;
     const coordinates = buildCoordinates(lng, lat, widthM, heightM, 0);
 
-    dispatch(addItem({ type: 'svg', src, coordinates, aspectRatio, rotation: 0 }));
+    const id = uuid();
+    dispatch(addItem({ type: 'svg', src, coordinates, aspectRatio, rotation: 0, id }));
+    dispatch(setActiveTool('select'));
+    dispatch(selectItem(id));
   }, [dispatch, getMapCenter]);
 
   return { openImagePicker, openSVGPicker };

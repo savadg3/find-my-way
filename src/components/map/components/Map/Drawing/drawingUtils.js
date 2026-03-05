@@ -258,8 +258,11 @@ export const shapesToGeoJSON = (shapes, selectedIds = []) => {
     };
     features.push(withSelected);
 
-    // Add vertex dots and edge labels for polygons only
-    if (s.geometry.type === 'Polygon') {
+    // Add vertex dots and edge labels for polygons — but NOT for circles.
+    // Circles are 64-sided polygon approximations, so showing all 64 vertex
+    // handles and 64 edge-length labels is noisy and unhelpful.
+    const isCircle = s.properties?.shapeType === 'circle';
+    if (s.geometry.type === 'Polygon' && !isCircle) {
       features.push(...makeVertexFeatures(withSelected));
       features.push(...makeEdgeLabelFeatures(withSelected));
     }

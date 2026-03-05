@@ -28,7 +28,10 @@ const imageOverlaySlice = createSlice({
   initialState,
   reducers: {
     addItem(state, { payload }) {
-      state.items.push({ rotation: 0, selected: false, ...payload, id: uuid() });
+      // Accept a caller-supplied id (so the caller can reference it before the
+      // reducer runs, e.g. to auto-select the item right after dispatch).
+      const id = payload.id ?? uuid();
+      state.items.push({ rotation: 0, selected: false, ...payload, id });
     },
     updateItem(state, { payload }) {
       const idx = state.items.findIndex((i) => i.id === payload.id);
