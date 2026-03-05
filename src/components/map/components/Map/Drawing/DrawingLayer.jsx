@@ -4,7 +4,7 @@
 // this component has NO useSelector on shapes/selectedIds,
 // so it NEVER re-renders due to drawing state changes.
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSelector }       from 'react-redux';
 import { shapesToGeoJSON, emptyCollection } from './drawingUtils';
 
@@ -33,9 +33,12 @@ const prop = (name) => ['get', name];
 // The ONLY way data gets into MapLibre sources.
 // DrawingLayer wires these on mount. useDrawingManager calls them directly.
 export const drawingSourceRef = {
-  setShapesData:  null,   // (shapes, selectedIds) => void
+  setShapesData:  null,   // (shapes, selectedIds) => void  — full rebuild (used by DrawingSync)
+  setShapesOnly:  null,   // (shapes, selectedIds) => void  — fast update during drag
+  setShapesFull:  null,   // (shapes, selectedIds) => void  — full rebuild after commit
   setPreviewData: null,   // (geojson) => void
   isDragging:     false,
+  onInit:         null,   // () => void — called after successful init so DrawingSync can re-push
 };
 
 export default function DrawingLayer() {
@@ -45,12 +48,17 @@ export default function DrawingLayer() {
   // and the one-time sync in useDrawingSync (see below).
   const initialised = useRef(false);
 
+  console.log(drawingSourceRef,"drawingSourceRef"); 
+ 
   useEffect(() => {
+    console.log(map,"map");
     if (!map) return;
 
     const init = () => {
       if (initialised.current) return;
-      initialised.current = true;
+      // NOTE: initialised.current is set AFTER all setup succeeds,
+      // so that a premature throw (e.g. "Style is not done loading")
+      // doesn't permanently block re-initialization.
 
       // ── Sources ────────────────────────────────────────────────────────
       map.addSource(SOURCES.shapes, {
@@ -113,18 +121,34 @@ export default function DrawingLayer() {
       });
 
       // ── Wire imperative handle ─────────────────────────────────────────
-      drawingSourceRef.setShapesData = (shapes, selectedIds) => {
+      const setShapesSource = (shapes, selectedIds) => {
         map.getSource(SOURCES.shapes)?.setData(shapesToGeoJSON(shapes, selectedIds));
       };
+      drawingSourceRef.setShapesData  = setShapesSource;
+      drawingSourceRef.setShapesOnly  = setShapesSource;  // same impl — MapLibre handles delta efficiently
+      drawingSourceRef.setShapesFull  = setShapesSource;
       drawingSourceRef.setPreviewData = (geojson) => {
         map.getSource(SOURCES.preview)?.setData(geojson);
       };
+
+      // Mark as fully initialised AFTER all setup succeeds,
+      // then notify DrawingSync so it re-pushes any existing shapes.
+      initialised.current = true;
+      drawingSourceRef.onInit?.();
     };
 
     const handleStyleData = () => {
+      // styledata fires many times during loading (sprites, fonts, tiles).
+      // Only act when the style is fully loaded AND our source is gone
+      // (indicates a genuine style-swap via map.setStyle()).
+      if (!map.isStyleLoaded()) return;
+      if (map.getSource(SOURCES.shapes)) return;  // sources still exist — nothing to do
+
       initialised.current = false;
       // Re-wire after style reload
       drawingSourceRef.setShapesData  = null;
+      drawingSourceRef.setShapesOnly  = null;
+      drawingSourceRef.setShapesFull  = null;
       drawingSourceRef.setPreviewData = null;
       init();
     };
@@ -136,6 +160,8 @@ export default function DrawingLayer() {
     return () => {
       map.off('styledata', handleStyleData);
       drawingSourceRef.setShapesData  = null;
+      drawingSourceRef.setShapesOnly  = null;
+      drawingSourceRef.setShapesFull  = null;
       drawingSourceRef.setPreviewData = null;
       initialised.current = false;
       Object.values(LAYERS).forEach((l) => {
@@ -159,10 +185,18 @@ export function DrawingSync() {
   const selectedIds = useSelector((s) => s.drawing.selectedIds);
   const inProgress  = useSelector((s) => s.drawing.inProgress);
 
+  // Incremented whenever DrawingLayer finishes (re-)initializing,
+  // so we re-push existing shapes into the freshly created source.
+  const [initCount, setInitCount] = useState(0);
+  useEffect(() => {
+    drawingSourceRef.onInit = () => setInitCount((c) => c + 1);
+    return () => { drawingSourceRef.onInit = null; };
+  }, []);
+
   useEffect(() => {
     if (drawingSourceRef.isDragging) return;   // drag handler owns the source
     drawingSourceRef.setShapesData?.(shapes, selectedIds);
-  }, [shapes, selectedIds]);
+  }, [shapes, selectedIds, initCount]);
 
   useEffect(() => {
     if (!inProgress) {

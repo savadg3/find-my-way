@@ -154,6 +154,7 @@ export default function useDrawingManager({
                     const { lng, lat } = e.lngLat;
                     const pt = [lng, lat];
                     
+                    console.log(coords.length,"object");
                     // Snap-close if clicking near start
                     if (coords.length >= 3 && isNearStart(pt, coords[0])) {
                         commitPolygon(coords);
@@ -211,7 +212,7 @@ export default function useDrawingManager({
                 
                 const handleMouseMove = (e) => {
                     if (!drawDragRef.current.active) return;
-                    const mousePos = [e.lngLat.lng, e.lngLat.lat];
+                    const mousePos = [e.lngLat.lng, e.lngLat.lat]; 
                     setPreviewData(map, buildPreviewGeoJSON(
                         { shapeType: 'rect', coords: [drawDragRef.current.startLngLat] },
                         mousePos
@@ -231,6 +232,8 @@ export default function useDrawingManager({
                         strokeWidth: stateRef.current.strokeWidth,
                         fillColor: stateRef.current.fillColor,
                     });
+
+                    console.log(shape, "shape");
                     dispatch(addShape(shape));
                     setPreviewData(map, { type: 'FeatureCollection', features: [] });
                 };
