@@ -71,8 +71,38 @@ export const resizeCoordinates = (coordinates, newWidthM, aspectRatio, rotationD
   return buildCoordinates(cx, cy, newWidthM, heightM, rotationDeg);
 };
 
-// Convert SVG src string → data URL so MapLibre image source can load it
-export const svgToDataURL = (svgText) => {
-  const blob = new Blob([svgText], { type: 'image/svg+xml' });
-  return URL.createObjectURL(blob);
-};
+// Convert SVG text → PNG data URL by rasterising through a <canvas>.
+//
+// Why PNG and not a blob/data SVG URL?
+// MapLibre's WebGL raster pipeline loads images with `new Image()` and then
+// calls gl.texImage2D().  Feeding a blob: SVG URL can silently fail because
+// the browser may mark the canvas as tainted when an SVG references external
+// resources, OR the WebGL driver refuses the non-raster MIME type altogether.
+// A plain PNG data URL is always accepted.
+//
+// width/height should match the SVG's natural aspect ratio so the texture is
+// not distorted; the caller supplies them from getSVGDimensions().
+export const svgToPNGDataURL = (svgText, width, height) =>
+  new Promise((resolve, reject) => {
+    // Create a temporary blob URL just to load the SVG into an <img>
+    const blob  = new Blob([svgText], { type: 'image/svg+xml' });
+    const blobURL = URL.createObjectURL(blob);
+    const img   = new Image();
+
+    img.onload = () => {
+      // Draw the SVG into an off-screen canvas at the requested resolution
+      const canvas  = document.createElement('canvas');
+      canvas.width  = Math.max(1, Math.round(width));
+      canvas.height = Math.max(1, Math.round(height));
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(blobURL);   // no longer needed
+      resolve(canvas.toDataURL('image/png'));
+    };
+
+    img.onerror = (err) => {
+      URL.revokeObjectURL(blobURL);
+      reject(new Error(`SVG rasterisation failed: ${err}`));
+    };
+
+    img.src = blobURL;
+  });
