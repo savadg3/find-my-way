@@ -47,9 +47,29 @@ export default function NavigationLayer() {
   useEffect(() => {
     if (!map) return;
 
+    // Shared teardown helper — used both by init() (defensive pre-clean)
+    // and by the effect cleanup / handleStyleData.
+    const teardown = () => {
+      Object.values(NAV_LAYERS).forEach((l) => {
+        try { if (map.getLayer(l)) map.removeLayer(l); } catch {}
+      });
+      Object.values(NAV_SOURCES).forEach((s) => {
+        try { if (map.getSource(s)) map.removeSource(s); } catch {}
+      });
+      navSourceRef.setLines   = null;
+      navSourceRef.setNodes   = null;
+      navSourceRef.setPreview = null;
+    };
+
     const init = () => {
       if (initialised.current) return;
       initialised.current = true;
+
+      // Defensive pre-clean: adding sources/layers fires 'styledata', which
+      // calls handleStyleData → init() again before initialised guard can stop
+      // it.  Removing anything that already exists avoids the "already exists"
+      // error on that second call.
+      teardown();
 
       // ── Sources ──────────────────────────────────────────────────────
       map.addSource(NAV_SOURCES.lines, {
@@ -188,10 +208,9 @@ export default function NavigationLayer() {
     };
 
     const handleStyleData = () => {
-      initialised.current     = false;
-      navSourceRef.setLines   = null;
-      navSourceRef.setNodes   = null;
-      navSourceRef.setPreview = null;
+      initialised.current = false;
+      // teardown() is called inside init() so navSourceRef handles are
+      // cleared there; no need to duplicate here.
       init();
     };
 
@@ -201,18 +220,8 @@ export default function NavigationLayer() {
 
     return () => {
       map.off('styledata', handleStyleData);
-      navSourceRef.setLines   = null;
-      navSourceRef.setNodes   = null;
-      navSourceRef.setPreview = null;
-      initialised.current     = false;
-
-      Object.values(NAV_LAYERS).forEach((l) => {
-        try { if (map.getLayer(l)) map.removeLayer(l); } catch {}
-      });
-      try { if (map.getLayer('nav-hit-line')) map.removeLayer('nav-hit-line'); } catch {}
-      Object.values(NAV_SOURCES).forEach((s) => {
-        try { if (map.getSource(s)) map.removeSource(s); } catch {}
-      });
+      initialised.current = false;
+      teardown();
     };
   }, [map]);
 
