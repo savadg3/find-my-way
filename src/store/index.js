@@ -5,6 +5,7 @@ import verticalReducer from './slices/verticalPlacementSlice';
 import drawingToolbarReducer from './slices/drawingToolbarSlice';
 import drawingReducer from './slices/drawingSlice';
 import imageOverlayReducer from './slices/imageOverlaySlice';
+import navigationReducer from './slices/navigationSlice';
 
 
 export const store = configureStore({
@@ -15,6 +16,7 @@ export const store = configureStore({
     drawingToolbar: drawingToolbarReducer,
     drawing: drawingReducer,
     imageOverlay: imageOverlayReducer,
+    navigation: navigationReducer,
   },
 });
 

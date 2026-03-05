@@ -11,7 +11,7 @@ import { useSelector } from 'react-redux';
 
 function Navigation() {
     
-    useActiveTab('vertical');
+    // useActiveTab('vertical');
     const dispatch    = useDispatch(); 
     const navigate    = useNavigate(); 
 

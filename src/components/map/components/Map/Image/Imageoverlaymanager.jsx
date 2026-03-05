@@ -1,22 +1,18 @@
 // ImageOverlayManager.jsx
-// Images: MapLibre raster source+layer (zooms with map).
-// Interaction: transparent fill layer on top catches clicks.
-// Handles: DOM overlay on canvasContainer, repositioned on every render.
-
 import { useEffect, useRef, useCallback } from 'react';
 import { useDispatch, useSelector }        from 'react-redux';
 import {
   updateItem, removeItem, selectItem, clearItemSelection,
 } from '../../../../../store/slices/imageOverlaySlice';
 import { clearSelection } from '../../../../../store/slices/drawingSlice';
-import {
-  getCenter, getWidthMetres,
-  translateCoordinates, rotateCoordinates, resizeCoordinates,
-} from './imageOverlayUtils';
+import { getCenter } from './imageOverlayUtils';
 
-const HS = 10; // handle size px
+const HS = 10;
 
-// ── Build handle overlay DOM ──────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// Pure DOM helpers — no React, no Redux
+// ─────────────────────────────────────────────────────────────────────────────
+
 const buildHandleOverlay = () => {
   const el = document.createElement('div');
   Object.assign(el.style, {
@@ -25,80 +21,48 @@ const buildHandleOverlay = () => {
     border:          '2px dashed #1a73e8',
     cursor:          'move',
     transformOrigin: '0 0',
-    // handles inside need pointer events; overlay itself also needs them for move
     pointerEvents:   'all',
     zIndex:          500,
+    display:         'none',   // hidden until shown
   });
 
-  // Rotate handle — top-center
   const rot = document.createElement('div');
   rot.dataset.role = 'rotate';
   Object.assign(rot.style, {
-    position:       'absolute',
-    top:            '-30px',
-    left:           '50%',
-    transform:      'translateX(-50%)',
-    width:          '20px',
-    height:         '20px',
-    borderRadius:   '50%',
-    background:     '#1a73e8',
-    border:         '2px solid #fff',
-    cursor:         'grab',
-    display:        'flex',
-    alignItems:     'center',
-    justifyContent: 'center',
-    fontSize:       '12px',
-    color:          '#fff',
-    userSelect:     'none',
+    position: 'absolute', top: '-30px', left: '50%',
+    transform: 'translateX(-50%)', width: '20px', height: '20px',
+    borderRadius: '50%', background: '#1a73e8', border: '2px solid #fff',
+    cursor: 'grab', display: 'flex', alignItems: 'center',
+    justifyContent: 'center', fontSize: '12px', color: '#fff', userSelect: 'none',
   });
   rot.textContent = '↺';
   el.appendChild(rot);
 
-  // Delete button — top-right
-  const del = document.createElement('button');
-  del.dataset.role = 'delete';
-  del.textContent  = '×';
-  Object.assign(del.style, {
-    position:       'absolute',
-    top:            '-13px',
-    right:          '-13px',
-    width:          '22px',
-    height:         '22px',
-    borderRadius:   '50%',
-    border:         'none',
-    background:     '#e03131',
-    color:          '#fff',
-    fontSize:       '15px',
-    fontWeight:     'bold',
-    cursor:         'pointer',
-    display:        'flex',
-    alignItems:     'center',
-    justifyContent: 'center',
-    padding:        0,
-    zIndex:         10,
-  });
-  el.appendChild(del);
+//   const del = document.createElement('button');
+//   del.dataset.role = 'delete';
+//   del.textContent  = '×';
+//   Object.assign(del.style, {
+//     position: 'absolute', top: '-13px', right: '-13px',
+//     width: '22px', height: '22px', borderRadius: '50%', border: 'none',
+//     background: '#e03131', color: '#fff', fontSize: '15px', fontWeight: 'bold',
+//     cursor: 'pointer', display: 'flex', alignItems: 'center',
+//     justifyContent: 'center', padding: 0, zIndex: 10,
+//   });
+//   el.appendChild(del);
 
-  // Resize corner handles
   [
-    { id: 'nw', top:    `${-HS/2}px`, left:   `${-HS/2}px`, cursor: 'nw-resize' },
-    { id: 'ne', top:    `${-HS/2}px`, right:  `${-HS/2}px`, cursor: 'ne-resize' },
-    { id: 'sw', bottom: `${-HS/2}px`, left:   `${-HS/2}px`, cursor: 'sw-resize' },
-    { id: 'se', bottom: `${-HS/2}px`, right:  `${-HS/2}px`, cursor: 'se-resize' },
-  ].forEach(({ id, cursor, ...pos }) => {
+    { corner: 'nw', top: `${-HS/2}px`, left:   `${-HS/2}px`, cursor: 'nw-resize' },
+    { corner: 'ne', top: `${-HS/2}px`, right:  `${-HS/2}px`, cursor: 'ne-resize' },
+    { corner: 'sw', bottom: `${-HS/2}px`, left: `${-HS/2}px`, cursor: 'sw-resize' },
+    { corner: 'se', bottom: `${-HS/2}px`, right:`${-HS/2}px`, cursor: 'se-resize' },
+  ].forEach(({ corner, cursor, ...pos }) => {
     const h = document.createElement('div');
     h.dataset.role   = 'resize';
-    h.dataset.corner = id;
+    h.dataset.corner = corner;
     Object.assign(h.style, {
-      position:    'absolute',
-      width:       `${HS}px`,
-      height:      `${HS}px`,
-      background:  '#1a73e8',
-      border:      '2px solid #fff',
-      borderRadius:'2px',
-      cursor,
-      zIndex:      10,
-      ...pos,
+      position: 'absolute', width: `${HS}px`, height: `${HS}px`,
+      background: '#1a73e8', border: '2px solid #fff', borderRadius: '2px',
+      cursor, zIndex: 10, ...pos,
     });
     el.appendChild(h);
   });
@@ -106,19 +70,21 @@ const buildHandleOverlay = () => {
   return el;
 };
 
-// ── Position handle overlay to match image screen bbox ────────────────────────
-// Uses top-left corner as origin + rotation angle from TL→TR vector.
+// Reposition overlay to match the image's current screen bbox.
+// Called on every mousemove and map render — must be as cheap as possible.
 const positionOverlay = (el, coordinates, map) => {
-  const px = coordinates.map((c) => map.project(c));
-  // [0]=TL [1]=TR [2]=BR [3]=BL
-  const [tl, tr] = px;
-
+  const px  = coordinates.map((c) => map.project(c));
+  const [tl, tr, , bl] = px;
   const w     = Math.hypot(tr.x - tl.x, tr.y - tl.y);
-  // height from TL→BL
-  const bl    = px[3];
   const h     = Math.hypot(bl.x - tl.x, bl.y - tl.y);
   const angle = Math.atan2(tr.y - tl.y, tr.x - tl.x) * (180 / Math.PI);
-
+  // Batch all style writes in one assignment — single layout pass
+  el.style.cssText = el.style.cssText.replace(/left:[^;]+/, `left:${tl.x}px`)
+    .replace(/top:[^;]+/, `top:${tl.y}px`)
+    .replace(/width:[^;]+/, `width:${w}px`)
+    .replace(/height:[^;]+/, `height:${h}px`)
+    .replace(/transform:[^;]+/, `transform:rotate(${angle}deg)`);
+  // Fallback if cssText replace fails (first call)
   Object.assign(el.style, {
     left:      `${tl.x}px`,
     top:       `${tl.y}px`,
@@ -128,7 +94,9 @@ const positionOverlay = (el, coordinates, map) => {
   });
 };
 
-// ── Component ─────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// Component
+// ─────────────────────────────────────────────────────────────────────────────
 export default function ImageOverlayManager() {
   const dispatch   = useDispatch();
   const map        = useSelector((s) => s.map.mapContainer);
@@ -137,120 +105,95 @@ export default function ImageOverlayManager() {
   const activeTool = useSelector((s) => s.drawingToolbar.activeTool);
 
   // id → { sourceId, layerId, hitLayerId }
-  const registryRef   = useRef(new Map());
-  // Gating flag — while true, the items useEffect skips setCoordinates
-  // (drag handlers update sources directly for zero-latency smooth updates)
-  const isDraggingRef = useRef(false);
+  const registryRef = useRef(new Map());
 
-  // Single handle overlay (only one selection at a time)
-  const overlayElRef  = useRef(null);
+  // Live coordinates per id — updated imperatively during drag, never causes re-render
+  const liveCoordsRef = useRef(new Map()); // id → [[lng,lat],...]
 
-  // Always-current item data for drag handlers (avoids stale closure)
-  const itemsRef      = useRef(items);
+  // The ONE overlay element — created once on mount, never recreated
+  const overlayElRef    = useRef(null);
+  const overlayItemRef  = useRef(null); // which item id the overlay is currently for
+
+  // Always-current items — readable in event handlers without stale closure
+  const itemsRef = useRef(items);
   useEffect(() => { itemsRef.current = items; }, [items]);
 
-  const resizeDragRef = useRef({ active: false });
-  const rotateDragRef = useRef({ active: false });
+  const selectedIdRef = useRef(selectedId);
+  useEffect(() => { selectedIdRef.current = selectedId; }, [selectedId]);
+
+  // Drag state — plain objects, never cause re-renders
   const moveDragRef   = useRef({ active: false });
+  const rotateDragRef = useRef({ active: false });
+  const resizeDragRef = useRef({ active: false });
+  const isDraggingRef = useRef(false);
 
-  // ── Deselect on tool change ───────────────────────────────────────────────
+  // ── Create the single overlay element on mount ────────────────────────────
   useEffect(() => {
-    dispatch(clearItemSelection());
-    dispatch(clearSelection());
-  }, [activeTool, dispatch]);
+    if (!map) return;
+    const el = buildHandleOverlay();
+    map.getCanvasContainer().appendChild(el);
+    overlayElRef.current = el;
 
-  // ── Remove handle overlay ─────────────────────────────────────────────────
-  const removeOverlay = useCallback(() => {
-    if (overlayElRef.current) {
-      overlayElRef.current._offRender?.();
-      overlayElRef.current.remove();
-      overlayElRef.current = null;
-    }
-  }, []);
+    // ── Reposition on every MapLibre render (handles pan/zoom) ────────────
+    const onRender = () => {
+      if (!overlayItemRef.current || !overlayElRef.current) return;
+      const coords = liveCoordsRef.current.get(overlayItemRef.current)
+        ?? itemsRef.current.find((i) => i.id === overlayItemRef.current)?.coordinates;
+      if (coords) positionOverlay(overlayElRef.current, coords, map);
+    };
+    map.on('render', onRender);
 
-  // ── Update both raster + hit sources directly (used during drag) ────────────
-  // Bypasses Redux entirely so there is zero re-render latency.
-  const updateSources = useCallback((id, newCoords) => {
-    const entry = registryRef.current.get(id);
-    if (!entry || !map) return;
-
-    // Update raster image position
-    map.getSource(entry.sourceId)?.setCoordinates(newCoords);
-
-    // Update transparent hit polygon so click target stays in sync
-    map.getSource(`${entry.sourceId}-hit`)?.setData({
-      type: 'Feature',
-      geometry: {
-        type: 'Polygon',
-        coordinates: [[...newCoords, newCoords[0]]],
-      },
-      properties: {},
-    });
-
-    // Update overlay handle position directly — no re-render needed
-    if (overlayElRef.current) positionOverlay(overlayElRef.current, newCoords, map);
+    return () => {
+      map.off('render', onRender);
+      el.remove();
+      overlayElRef.current   = null;
+      overlayItemRef.current = null;
+    };
   }, [map]);
 
-  // ── Delete item ───────────────────────────────────────────────────────────
-  const handleDelete = useCallback((id) => {
-    removeOverlay();
-    const entry = registryRef.current.get(id);
-    if (entry && map) {
-      try { if (map.getLayer(entry.hitLayerId)) map.removeLayer(entry.hitLayerId); } catch {}
-      try { if (map.getLayer(entry.layerId))    map.removeLayer(entry.layerId);    } catch {}
-      try { if (map.getSource(entry.sourceId))  map.removeSource(entry.sourceId); } catch {}
-      registryRef.current.delete(id);
-    }
-    dispatch(removeItem(id));
-  }, [map, dispatch, removeOverlay]);
-
-  // ── Create / update handle overlay for selected item ─────────────────────
+  // ── Show / hide overlay (just toggle display, never recreate) ────────────
   const showOverlay = useCallback((itemId) => {
-    if (!map) return;
-    removeOverlay();
-
+    const el = overlayElRef.current;
+    if (!el || !map) return;
     const item = itemsRef.current.find((i) => i.id === itemId);
     if (!item) return;
 
-    const el = buildHandleOverlay();
-    overlayElRef.current = el;
-    map.getCanvasContainer().appendChild(el);
-
-    // Initial position
+    overlayItemRef.current = itemId;
     positionOverlay(el, item.coordinates, map);
+    el.style.display = 'block';
+  }, [map]);
 
-    // Reposition on every map render so it tracks pan/zoom
-    const onRender = () => {
-      const current = itemsRef.current.find((i) => i.id === itemId);
-      if (!current || !overlayElRef.current) return;
-      positionOverlay(overlayElRef.current, current.coordinates, map);
-    };
-    map.on('render', onRender);
-    el._offRender = () => map.off('render', onRender);
+  const hideOverlay = useCallback(() => {
+    if (overlayElRef.current) overlayElRef.current.style.display = 'none';
+    overlayItemRef.current = null;
+  }, []);
 
-    // ── Delete ───────────────────────────────────────────────────────────
-    el.querySelector('[data-role="delete"]').addEventListener('click', (e) => {
-      e.stopPropagation();
-      handleDelete(itemId);
-    });
+  // ── Wire overlay event handlers once (on mount) ───────────────────────────
+  // Handlers read from refs so they never go stale — no need to re-wire.
+  useEffect(() => {
+    if (!map) return;
+    const el = overlayElRef.current;
+    if (!el) return;
 
-    // ── Move (drag the overlay border) ────────────────────────────────────
+    const cornerMap = { nw: 0, ne: 1, se: 2, sw: 3 };
+
+    // ── Move ─────────────────────────────────────────────────────────────
     el.addEventListener('mousedown', (e) => {
-      // ignore clicks on child handles — they have their own handlers
       const role = e.target.dataset?.role;
       if (role === 'rotate' || role === 'resize' || role === 'delete') return;
-
       e.stopPropagation();
       e.preventDefault();
-      map.dragPan.disable();
 
-      const current = itemsRef.current.find((i) => i.id === itemId);
+      const itemId  = overlayItemRef.current;
+      const item    = itemsRef.current.find((i) => i.id === itemId);
+      if (!item) return;
+
+      map.dragPan.disable();
+      const coords = liveCoordsRef.current.get(itemId) ?? item.coordinates;
       moveDragRef.current = {
-        active:     true,
-        id:         itemId,
-        startX:     e.clientX,
-        startY:     e.clientY,
-        origCoords: current.coordinates.map((c) => [...c]),
+        active: true, id: itemId,
+        lastX: e.clientX, lastY: e.clientY,
+        liveCoords: coords.map((c) => [...c]),
       };
     });
 
@@ -258,15 +201,25 @@ export default function ImageOverlayManager() {
     el.querySelector('[data-role="rotate"]').addEventListener('mousedown', (e) => {
       e.stopPropagation();
       e.preventDefault();
-      map.dragPan.disable();
 
-      const current = itemsRef.current.find((i) => i.id === itemId);
+      const itemId = overlayItemRef.current;
+      const item   = itemsRef.current.find((i) => i.id === itemId);
+      if (!item) return;
+
+      map.dragPan.disable();
+      const coords     = liveCoordsRef.current.get(itemId) ?? item.coordinates;
+      const center     = getCenter(coords);
+      const cp         = map.project(center);
+      const cRect      = map.getCanvasContainer().getBoundingClientRect();
+      const initAngle  = Math.atan2(
+        e.clientY - (cRect.top  + cp.y),
+        e.clientX - (cRect.left + cp.x),
+      );
       rotateDragRef.current = {
-        active:      true,
-        id:          itemId,
-        aspectRatio: current.aspectRatio,
-        origCoords:  current.coordinates.map((c) => [...c]),
-        rotation:    current.rotation || 0,
+        active: true, id: itemId,
+        lastAngle: initAngle,
+        liveCoords: coords.map((c) => [...c]),
+        liveRotation: item.rotation || 0,
       };
     });
 
@@ -275,116 +228,157 @@ export default function ImageOverlayManager() {
       handle.addEventListener('mousedown', (e) => {
         e.stopPropagation();
         e.preventDefault();
-        map.dragPan.disable();
 
-        const current = itemsRef.current.find((i) => i.id === itemId);
+        const itemId = overlayItemRef.current;
+        const item   = itemsRef.current.find((i) => i.id === itemId);
+        if (!item) return;
+
+        map.dragPan.disable();
+        const coords = liveCoordsRef.current.get(itemId) ?? item.coordinates;
         resizeDragRef.current = {
-          active:      true,
-          id:          itemId,
-          corner:      handle.dataset.corner,
-          aspectRatio: current.aspectRatio,
-          rotation:    current.rotation || 0,
-          origCoords:  current.coordinates.map((c) => [...c]),
-          origWidthM:  getWidthMetres(current.coordinates),
-          startX:      e.clientX,
-          startY:      e.clientY,
+          active: true, id: itemId,
+          cornerIdx: cornerMap[handle.dataset.corner] ?? 2,
+          liveCoords: coords.map((c) => [...c]),
         };
       });
     });
-  }, [map, handleDelete, removeOverlay]);
 
-  // ── Global mousemove / mouseup ────────────────────────────────────────────
+    // // ── Delete ───────────────────────────────────────────────────────────
+    // el.querySelector('[data-role="delete"]').addEventListener('click', (e) => {
+    //   e.stopPropagation();
+    //   const itemId = overlayItemRef.current;
+    //   if (!itemId) return;
+
+    //   hideOverlay();
+    //   liveCoordsRef.current.delete(itemId);
+
+    //   const entry = registryRef.current.get(itemId);
+    //   if (entry) {
+    //     try { if (map.getLayer(entry.hitLayerId)) map.removeLayer(entry.hitLayerId); } catch {}
+    //     try { if (map.getLayer(entry.layerId))    map.removeLayer(entry.layerId);    } catch {}
+    //     try { if (map.getSource(`${entry.sourceId}-hit`)) map.removeSource(`${entry.sourceId}-hit`); } catch {}
+    //     try { if (map.getSource(entry.sourceId))  map.removeSource(entry.sourceId);  } catch {}
+    //     registryRef.current.delete(itemId);
+    //   }
+    //   dispatch(removeItem(itemId));
+    // });
+  }, [map, dispatch, hideOverlay]);
+
+  // ── Core drag logic: update sources imperatively, never touch Redux ───────
   useEffect(() => {
     if (!map) return;
 
-    // Helper: px delta → lng/lat delta at current zoom
-    const pxToLngLat = (dx, dy) => {
-      const center = map.getCenter();
-      const cp     = map.project(center);
-      const newPos = map.unproject({ x: cp.x + dx, y: cp.y + dy });
-      return [newPos.lng - center.lng, newPos.lat - center.lat];
+    const updateSourcesDirect = (id, newCoords) => {
+      const entry = registryRef.current.get(id);
+      if (!entry) return;
+      // setCoordinates is the fast path — no parse, no re-upload, just repositions
+      map.getSource(entry.sourceId)?.setCoordinates(newCoords);
+      // Store live coords so overlay repositions correctly on render
+      liveCoordsRef.current.set(id, newCoords);
+      // Reposition overlay immediately — don't wait for next render event
+      if (overlayItemRef.current === id && overlayElRef.current) {
+        positionOverlay(overlayElRef.current, newCoords, map);
+      }
     };
 
     const onMove = (e) => {
       // ── Move ────────────────────────────────────────────────────────────
       const md = moveDragRef.current;
       if (md.active) {
-        const [dlng, dlat] = pxToLngLat(
-          e.clientX - md.startX,
-          e.clientY - md.startY,
-        );
-        const newCoords = translateCoordinates(md.origCoords, dlng, dlat);
-        md.liveCoords   = newCoords;
-
         isDraggingRef.current = true;
-        updateSources(md.id, newCoords);
+        // Convert pixel delta to lngLat delta at current zoom
+        const center = map.getCenter();
+        const cp     = map.project(center);
+        const p1     = map.unproject({ x: cp.x + (e.clientX - md.lastX), y: cp.y + (e.clientY - md.lastY) });
+        const dlng   = p1.lng - center.lng;
+        const dlat   = p1.lat - center.lat;
+
+        const newCoords = md.liveCoords.map(([lng, lat]) => [lng + dlng, lat + dlat]);
+        md.liveCoords   = newCoords;
+        md.lastX        = e.clientX;
+        md.lastY        = e.clientY;
+
+        updateSourcesDirect(md.id, newCoords);
         return;
       }
 
       // ── Rotate ──────────────────────────────────────────────────────────
       const rr = rotateDragRef.current;
       if (rr.active) {
-        // Center of image in screen space
-        const center = getCenter(rr.origCoords);
-        const cp     = map.project(center);
-
-        // Angle from center → mouse, +90 so 0° = pointing up
-        const angle   = Math.atan2(e.clientY - cp.y, e.clientX - cp.x) * (180 / Math.PI) + 90;
-        const rounded = Math.round(angle);
-
-        const newCoords = rotateCoordinates(rr.origCoords, rounded, rr.aspectRatio);
-        rr.liveCoords   = newCoords;
-        rr.liveRotation = rounded;
-
         isDraggingRef.current = true;
-        updateSources(rr.id, newCoords);
+        const center  = getCenter(rr.liveCoords);
+        const cp      = map.project(center);
+        const cRect   = map.getCanvasContainer().getBoundingClientRect();
+        const angle   = Math.atan2(
+          e.clientY - (cRect.top  + cp.y),
+          e.clientX - (cRect.left + cp.x),
+        );
+        const delta   = angle - rr.lastAngle;
+        const cos     = Math.cos(delta);
+        const sin     = Math.sin(delta);
+
+        const newCoords = rr.liveCoords.map(([lng, lat]) => {
+          const dx = lng - center[0];
+          const dy = lat - center[1];
+          return [center[0] + dx * cos - dy * sin, center[1] + dx * sin + dy * cos];
+        });
+        rr.liveCoords    = newCoords;
+        rr.lastAngle     = angle;
+        rr.liveRotation  = (rr.liveRotation + delta * (180 / Math.PI)) % 360;
+
+        updateSourcesDirect(rr.id, newCoords);
         return;
       }
 
       // ── Resize ──────────────────────────────────────────────────────────
       const rd = resizeDragRef.current;
       if (rd.active) {
-        const dx    = e.clientX - rd.startX;
-        // Left-side corners shrink when dragging right
-        const sign  = (rd.corner === 'nw' || rd.corner === 'sw') ? -1 : 1;
-        // 1 screen pixel → how many metres at current zoom?
-        const [mPerPxLng] = pxToLngLat(1, 0);
-        const mPerPx = Math.abs(mPerPxLng) * 111320 *
-          Math.cos((getCenter(rd.origCoords)[1] * Math.PI) / 180);
-        const newWidthM = Math.max(2, rd.origWidthM + sign * dx * mPerPx);
-        const newCoords = resizeCoordinates(rd.origCoords, newWidthM, rd.aspectRatio, rd.rotation);
-        rd.liveCoords   = newCoords;
-        rd.liveWidthM   = newWidthM;
-
         isDraggingRef.current = true;
-        updateSources(rd.id, newCoords);
+        const center  = getCenter(rd.liveCoords);
+        const cp      = map.project(center);
+        const cRect   = map.getCanvasContainer().getBoundingClientRect();
+        const cpVpX   = cRect.left + cp.x;
+        const cpVpY   = cRect.top  + cp.y;
+
+        const mouseDist = Math.hypot(e.clientX - cpVpX, e.clientY - cpVpY);
+        const corner    = rd.liveCoords[rd.cornerIdx];
+        const cornerPx  = map.project(corner);
+        const origDist  = Math.hypot(cornerPx.x - cp.x, cornerPx.y - cp.y);
+        if (origDist < 1) return;
+
+        const scale     = mouseDist / origDist;
+        const newCoords = rd.liveCoords.map(([lng, lat]) => [
+          center[0] + (lng - center[0]) * scale,
+          center[1] + (lat - center[1]) * scale,
+        ]);
+        rd.liveCoords = newCoords;
+
+        updateSourcesDirect(rd.id, newCoords);
       }
     };
 
     const onUp = () => {
-      // Clear dragging flag BEFORE dispatch so the items useEffect
-      // can safely call setCoordinates with the committed value
       isDraggingRef.current = false;
 
       const md = moveDragRef.current;
       if (md.active) {
         map.dragPan.enable();
-        if (md.liveCoords) dispatch(updateItem({ id: md.id, coordinates: md.liveCoords }));
+        // Sync live coords → Redux (only happens once on mouseup)
+        dispatch(updateItem({ id: md.id, coordinates: md.liveCoords }));
         moveDragRef.current = { active: false };
       }
 
       const rr = rotateDragRef.current;
       if (rr.active) {
         map.dragPan.enable();
-        if (rr.liveCoords)
-          dispatch(updateItem({ id: rr.id, coordinates: rr.liveCoords, rotation: rr.liveRotation }));
+        dispatch(updateItem({ id: rr.id, coordinates: rr.liveCoords, rotation: rr.liveRotation }));
         rotateDragRef.current = { active: false };
       }
 
       const rd = resizeDragRef.current;
       if (rd.active) {
         map.dragPan.enable();
-        if (rd.liveCoords) dispatch(updateItem({ id: rd.id, coordinates: rd.liveCoords }));
+        dispatch(updateItem({ id: rd.id, coordinates: rd.liveCoords }));
         resizeDragRef.current = { active: false };
       }
     };
@@ -395,53 +389,52 @@ export default function ImageOverlayManager() {
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup',   onUp);
     };
-  }, [map, dispatch, updateSources]);
+  }, [map, dispatch]);
 
   // ── Delete key ────────────────────────────────────────────────────────────
   useEffect(() => {
     const onKey = (e) => {
-      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedId)
-        handleDelete(selectedId);
+      if (e.key !== 'Delete' && e.key !== 'Backspace') return;
+      const id = selectedIdRef.current;
+      if (!id) return;
+      dispatch(clearItemSelection());
+      dispatch(removeItem(id));
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [selectedId, handleDelete]);
+  }, [dispatch]);
 
-  // ── Click map background → deselect ──────────────────────────────────────
+  // ── Deselect on tool change ───────────────────────────────────────────────
   useEffect(() => {
-    if (!map) return;
-    const onClick = () => {
-      dispatch(clearItemSelection());
-      removeOverlay();
-    };
-    map.on('click', onClick);
-    return () => map.off('click', onClick);
-  }, [map, dispatch, removeOverlay]);
+    dispatch(clearItemSelection());
+    dispatch(clearSelection());
+  }, [activeTool, dispatch]);
 
-  // ── React to selectedId change ────────────────────────────────────────────
+  // ── selectedId change → show/hide overlay ────────────────────────────────
+  // NOTE: does NOT recreate the overlay — just repositions and toggles display
   useEffect(() => {
-    if (selectedId) {
-      showOverlay(selectedId);
-    } else {
-      removeOverlay();
-    }
-  }, [selectedId, showOverlay, removeOverlay]);
+    if (selectedId) showOverlay(selectedId);
+    else            hideOverlay();
+  }, [selectedId, showOverlay, hideOverlay]);
 
-  // ── Main sync: items → MapLibre sources/layers ────────────────────────────
+  // ── Sync items → MapLibre sources (add new, remove deleted) ─────────────
+  // This effect ONLY runs for structural changes (add/delete).
+  // Coordinate updates during drag bypass this entirely via updateSourcesDirect.
   useEffect(() => {
     if (!map) return;
 
     const registry    = registryRef.current;
     const incomingIds = new Set(items.map((i) => i.id));
 
-    // Remove deleted
+    // Remove deleted items
     registry.forEach((entry, id) => {
-      if (!incomingIds.has(id)) {
-        try { if (map.getLayer(entry.hitLayerId))  map.removeLayer(entry.hitLayerId);  } catch {}
-        try { if (map.getLayer(entry.layerId))     map.removeLayer(entry.layerId);     } catch {}
-        try { if (map.getSource(entry.sourceId))   map.removeSource(entry.sourceId);  } catch {}
-        registry.delete(id);
-      }
+      if (incomingIds.has(id)) return;
+      try { if (map.getLayer(entry.hitLayerId))          map.removeLayer(entry.hitLayerId);         } catch {}
+      try { if (map.getLayer(entry.layerId))             map.removeLayer(entry.layerId);            } catch {}
+      try { if (map.getSource(`${entry.sourceId}-hit`))  map.removeSource(`${entry.sourceId}-hit`); } catch {}
+      try { if (map.getSource(entry.sourceId))           map.removeSource(entry.sourceId);          } catch {}
+      liveCoordsRef.current.delete(id);
+      registry.delete(id);
     });
 
     items.forEach((item) => {
@@ -450,55 +443,42 @@ export default function ImageOverlayManager() {
       const hitLayerId = `img-hit-${item.id}`;
 
       if (registry.has(item.id)) {
-        // Only update coordinates from Redux when NOT actively dragging.
-        // During drag, the mousemove handler calls updateSources() directly
-        // for zero-latency updates — no blink, no double update.
+        // Existing item: only update coordinates if NOT mid-drag
+        // (during drag, updateSourcesDirect keeps the source current)
         if (!isDraggingRef.current) {
-          map.getSource(sourceId)?.setCoordinates(item.coordinates);
+          const coords = liveCoordsRef.current.get(item.id) ?? item.coordinates;
+          map.getSource(sourceId)?.setCoordinates(coords);
+          // Only update hit polygon on commit (mouseup), not during drag
           map.getSource(`${sourceId}-hit`)?.setData({
             type: 'Feature',
-            geometry: {
-              type: 'Polygon',
-              coordinates: [[...item.coordinates, item.coordinates[0]]],
-            },
+            geometry: { type: 'Polygon', coordinates: [[...coords, coords[0]]] },
             properties: {},
           });
         }
         return;
       }
 
-      // ── Create ──────────────────────────────────────────────────────────
+      // New item — create source + layers
       try {
-        // Raster source — the actual image
         map.addSource(sourceId, {
-          type:        'image',
-          url:         item.src,
-          coordinates: item.coordinates,
+          type: 'image', url: item.src, coordinates: item.coordinates,
         });
         map.addLayer({
-          id:     layerId,
-          type:   'raster',
-          source: sourceId,
-          paint:  { 'raster-opacity': 1 },
+          id: layerId, type: 'raster', source: sourceId,
+          paint: { 'raster-opacity': 1 },
         });
 
-        // Transparent fill on top — raster layers don't fire click events in MapLibre
         map.addSource(`${sourceId}-hit`, {
           type: 'geojson',
           data: {
             type: 'Feature',
-            geometry: {
-              type: 'Polygon',
-              coordinates: [[...item.coordinates, item.coordinates[0]]],
-            },
+            geometry: { type: 'Polygon', coordinates: [[...item.coordinates, item.coordinates[0]]] },
             properties: {},
           },
         });
         map.addLayer({
-          id:     hitLayerId,
-          type:   'fill',
-          source: `${sourceId}-hit`,
-          paint:  { 'fill-opacity': 0, 'fill-color': '#000' },
+          id: hitLayerId, type: 'fill', source: `${sourceId}-hit`,
+          paint: { 'fill-opacity': 0, 'fill-color': '#000' },
         });
 
         map.on('click', hitLayerId, (e) => {
@@ -510,15 +490,25 @@ export default function ImageOverlayManager() {
 
         registry.set(item.id, { sourceId, layerId, hitLayerId });
 
+        // Store initial live coords
+        liveCoordsRef.current.set(item.id, item.coordinates.map((c) => [...c]));
+
       } catch (err) {
         console.error('[ImageOverlayManager] create failed:', err);
       }
     });
   }, [map, items, dispatch]);
 
-  // ── Cleanup on unmount ────────────────────────────────────────────────────
+  // ── Click map background → deselect ──────────────────────────────────────
+  useEffect(() => {
+    if (!map) return;
+    const onClick = () => dispatch(clearItemSelection());
+    map.on('click', onClick);
+    return () => map.off('click', onClick);
+  }, [map, dispatch]);
+
+  // ── Cleanup ───────────────────────────────────────────────────────────────
   useEffect(() => () => {
-    removeOverlay();
     if (map) {
       registryRef.current.forEach(({ sourceId, layerId, hitLayerId }) => {
         try { if (map.getLayer(hitLayerId))          map.removeLayer(hitLayerId);         } catch {}
@@ -528,6 +518,7 @@ export default function ImageOverlayManager() {
       });
     }
     registryRef.current.clear();
+    liveCoordsRef.current.clear();
   }, []);
 
   return null;
