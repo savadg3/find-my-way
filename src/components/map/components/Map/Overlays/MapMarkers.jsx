@@ -359,7 +359,8 @@ const createMarkerElement = ({ category, subType, title, isEditing }) => {
   wrapper.className = `mm-wrapper${isEditing ? ' mm-wrapper--editing' : ''}`;
   
   const icon = document.createElement('div');
-  icon.className = `mm-icon marker-pop ${category} ${subType || ''}`;
+  // icon.className = `mm-icon marker-pop ${category} ${subType || ''}`;
+  icon.className = `mm-icon  ${category} ${subType || ''}`;
   if (isEditing) icon.classList.add('marker-wobble');
   icon.style.backgroundImage = getIconUrl(category);
 
@@ -519,21 +520,12 @@ const MapMarkers = React.memo(() => {
 
       // console.log({feature, FloorList}, "feature");
       const element   = createMarkerElement({ category, subType, title, isEditing });
-
-      if(feature.enc_id == 363){
-        console.log({feature,pos,visiblePins},"feature,pos");
-      }
+ 
       
       let marker;
       try {
         marker = new maplibregl.Marker({
-          element,
-          // anchor:'center' places the stored [lng,lat] at the visual centre
-          // of the 30×30 icon. This makes path endpoints connect to the icon
-          // centre for all pin types (beacon, amenity, location, etc.) without
-          // needing any pixel-offset calculations in the path utilities.
-          anchor: 'center',
-          // Draggable only when the navigation select tool is active.
+          element, 
           draggable: isNavigation ? isSelectToolRef.current : true,
         })
         .setLngLat([pos.x, pos.y])
@@ -544,11 +536,9 @@ const MapMarkers = React.memo(() => {
       }
       
       element.addEventListener('click', (e) => {
-        e.stopPropagation();
-        bringToFront(marker); 
-        const { lng, lat } = marker.getLngLat();
-
-        console.log({lat,lng},"sdjfkjsdf");
+        // e.stopPropagation();
+        bringToFront(marker);  
+        console.log("click");
       });
       
       marker.on('dragstart', () => bringToFront(marker));

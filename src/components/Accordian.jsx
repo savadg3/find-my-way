@@ -241,7 +241,8 @@ const AccordionItem = ({ panel, getProjectlist, index, getProjectById, getAllLis
 
   const EditClick = (panel) => {
     if (window.innerWidth > 1100) {
-      navigate(`/view-floor/${encode(panel?.enc_id)}`)
+      // navigate(`/view-floor/${encode(panel?.enc_id)}`)
+      navigate(`/project/${encode(panel?.enc_id)}`)
     } else {
       toast.warning('These modules do not support the mobile version. Please switch to  laptops, or PCs to access the advantages',
         { autoClose: 5000 }
