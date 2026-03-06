@@ -264,7 +264,9 @@ import { getTypeFromCategory, updatePinPosition } from '../../helpers/projectApi
 import { fetchPinData } from '../../hooks/useLoadPins';
 import { setPinsByCategory } from '../../../../../store/slices/projectItemSlice';
 import { updatePinConnectedPoints } from '../../../../../store/slices/navigationSlice';
+import { navSourceRef } from '../Navigation/NavigationLayer';
 import { FloorList } from '../../../mapData';
+import { useMatch } from 'react-router-dom';
 
 const ICON_REGISTRY = {
   location: {
@@ -381,15 +383,48 @@ const MapMarkers = React.memo(() => {
   const editingPinId = useSelector((s) => s.api.editingPinId);
   const currentFloor = useSelector((s) => s.api.currentFloor);
   const projectData  = useSelector((s) => s.api.projectData);
-  const dispatch     = useDispatch();
-  
-  
-  const markerRegistryRef = useRef(new Map());
-  
-  const visiblePins = useMemo(() => {
-    const { vertical, ...restPins } = allPins || {};  
+  const isDrawing    = useSelector((s) => !!s.drawingToolbar.activeTool);
+  // Pins are only draggable when the navigation SELECT tool is active.
+  // All other tools (pen, highlighter) and the drawing toolbar treat pins as read-only.
+  const isSelectTool = useSelector((s) => s.navigation.activeTool === 'select');
+  const isNavigation = !!useMatch('/project/:id/navigation');
 
-    const flat = Object.values(restPins).flat(); 
+  const dispatch     = useDispatch();
+
+  // Nav path state — needed for live drag updates via navSourceRef.
+  const paths           = useSelector((s) => s.navigation.paths);
+  const selectedPathId  = useSelector((s) => s.navigation.selectedPathId);
+  const selectedPointId = useSelector((s) => s.navigation.selectedPointId);
+
+  // Always-current refs so marker drag callbacks never capture stale closures.
+  const isSelectToolRef    = useRef(isSelectTool);
+  const pathsRef           = useRef(paths);
+  const selectedPathIdRef  = useRef(selectedPathId);
+  const selectedPointIdRef = useRef(selectedPointId);
+  isSelectToolRef.current    = isSelectTool;
+  pathsRef.current           = paths;
+  selectedPathIdRef.current  = selectedPathId;
+  selectedPointIdRef.current = selectedPointId;
+
+  const markerRegistryRef = useRef(new Map());
+
+  // When the active navigation tool changes, update every existing marker's
+  // draggable state without recreating the markers.
+  useEffect(() => {
+    if(!isNavigation) return
+    markerRegistryRef.current.forEach((marker) => {
+      marker.setDraggable(isSelectTool);
+    });
+  }, [isSelectTool,isNavigation]);
+
+  const visiblePins = useMemo(() => {
+    // Hide all pins while the drawing toolbar is active so they don't
+    // interfere with shape drawing on the floor-plan page.
+    if (isDrawing) return [];
+
+    const { vertical, ...restPins } = allPins || {};
+
+    const flat = Object.values(restPins).flat();
 
     return flat.filter((pin) => {
       if (!pin?.positions) return false;
@@ -397,14 +432,20 @@ const MapMarkers = React.memo(() => {
       if (activeTab !== "all" && pin?.category !== activeTab) return false;
       return true;
     });
-  }, [allPins, activeTab, currentFloor]);
+  }, [allPins, activeTab, currentFloor, isDrawing]);
   
   const handleDragEnd = useCallback(
     async (marker, feature) => {
-      const { lng, lat } = marker.getLngLat();
+      // Only process drag-end when the navigation select tool was active.
+      // (Other tools and the drawing toolbar keep pins non-draggable, so this
+      // guard is a safety net in case the event fires unexpectedly.)
+      if (isNavigation && !isSelectToolRef.current) return;
+
+      const { lng, lat } = marker.getLngLat(); // anchor='center' → this IS the icon centre
       const { category, enc_id } = feature;
 
-      // Move any navigation path points anchored to this pin
+      // Move any navigation path points anchored to this pin.
+      // getLngLat() returns the icon centre (anchor='center'), so no offset needed.
       dispatch(updatePinConnectedPoints({ pinId: enc_id, position: [lng, lat] }));
       
       const payload = {
@@ -478,13 +519,22 @@ const MapMarkers = React.memo(() => {
 
       // console.log({feature, FloorList}, "feature");
       const element   = createMarkerElement({ category, subType, title, isEditing });
+
+      if(feature.enc_id == 363){
+        console.log({feature,pos,visiblePins},"feature,pos");
+      }
       
       let marker;
       try {
         marker = new maplibregl.Marker({
           element,
-          anchor: 'bottom',
-          draggable: true,
+          // anchor:'center' places the stored [lng,lat] at the visual centre
+          // of the 30×30 icon. This makes path endpoints connect to the icon
+          // centre for all pin types (beacon, amenity, location, etc.) without
+          // needing any pixel-offset calculations in the path utilities.
+          anchor: 'center',
+          // Draggable only when the navigation select tool is active.
+          draggable: isNavigation ? isSelectToolRef.current : true,
         })
         .setLngLat([pos.x, pos.y])
         .addTo(map);
@@ -495,10 +545,41 @@ const MapMarkers = React.memo(() => {
       
       element.addEventListener('click', (e) => {
         e.stopPropagation();
-        bringToFront(marker);
+        bringToFront(marker); 
+        const { lng, lat } = marker.getLngLat();
+
+        console.log({lat,lng},"sdjfkjsdf");
       });
       
       marker.on('dragstart', () => bringToFront(marker));
+
+      // Live drag: imperatively push updated path lines + nodes into MapLibre
+      // without dispatching to Redux (avoids expensive re-renders every frame).
+      // The final position is committed to Redux in handleDragEnd (dragend).
+      marker.on('drag', () => {
+        if (isNavigation && !isSelectToolRef.current) return;
+        // anchor='center' → getLngLat() is already the icon centre, no offset needed
+        const { lng, lat } = marker.getLngLat();
+        const newPos = [lng, lat];
+        const curPaths = pathsRef.current;
+
+        // Build updated paths with all pin-anchored points moved to newPos.
+        // Paths with no point anchored to this pin are returned unchanged.
+        const updatedPaths = curPaths.map((path) => {
+          const hasPinPt = path.points.some((pt) => pt.pinId === enc_id);
+          if (!hasPinPt) return path;
+          return {
+            ...path,
+            points: path.points.map((pt) =>
+              pt.pinId === enc_id ? { ...pt, position: newPos } : pt
+            ),
+          };
+        });
+
+        navSourceRef.setLines?.(updatedPaths, selectedPathIdRef.current);
+        navSourceRef.setNodes?.(updatedPaths, selectedPathIdRef.current, selectedPointIdRef.current);
+      });
+
       marker.on('dragend', () => handleDragEnd(marker, feature));
       
       registry.set(enc_id, marker);

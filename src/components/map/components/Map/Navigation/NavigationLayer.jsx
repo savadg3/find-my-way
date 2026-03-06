@@ -142,22 +142,12 @@ export default function NavigationLayer() {
         },
       });
 
-      // Pin-anchored nodes — solid darker-blue / darker-green, white ring
-      map.addLayer({
-        id: NAV_LAYERS.nodesPin, type: 'circle', source: NAV_SOURCES.nodes,
-        filter: ['get', 'isPin'],
-        paint: {
-          'circle-radius': ['case', ['get', 'selected'], 10, 8],
-          'circle-color': [
-            'case',
-            ['get', 'selected'],                         '#f57c00',
-            ['==', ['get', 'pathType'], 'main'],         '#1565c0',
-            /* sub */                                     '#1b5e20',
-          ],
-          'circle-stroke-width': 2.5,
-          'circle-stroke-color': '#ffffff',
-        },
-      });
+      // NOTE: Pin-anchored path endpoints (isPin === true) are NOT rendered as
+      // GL circles. The pin marker itself (anchor: 'bottom', tip at [lng,lat])
+      // is the visual anchor. Adding a circle layer here would produce a
+      // floating dot 8 px below the pin tip because the circle is centred at
+      // the coordinate, while the marker tip is AT the coordinate.
+      // The path line connecting to the pin is visual evidence enough.
 
       // Preview line while drawing (dashed, coloured by path type)
       map.addLayer({

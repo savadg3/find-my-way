@@ -48,8 +48,7 @@ export default function DrawingLayer() {
   // and the one-time sync in useDrawingSync (see below).
   const initialised = useRef(false);
  
-  useEffect(() => {
-    console.log(map,"map");
+  useEffect(() => { 
     if (!map) return;
 
     const init = () => {

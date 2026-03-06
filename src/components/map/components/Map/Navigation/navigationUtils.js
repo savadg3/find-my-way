@@ -118,6 +118,8 @@ export const findSnap = ({
   const screenPt = map.project(lngLat);
 
   // 1. Pins ─────────────────────────────────────────────────────────────────
+  // Markers use anchor='center', so the stored [lng,lat] IS the visual centre
+  // of the icon. No pixel offset needed — snap to the coordinate directly.
   for (const pin of (visiblePins || [])) {
     try {
       const pos = parsePinPosition(pin.positions);
@@ -469,23 +471,27 @@ export const autoGenerateSubPaths = (paths, visiblePins, map) => {
   for (const pin of visiblePins) {
     const pinId = pin.enc_id;
 
-    // Skip if already connected
+    // Skip if already connected — covers both cases:
+    //  • a sub-path whose endpoint anchors this pin (normal auto-generated or manual sub-path)
+    //  • a main-path that was drawn through this pin (pin is already on the main path,
+    //    so adding a redundant sub-path would create a double connection)
     const alreadyConnected = paths.some(
-      (p) => p.type === 'sub' && p.points.some((pt) => pt.pinId === pinId)
+      (p) => p.points.some((pt) => pt.pinId === pinId)
     );
     if (alreadyConnected) continue;
 
     const pinPos = parsePinPosition(pin.positions);
     if (!pinPos) continue;
 
+    // Markers use anchor='center', so pinPos IS the visual centre of the icon.
     // Find nearest segment across all main paths (screen-space via projection)
     let best = null;
     let bestDistPx = Infinity;
+    const screenPin = map.project(pinPos);
 
     for (const mc of mainClones) {
       if (mc.points.length < 2) continue;
       const pxPoints = mc.points.map((pt) => map.project(pt.position));
-      const screenPin = map.project(pinPos);
 
       let acc = 0;
       const segs = [];
@@ -533,7 +539,7 @@ export const autoGenerateSubPaths = (paths, visiblePins, map) => {
       already.points = best.mainClone.points;
     }
 
-    // Create the sub path
+    // Create the sub path — anchor='center' means pinPos IS the icon centre
     newSubPaths.push({
       id: uuid(),
       type: 'sub',
