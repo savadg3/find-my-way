@@ -97,6 +97,25 @@ const MultiPathControls = ({ selTraversibleDetails, setSelTraversibleDetails, ha
     );
 };
 
+// ── Format metres to a readable string ───────────────────────────────────────
+const formatDistance = (metres) => {
+    if (metres == null) return '';
+    if (metres >= 1000) return `${(metres / 1000).toFixed(2)} km`;
+    return `${Math.round(metres)} m`;
+};
+
+// ── Estimated walk time (average walking speed 5 km/h = 1.389 m/s) ───────────
+const formatWalkTime = (metres) => {
+    if (metres == null) return '';
+    const totalSeconds = metres / 1.3889;
+    const totalMinutes = Math.ceil(totalSeconds / 60);
+    if (totalMinutes < 1) return '< 1 min';
+    if (totalMinutes < 60) return `${totalMinutes} min`;
+    const hours = Math.floor(totalMinutes / 60);
+    const mins  = totalMinutes % 60;
+    return mins > 0 ? `${hours} hr ${mins} min` : `${hours} hr`;
+};
+
 const NavigationTestForm = ({
     errors,
     touched,
@@ -104,7 +123,10 @@ const NavigationTestForm = ({
     options,
     selTraversibleDetails,
     setSelTraversibleDetails,
-    findPath, 
+    findPath,
+    onClear,
+    pathResult,
+    pathError,
     handleNextPreviousClick,
     switchFloor,
     showPath,
@@ -113,11 +135,12 @@ const NavigationTestForm = ({
     const normalizedOptions = normalizeOptions(options);  
 
     const handleFromChange = (e) => {
-        const found = findOption(options, e); 
+        const found = findOption(options, e);
         setSelTraversibleDetails((prev) => ({
             ...prev,
             from:          `${found?.title}_${found?.enc_id}`,
             from_floor_id: found?.fp_id,
+            from_pin_id:   found?.enc_id,
             is_miltiple:   false,
             isNext:        0,
         }));
@@ -129,6 +152,7 @@ const NavigationTestForm = ({
             ...prev,
             to:          `${found?.title}_${found?.enc_id}`,
             to_floor_id: found?.fp_id,
+            to_pin_id:   found?.enc_id,
             is_miltiple: false,
             isNext:      0,
         }));
@@ -184,12 +208,46 @@ const NavigationTestForm = ({
                 ) : (
                     <MultiPathControls
                         selTraversibleDetails={selTraversibleDetails}
-                        setSelTraversibleDetails={setSelTraversibleDetails} 
+                        setSelTraversibleDetails={setSelTraversibleDetails}
                         handleNextPreviousClick={handleNextPreviousClick}
                         switchFloor={switchFloor}
                         showPath={showPath}
                         handleEndDirectionclick={handleEndDirectionclick}
                     />
+                )}
+
+                {/* ── Shortest-path result ── */}
+                {pathError && (
+                    <div className="text-danger mt-2" style={{ clear: 'both', fontSize: '0.85rem' }}>
+                        {pathError}
+                    </div>
+                )}
+                {pathResult && !pathError && (
+                    <div style={{ clear: 'both', marginTop: '0.75rem' }}>
+                        <div
+                            style={{
+                                background:   '#e8f5e9',
+                                border:       '1px solid #66bb6a',
+                                borderRadius: 6,
+                                padding:      '10px 12px',
+                                fontSize:     '0.85rem',
+                                color:        '#2e7d32',
+                            }}
+                        >
+                            <div style={{ fontWeight: 600, marginBottom: 4 }}>Path found</div>
+                            <div>📏 Distance: <strong>{formatDistance(pathResult.distanceM)}</strong></div>
+                            <div>🚶 Est. walk time: <strong>{formatWalkTime(pathResult.distanceM)}</strong></div>
+                        </div>
+                        <Button
+                            className="btn-danger bar-btn mt-2"
+                            type="button"
+                            size="sm"
+                            style={{ width: '100%' }}
+                            onClick={onClear}
+                        >
+                            Clear
+                        </Button>
+                    </div>
                 )}
             </div>
 
@@ -198,21 +256,24 @@ const NavigationTestForm = ({
     );
 };
 
-const NavigationFormFields = ({ 
+const NavigationFormFields = ({
     errors,
     touched,
     setFieldValue,
- 
+
     options,
     selTraversibleDetails,
     setSelTraversibleDetails,
- 
-    findPath,  
+
+    findPath,
+    onClear,
+    pathResult,
+    pathError,
     handleNextPreviousClick,
     switchFloor,
     showPath,
     handleEndDirectionclick,
-}) => { 
+}) => {
 
     return (
         <NavigationTestForm
@@ -222,7 +283,10 @@ const NavigationFormFields = ({
             options={options}
             selTraversibleDetails={selTraversibleDetails}
             setSelTraversibleDetails={setSelTraversibleDetails}
-            findPath={findPath} 
+            findPath={findPath}
+            onClear={onClear}
+            pathResult={pathResult}
+            pathError={pathError}
             handleNextPreviousClick={handleNextPreviousClick}
             switchFloor={switchFloor}
             showPath={showPath}
