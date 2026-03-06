@@ -182,7 +182,8 @@
 }
 .shape-btn:hover  { background: #f0f0f0; color: #555; }
 .shape-btn.active { background: #1a91d3; color: #fff; }
-.shape-btn.active svg { stroke: #fff; }
+.shape-btn.active svg { stroke: #fff; fill:#fff }
+.shape-btn.active svg path { stroke: #fff; fill:#fff }
 .shape-btn:active { transform: scale(.9); }
  
 .text-toolbar {

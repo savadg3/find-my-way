@@ -47,9 +47,25 @@ export default function NavigationLayer() {
   useEffect(() => {
     if (!map) return;
 
+    // Shared teardown helper — used by the effect cleanup and handleStyleData
+    // when a genuine style-swap has removed all sources.
+    const teardown = () => {
+      Object.values(NAV_LAYERS).forEach((l) => {
+        try { if (map.getLayer(l)) map.removeLayer(l); } catch {}
+      });
+      Object.values(NAV_SOURCES).forEach((s) => {
+        try { if (map.getSource(s)) map.removeSource(s); } catch {}
+      });
+      navSourceRef.setLines   = null;
+      navSourceRef.setNodes   = null;
+      navSourceRef.setPreview = null;
+    };
+
     const init = () => {
       if (initialised.current) return;
-      initialised.current = true;
+      // NOTE: initialised.current is set AFTER all setup succeeds,
+      // so that a premature throw (e.g. "Style is not done loading")
+      // doesn't permanently block re-initialization.
 
       // ── Sources ──────────────────────────────────────────────────────
       map.addSource(NAV_SOURCES.lines, {
@@ -185,10 +201,24 @@ export default function NavigationLayer() {
         map.getSource(NAV_SOURCES.preview)
           ?.setData(previewToGeoJSON(inProgress, mousePos));
       };
+
+      // Mark fully initialised AFTER all setup succeeds.
+      // This mirrors the DrawingLayer pattern so that a premature throw
+      // (e.g. "Style is not done loading") doesn't permanently block retries.
+      initialised.current = true;
     };
 
     const handleStyleData = () => {
-      initialised.current     = false;
+      // styledata fires many times during loading (sprites, fonts, tiles).
+      // Only reinitialise when the style is fully loaded AND our sources are
+      // gone — identical to DrawingLayer's guard, preventing the
+      // constant teardown/reinit loop that the previous "always reinit"
+      // approach created.
+      if (!map.isStyleLoaded()) return;
+      if (map.getSource(NAV_SOURCES.lines)) return; // sources still exist — nothing to do
+
+      // Sources are gone (genuine style-swap) — reset and re-init.
+      initialised.current = false;
       navSourceRef.setLines   = null;
       navSourceRef.setNodes   = null;
       navSourceRef.setPreview = null;
@@ -201,18 +231,8 @@ export default function NavigationLayer() {
 
     return () => {
       map.off('styledata', handleStyleData);
-      navSourceRef.setLines   = null;
-      navSourceRef.setNodes   = null;
-      navSourceRef.setPreview = null;
-      initialised.current     = false;
-
-      Object.values(NAV_LAYERS).forEach((l) => {
-        try { if (map.getLayer(l)) map.removeLayer(l); } catch {}
-      });
-      try { if (map.getLayer('nav-hit-line')) map.removeLayer('nav-hit-line'); } catch {}
-      Object.values(NAV_SOURCES).forEach((s) => {
-        try { if (map.getSource(s)) map.removeSource(s); } catch {}
-      });
+      initialised.current = false;
+      teardown();
     };
   }, [map]);
 

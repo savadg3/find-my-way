@@ -21,7 +21,7 @@ import Select from 'react-dropdown-select';
 import { toast } from 'react-toastify'; 
 import DrawingToolbar from './components/Drawingtoolbar ';
 import ConnectionToolbar from './components/Connectiontoolbar';
-import { useLocation } from 'react-router-dom';
+import { useMatch } from 'react-router-dom';
 
 const customStyles = {
     control: (provided) => ({
@@ -222,15 +222,15 @@ const usePinDrop = (pinType, map, onDrop) => {
 
 function RightSideComponent() {
     const dispatch               = useDispatch();
-    const location               = useLocation();
     const projectData            = useSelector((state) => state.api.projectData);
     const map                    = useSelector((state) => state.map.mapContainer);
     const currentFloor           = useSelector((state) => state.api.currentFloor);
     const floorList              = useSelector((state) => state.api.floorList);
     const isConnectionEnabled    = useSelector((state) => state.vertical.isConnectionEnabled);
-    const locationArray = location?.pathname.split("/")
-    const isNavigation = locationArray[locationArray.length - 1] == 'navigation'
-    const isFloorplan = locationArray[locationArray.length - 2] == 'floor-plan'
+    // Use useMatch for reliable route detection — handles trailing slashes and
+    // any URL normalisation React Router applies, unlike manual string splitting.
+    const isNavigation = !!useMatch('/project/:id/navigation');
+    const isFloorplan  = !!useMatch('/project/:id/floor-plan/:subid');
 
     const handleDrop = useHandleDrop({ projectData, currentFloor, dispatch });
 

@@ -47,8 +47,6 @@ export default function DrawingLayer() {
   // All data flows through drawingSourceRef imperatively from useDrawingManager
   // and the one-time sync in useDrawingSync (see below).
   const initialised = useRef(false);
-
-  console.log(drawingSourceRef,"drawingSourceRef"); 
  
   useEffect(() => {
     console.log(map,"map");

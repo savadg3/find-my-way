@@ -14,24 +14,28 @@ import {
   useAutoGenerateSubPaths,
 } from '../../../../../components/map/components/Map/Navigation/useNavigationManager'; 
 import './connection.css';
+import { EraseSvg, PencilSvg, SelectSvg } from '../../../../../components/common/svgIcons';
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 const PenIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/>
-  </svg>
+  // <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  //   <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/>
+  // </svg>
+  <PencilSvg fill={'#A8ABAF'}/>
 );
 const SelectIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M5 3l14 9-7 1-4 7z"/>
-  </svg>
+  // <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  //   <path d="M5 3l14 9-7 1-4 7z"/>
+  // </svg>
+  <SelectSvg fill={'#A8ABAF'}/>
 );
 const HighlighterIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M15.232 5.232l3.536 3.536-7.071 7.07-3.536-3.535z"/>
-    <path d="M9.5 19.5l-3-3 1-4 3 3z"/>
-    <line x1="3" y1="21" x2="9.5" y2="19.5"/>
-  </svg>
+  // <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  //   <path d="M15.232 5.232l3.536 3.536-7.071 7.07-3.536-3.535z"/>
+  //   <path d="M9.5 19.5l-3-3 1-4 3 3z"/>
+  //   <line x1="3" y1="21" x2="9.5" y2="19.5"/>
+  // </svg>
+  <EraseSvg fill={'#A8ABAF'}/>
 );
 const BoltIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
