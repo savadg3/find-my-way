@@ -22,11 +22,12 @@ const AmenitySideBar = () => {
     useActiveTab('amenity');
     
     const dispatch    = useDispatch();
-    const navigate    = useNavigate(); 
+    const navigate    = useNavigate();
     const { id }      = useParams();
     const decodedId   = decode(id);
-    
-    const [mapDivSize, setMapDivSize] = useState(window.innerHeight - 80); 
+    const pinsLoaded  = useSelector((state) => state.api.pinsLoaded);
+
+    const [mapDivSize, setMapDivSize] = useState(window.innerHeight - 80);
     const [amenityIcons, setAmenityIcons] = useState([]); 
     
     const {
@@ -133,9 +134,15 @@ const AmenitySideBar = () => {
                                     </div>
 
                                     <div className='custom-scrollbar customScroll' style={{
-                                        height: mapDivSize - 246 
+                                        height: mapDivSize - 246
                                     }} >
-                                        {filteredList.map((amenity, idx) => (
+                                        {!pinsLoaded ? (
+                                            <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 40 }}>
+                                                <div className="spinner-border text-primary" role="status">
+                                                    <span className="sr-only">Loading…</span>
+                                                </div>
+                                            </div>
+                                        ) : filteredList.map((amenity, idx) => (
                                             <AmenityItem
                                                 key={amenity.enc_id}
                                                 index={idx}

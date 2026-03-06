@@ -28,6 +28,7 @@ const BeaconSideBar = () => {
     const navigate    = useNavigate();
     const projectData = useSelector((state) => state.api.projectData);
     const pinCount    = useSelector((state) => state.api.pinCount);
+    const pinsLoaded  = useSelector((state) => state.api.pinsLoaded);
     
     const [mapDivSize, setMapDivSize]     = useState(window.innerHeight - 80);
     const [modal, setModal]               = useState(false);
@@ -137,9 +138,15 @@ const BeaconSideBar = () => {
                                     </div>
 
                                     <div className='custom-scrollbar customScroll' style={{
-                                        height: mapDivSize - 246 
+                                        height: mapDivSize - 246
                                     }} >
-                                        {filteredList.map((beacon, idx) => (
+                                        {!pinsLoaded ? (
+                                            <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 40 }}>
+                                                <div className="spinner-border text-primary" role="status">
+                                                    <span className="sr-only">Loading…</span>
+                                                </div>
+                                            </div>
+                                        ) : filteredList.map((beacon, idx) => (
                                             <BeaconItem
                                                 key={beacon.enc_id}
                                                 index={idx}

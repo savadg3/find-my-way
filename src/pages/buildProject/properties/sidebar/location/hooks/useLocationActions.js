@@ -17,14 +17,15 @@ import { environmentaldatas } from '../../../../../../constant/defaultValues';
 
 const { image_url } = environmentaldatas;
 
-export const useLocationSubmit = ({ 
+export const useLocationSubmit = ({
     websiteLinks,
     hours,
     isBoundary,
-    boundaryAttributesRef = undefined, 
+    boundaryAttributesRef = undefined,
     // setIsDirty,
     setModal,
     setPlanDetails,
+    onAfterSave,
 }) => {
     const dispatch   = useDispatch();
     const { id }     = useParams();
@@ -60,19 +61,22 @@ export const useLocationSubmit = ({
             if (response.type === 1) {
                 const data = response.response?.data ?? {};
                 boundaryAttributesRef.current = undefined;
-                  
+
                 const updated = await fetchPinData(decodedId, ['location']);
                 dispatch(setPinsByCategory({ location: updated?.location }));
-                
+
                 // setIsDirty(false);
+                onAfterSave?.();
             } else {
                 SetBackEndErrorsAPi(response, setFieldError);
+                onAfterSave?.();
             }
         } catch (error) {
             console.error('Location save failed:', error);
+            onAfterSave?.();
         }
     };
-    
+
     return { submit };
 };
 

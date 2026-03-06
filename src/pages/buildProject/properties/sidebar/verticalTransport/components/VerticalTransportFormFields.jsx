@@ -299,26 +299,26 @@ const VerticalTransportFormFields = ({
                                             values={values}
                                             floorList={filteredList}
                                             customStyles={customStyles}
-                                            onLevelChange={(selected) => { 
-                                                let selectedFloor = filteredList.find(item => item?.enc_id == selected?.value)
-                                                dispatch(setCurrentFloor(selectedFloor))
-                                                dispatch(setIsConnectionEnabled(true)) 
-                                                setselVerticalDtls((prev) => {   
-                                                    return {
-                                                        ...prev,
-                                                        vt_name: values?.vt_name,
-                                                        icon: values?.icon,
-                                                        icon_path: values?.icon_path,
-                                                        connectionPins: Array.isArray(prev?.connectionPins)
-                                                            ? [
-                                                                ...prev.connectionPins,
-                                                                { value: selected?.value, label: selected?.label, position: null }
-                                                            ]
-                                                            : [{ value: selected?.value, label: selected?.label, position: null }]
-                                                    }
-                                                });
+                                            onLevelChange={(selected) => {
+                                                const selectedFloor = filteredList.find(item => item?.enc_id == selected?.value);
+                                                dispatch(setCurrentFloor(selectedFloor));
+                                                dispatch(setIsConnectionEnabled(true));
+                                                fetchFloorData(dispatch, selectedFloor);
+
+                                                const newPin = { value: selected?.value, label: selected?.label, position: null };
+
+                                                // Update Formik immediately at this specific index
+                                                setFieldValue(`connectionPins[${index}]`, newPin);
+
+                                                // Keep currentPinData in sync (push new entry)
+                                                setselVerticalDtls((prev) => ({
+                                                    ...prev,
+                                                    connectionPins: Array.isArray(prev?.connectionPins)
+                                                        ? [...prev.connectionPins, newPin]
+                                                        : [newPin],
+                                                }));
                                             }}
-                                            onRemove={() => 
+                                            onRemove={() =>
                                                 removePin(index, values.connectionPins, setFieldValue)
                                             }
                                         />

@@ -24,6 +24,7 @@ const LocationSidebar = () => {
     const navigate    = useNavigate();
     const projectData = useSelector((state) => state.api.projectData);
     const pinCount    = useSelector((state) => state.api.pinCount);
+    const pinsLoaded  = useSelector((state) => state.api.pinsLoaded);
 
     const [mapDivSize, setMapDivSize]     = useState(window.innerHeight - 80);
     const [modal, setModal]               = useState(false);
@@ -130,7 +131,13 @@ const LocationSidebar = () => {
                             className="custom-scrollbar customScroll"
                             style={{ height: mapDivSize - 140 }}
                         >
-                            {filteredList.map((location, idx) => (
+                            {!pinsLoaded ? (
+                                <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 40 }}>
+                                    <div className="spinner-border text-primary" role="status">
+                                        <span className="sr-only">Loading…</span>
+                                    </div>
+                                </div>
+                            ) : filteredList.map((location, idx) => (
                                 <LocationItem
                                     key={location.enc_id}
                                     index={idx}

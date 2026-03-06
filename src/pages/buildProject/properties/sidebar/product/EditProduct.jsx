@@ -1,5 +1,5 @@
 import { Formik } from 'formik';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { BsArrowLeftShort } from 'react-icons/bs';
 import { Button, Col, Row } from 'reactstrap';
 import * as Yup from 'yup';
@@ -14,12 +14,12 @@ import useFlyToPin from '../../../../../components/map/components/hooks/useFlyTo
 
 import { fetchProductById, normalizeProductData } from './services/productService';
 import useProductImageHandler, { useProductSubmit } from './hooks/useProductActions';
-import ProductFormFields from './components/ProductFormFields'; 
+import ProductFormFields from './components/ProductFormFields';
 import { FormInitializer } from '../../utils/pinServices';
 import { postRequest } from '../../../../../hooks/axiosClient';
 import { environmentaldatas } from '../../../../../constant/defaultValues';
 const { image_url } = environmentaldatas;
- 
+
 
 const urlRegex = /^(https?:\/\/)?([\w-]+\.)+[\w-]{2,}(\/[^\s]*)?$/i;
 
@@ -36,50 +36,53 @@ const validationSchema = Yup.object().shape({
         })
     ),
 });
- 
+
 
 const EditProduct = () => {
-    useActiveTab('product');  
+    useActiveTab('product');
 
     const dispatch     = useDispatch();
     const navigate     = useNavigate();
-    const { subid }    = useParams();
+    const { id, subid } = useParams();
     const decodedSubid = decode(subid);
     const flyToPin     = useFlyToPin();
 
     const projectData = useSelector((state) => state.api.projectData);
- 
-    const [currentPinData, setCurrentPinData] = useState({}); 
+
+    const [currentPinData, setCurrentPinData] = useState({});
     const [websiteLinks, setwebsiteLinks]     = useState([]);
-    const [specifications, setSpecifications] = useState([]); 
+    const [specifications, setSpecifications] = useState([]);
     const [isDirty, setIsDirty]               = useState(false);
     const [color, setColor]                   = useState(null);
     const [openPicker, setOpenPicker]         = useState(null);
     const [planDetails, setPlanDetails]       = useState(null);
     const [planModal, setPlanModal]           = useState(false);
- 
+    const [isSaving, setIsSaving]             = useState(false);
+
+    const pendingNavigation = useRef(false);
+
     const imageHandler = useProductImageHandler({
         onUpload: (blob) => postImages(blob, 'post'),
         onDelete: (deleted) => postImages(deleted, 'delete')
     });
- 
-    useEffect(() => { 
+
+    useEffect(() => {
         if (!decodedSubid) return;
 
         const load = async () => {
             try {
                 const data = await fetchProductById(decodedSubid);
-                const { prefillData, websiteLinks: links, specificationsArray, uniqueImages } = normalizeProductData(data); 
+                const { prefillData, websiteLinks: links, specificationsArray, uniqueImages } = normalizeProductData(data);
 
                 dispatch(setEditingPinId(decodedSubid));
                 setCurrentPinData(prefillData);
-                setwebsiteLinks(links); 
+                setwebsiteLinks(links);
                 setSpecifications(specificationsArray ?? []);
- 
+
                 if (uniqueImages?.length > 0) {
                     imageHandler.setImages(uniqueImages);
                 }
- 
+
                 if (data?.positions) {
                     flyToPin(JSON.parse(data.positions));
                 }
@@ -116,26 +119,40 @@ const EditProduct = () => {
         const response = await postRequest("product-image", formData, true);
         return response;
     };
- 
+
+    const handleAfterSave = useCallback(() => {
+        setIsSaving(false);
+        if (pendingNavigation.current) {
+            pendingNavigation.current = false;
+            navigate(-1);
+        }
+    }, [navigate]);
+
     const { submit } = useProductSubmit({
-        websiteLinks, 
+        websiteLinks,
         specifications,
-        imageHandler, 
+        imageHandler,
         setCurrentPinData,
         setIsDirty,
         setPlanModal,
         setPlanDetails,
+        onAfterSave: handleAfterSave,
     });
 
-    const handleAutoSave = () => {
+    const handleAutoSave = useCallback(() => {
         document.getElementById('productSubmitBtn')?.click();
-    };
+    }, []);
 
     const goBack = () => {
-        handleAutoSave();
-        navigate(-1);
+        if (isDirty) {
+            setIsSaving(true);
+            pendingNavigation.current = true;
+            document.getElementById('productSubmitBtn')?.click();
+        } else {
+            navigate(-1);
+        }
     };
- 
+
     const initialValues = {
         product_name:  '! New product',
         description:   '',
@@ -157,6 +174,23 @@ const EditProduct = () => {
             id="inner-customizer2"
             style={{ position: 'relative', height: window.innerHeight - 80, paddingBottom: 20 }}
         >
+            {/* Loading overlay shown while auto-saving before navigation */}
+            {isSaving && (
+                <div style={{
+                    position:        'absolute',
+                    top: 0, left: 0, right: 0, bottom: 0,
+                    backgroundColor: 'rgba(255, 255, 255, 0.75)',
+                    display:         'flex',
+                    alignItems:      'center',
+                    justifyContent:  'center',
+                    zIndex:          9999,
+                }}>
+                    <div className="spinner-border text-primary" role="status">
+                        <span className="sr-only">Saving…</span>
+                    </div>
+                </div>
+            )}
+
             <Row className="backRow">
                 <Col md={8}>
                     <h1>Product Pin Details</h1>
@@ -174,7 +208,7 @@ const EditProduct = () => {
                 onSubmit={submit}
             >
                 {({ errors, values, touched, handleSubmit, handleChange, setFieldValue, setFieldError }) => (
-                    <> 
+                    <>
                         <FormInitializer currentPinData={currentPinData} />
 
                         {currentPinData?.position && !currentPinData?.enc_id && (
@@ -191,22 +225,22 @@ const EditProduct = () => {
                                 style={{ height: window.innerHeight - 80 }}
                             >
                                 <div className="bar-sub">
-                                    <ProductFormFields 
+                                    <ProductFormFields
                                         values={values}
                                         errors={errors}
                                         touched={touched}
                                         handleChange={handleChange}
                                         setFieldValue={setFieldValue}
-                                        setFieldError={setFieldError} 
-                                        {...imageHandler} 
+                                        setFieldError={setFieldError}
+                                        {...imageHandler}
                                         websiteLinks={websiteLinks}
                                         setwebsiteLinks={setwebsiteLinks}
                                         specifications={specifications}
-                                        setSpecifications={setSpecifications} 
+                                        setSpecifications={setSpecifications}
                                         color={color}
                                         setColor={setColor}
                                         openPicker={openPicker}
-                                        setOpenPicker={setOpenPicker} 
+                                        setOpenPicker={setOpenPicker}
                                         setCurrentPinData={setCurrentPinData}
                                         setIsDirty={setIsDirty}
                                         projectData={projectData}

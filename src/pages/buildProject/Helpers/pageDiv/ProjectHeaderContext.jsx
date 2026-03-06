@@ -103,11 +103,11 @@ export const ProjectHeaderProvider = ({ children }) => {
 
         if(!currentFloor) return
 
-        let getFloorData = await GetFloorData(currentFloor.enc_id) 
+        let getFloorData = await GetFloorData(currentFloor.enc_id)  
         let verticalItem = (getFloorData?.vertical_transports || []).map((item) => ({
             ...item,
             category:"vertical_transport",
-            title:getFloorData?.vt_name ?? ''
+            title:item?.vt_name ?? ''
         }))
         
         dispatch(

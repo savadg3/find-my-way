@@ -9,7 +9,7 @@ import { useBuildVerticalPayload } from './useBuildVerticalPayload';
 import { GetFloorData } from '../../../../../../components/map/components/helpers/projectApi';
 import { useSelector } from 'react-redux';
 
-export const useVerticalSubmit = ({setNewPinAdded, newPinAdded} ) => {
+export const useVerticalSubmit = ({setNewPinAdded, newPinAdded, onAfterSave} ) => {
     const dispatch   = useDispatch();
     const { id }     = useParams();
     const navigate   = useNavigate();
@@ -26,24 +26,27 @@ export const useVerticalSubmit = ({setNewPinAdded, newPinAdded} ) => {
             
             const response = await saveVertical(payload);
             
-            if (response.type === 1) {    
-                let enc_id = response?.response?.data?.enc_id               
+            if (response.type === 1) {
+                let enc_id = response?.response?.data?.enc_id
                 if(enc_id){
                     navigate(`/project/${id}/vertical-transport/${encode(enc_id)}`)
-                } 
+                }
                 const updated = await fetchPinData(decodedId, ['vertical']);
-                dispatch(setPinsByCategory({ vertical: updated?.vertical })); 
+                dispatch(setPinsByCategory({ vertical: updated?.vertical }));
 
                 if(newPinAdded){
                     fetchFloorData(dispatch,currentFloor)
                     setNewPinAdded(false)
                 }
 
+                onAfterSave?.();
             } else {
                 SetBackEndErrorsAPi(response, setFieldError);
+                onAfterSave?.();
             }
         } catch (error) {
             console.error('Location save failed:', error);
+            onAfterSave?.();
         }
     };
     

@@ -3,7 +3,7 @@ import { BsArrowLeftShort } from 'react-icons/bs';
 import { FiSearch } from 'react-icons/fi';
 import { GoPlus } from 'react-icons/go';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 
 import { setEditingPinId } from '../../../../../store/slices/projectItemSlice';
 import { handleBlockEnter } from '../../../Helpers/constants/constant'; 
@@ -17,8 +17,9 @@ const AdvertisingSideBar = () => {
   
     const { id }      = useParams();
     const dispatch    = useDispatch();
-    const navigate    = useNavigate(); 
-    
+    const navigate    = useNavigate();
+    const pinsLoaded  = useSelector((state) => state.api.pinsLoaded);
+
     const [mapDivSize, setMapDivSize] = useState(window.innerHeight - 80);
     
     const {
@@ -94,9 +95,15 @@ const AdvertisingSideBar = () => {
             </div>
 
             <div className='custom-scrollbar customScroll' style={{
-                height: mapDivSize - 246 
+                height: mapDivSize - 246
             }} >
-                {filteredList.map((advertise, idx) => (
+                {!pinsLoaded ? (
+                    <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 40 }}>
+                        <div className="spinner-border text-primary" role="status">
+                            <span className="sr-only">Loading…</span>
+                        </div>
+                    </div>
+                ) : filteredList.map((advertise, idx) => (
                     <AdvertisingItem
                         key={advertise.enc_id}
                         advertise={advertise}

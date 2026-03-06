@@ -354,14 +354,16 @@ const parsePosition = (positions) => {
   }
 };
 
-const createMarkerElement = ({ category, subType, title, isEditing }) => {
+const createMarkerElement = ({ category, subType, title, isEditing }) => { 
   const wrapper = document.createElement('div');
-  wrapper.className = `mm-wrapper${isEditing ? ' mm-wrapper--editing' : ''}`;
+  // wrapper.className = `mm-wrapper${isEditing ? ' mm-wrapper--editing' : ''}`;
+  wrapper.className = `mm-wrapper`;
   
   const icon = document.createElement('div');
   // icon.className = `mm-icon marker-pop ${category} ${subType || ''}`;
   icon.className = `mm-icon  ${category} ${subType || ''}`;
   if (isEditing) icon.classList.add('marker-wobble');
+  if (isEditing) icon.classList.add('mm-wrapper--editing');
   icon.style.backgroundImage = getIconUrl(category);
 
   
@@ -425,7 +427,7 @@ const MapMarkers = React.memo(() => {
 
     const { vertical, ...restPins } = allPins || {};
 
-    const flat = Object.values(restPins).flat();
+    const flat = Object.values(restPins).flat(); 
 
     return flat.filter((pin) => {
       if (!pin?.positions) return false;

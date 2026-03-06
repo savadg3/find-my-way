@@ -79,11 +79,13 @@ export const fetchFloorData = async (dispatch, currentFloor) => {
   if(!currentFloor) return
   
   let getFloorData = await GetFloorData(currentFloor.enc_id) 
+
+  // console.log(getFloorData,"getFloorData");
  
   let verticalItem = (getFloorData?.vertical_transports || []).map((item) => ({
     ...item,
     category:"vertical_transport",
-    title:getFloorData?.vt_name ?? ''
+    title:item?.vt_name ?? ''
   }))  
 
   dispatch(

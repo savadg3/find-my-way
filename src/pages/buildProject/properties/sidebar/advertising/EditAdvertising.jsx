@@ -1,41 +1,47 @@
 import { Formik } from 'formik';
-import React, { useEffect, useState } from 'react'; 
+import React, { useEffect, useState } from 'react';
 import { Button, Col, Row } from 'reactstrap';
 import { useSelector } from 'react-redux';
 import { useNavigate, useParams } from 'react-router-dom';
 
-import { decode } from '../../../../../helpers/utils'; 
+import { decode } from '../../../../../helpers/utils';
 import { useActiveTab } from '../../../../../components/map/components/hooks/useActiveTab';
-import AutosaveForm from '../../../components/AutoSaveForm'; 
+import AutosaveForm from '../../../components/AutoSaveForm';
 
 import { FormInitializer } from '../../utils/pinServices';
 import { fetchAdvertisingItemById, normalizeAdvertisingData } from './services/advertisingService';
-import {  useAdvertisingImageHandler, useAdvertisingLinkHandler } from './hooks/useAdvertisingActions';
-import AdvertisementFormFields from './components/AdvertisementFormFields'; 
+import { useAdvertisingImageHandler, useAdvertisingLinkHandler } from './hooks/useAdvertisingActions';
+import AdvertisementFormFields from './components/AdvertisementFormFields';
 import { IoMdCheckmark } from 'react-icons/io';
 import { MdBlock } from 'react-icons/md';
 import { useAdvertisingSubmit } from './hooks/useBuildAdvertisingPayload';
 
 const EditAdvertising = () => {
     useActiveTab('advertisements');
- 
-    const navigate   = useNavigate();
+
+    const navigate      = useNavigate();
     const { id, subid } = useParams();
-    const decodedSubid  = decode(subid);  
- 
-    const [currentPinData, setCurrentPinData] = useState({}); 
-    const [isDirty, setIsDirty]               = useState(false); 
- 
+    const decodedSubid  = decode(subid);
+
+    const [currentPinData, setCurrentPinData] = useState({});
+    const [isDirty, setIsDirty]               = useState(false);
+    const [isSaving, setIsSaving]             = useState(false);
+
     const imageHandler = useAdvertisingImageHandler();
-    const { locationValues, handleURL, handlePin, onValueChange } = useAdvertisingLinkHandler(); 
+    const { locationValues, handleURL, handlePin, onValueChange } = useAdvertisingLinkHandler();
+
+    const handleAfterSave = () => {
+        setIsSaving(false);
+    };
 
     const { submit } = useAdvertisingSubmit({
-        croppedImage: imageHandler.croppedImage, 
-        blobImage:    imageHandler.blobImage, 
+        croppedImage: imageHandler.croppedImage,
+        blobImage:    imageHandler.blobImage,
         setIsDirty,
         setCroppedImage: imageHandler.setCroppedImage,
         setBlobImage:    imageHandler.setBlobImage,
         setPreviewImage: imageHandler.setPreviewImage,
+        onAfterSave:     handleAfterSave,
     });
 
     useEffect(() => {
@@ -43,25 +49,26 @@ const EditAdvertising = () => {
 
         const load = async () => {
             try {
-                const data = await fetchAdvertisingItemById(decodedSubid); 
-                const { prefillData } = normalizeAdvertisingData(data); 
-                setCurrentPinData(prefillData); 
+                const data = await fetchAdvertisingItemById(decodedSubid);
+                const { prefillData } = normalizeAdvertisingData(data);
+                setCurrentPinData(prefillData);
             } catch (err) {
                 console.error('Failed to load advertising item:', err);
             }
         };
 
         load();
-    }, [decodedSubid]); 
+    }, [decodedSubid]);
 
-    const goBack = () => { 
+    const goBack = () => {
         if (isDirty) {
+            setIsSaving(true);
             document.getElementById('advertismentSubmitBtn')?.click();
-        }else{
+        } else {
             navigate(`/project/${id}/advertisements`);
         }
     };
- 
+
     const initialValues = {
         banner_name: '',
         start_date:  '',
@@ -73,7 +80,7 @@ const EditAdvertising = () => {
         ad_image:    '',
         type:        '',
         ...currentPinData,
-    }; 
+    };
 
     return (
         <div
@@ -81,21 +88,36 @@ const EditAdvertising = () => {
             id="inner-customizer2"
             style={{ position: 'relative', height: window.innerHeight - 80, paddingBottom: 20 }}
         >
+            {/* Loading overlay shown while saving */}
+            {isSaving && (
+                <div style={{
+                    position:        'absolute',
+                    top: 0, left: 0, right: 0, bottom: 0,
+                    backgroundColor: 'rgba(255, 255, 255, 0.75)',
+                    display:         'flex',
+                    alignItems:      'center',
+                    justifyContent:  'center',
+                    zIndex:          9999,
+                }}>
+                    <div className="spinner-border text-primary" role="status">
+                        <span className="sr-only">Saving…</span>
+                    </div>
+                </div>
+            )}
+
             <Row className="backRow">
                 <Col md={8}>
                     <h1>Advertisement Details</h1>
                 </Col>
                 <Col md={4}>
-                   <div className='d-flex gap-1 justify-end mx-3'>
+                    <div className='d-flex gap-1 justify-end mx-3'>
                         <div className='backArrow m-0' onClick={() => {
-                            navigate(`/project/${id}/advertisements`)
+                            navigate(`/project/${id}/advertisements`);
                         }}>
                             <MdBlock />
                         </div>
 
-                        <div className='plus-icon ' onClick={() => 
-                            goBack()
-                        } >
+                        <div className='plus-icon' onClick={() => goBack()}>
                             <IoMdCheckmark />
                         </div>
                     </div>
@@ -104,10 +126,10 @@ const EditAdvertising = () => {
 
             <Formik
                 initialValues={initialValues}
-                onSubmit={submit} 
+                onSubmit={submit}
             >
                 {({ errors, values, touched, handleSubmit, handleChange, setFieldValue, setFieldError }) => (
-                    <> 
+                    <>
                         <FormInitializer currentPinData={currentPinData} />
 
                         <form
@@ -119,19 +141,19 @@ const EditAdvertising = () => {
                                 style={{ height: window.innerHeight - 80 }}
                             >
                                 <div className="bar-sub">
-                                    <AdvertisementFormFields 
+                                    <AdvertisementFormFields
                                         values={values}
                                         errors={errors}
                                         touched={touched}
                                         handleChange={handleChange}
-                                        setFieldValue={setFieldValue} 
-                                        {...imageHandler} 
+                                        setFieldValue={setFieldValue}
+                                        {...imageHandler}
                                         locationValues={locationValues}
                                         handleURL={handleURL}
                                         handlePin={handlePin}
-                                        onValueChange={onValueChange} 
+                                        onValueChange={onValueChange}
                                         currentPinData={currentPinData}
-                                        setCurrentPinData={setCurrentPinData} 
+                                        setCurrentPinData={setCurrentPinData}
                                         setIsDirty={setIsDirty}
                                     />
                                 </div>

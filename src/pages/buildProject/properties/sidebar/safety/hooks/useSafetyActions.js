@@ -7,7 +7,7 @@ import { SetBackEndErrorsAPi } from '../../../../../../hooks/setBEerror';
 import { saveSafety } from '../services/safetyService';
 import { useBuildSafetyPayload } from './useBuildSafetyPayload';
 
-export const useSafetySubmit = ( ) => {
+export const useSafetySubmit = ({ onAfterSave } = {}) => {
     const dispatch   = useDispatch();
     const { id }     = useParams();
     let decodedId      = decode(id);  
@@ -21,17 +21,19 @@ export const useSafetySubmit = ( ) => {
             const payload  = buildPayload(values); 
             const response = await saveSafety(payload);
             
-            if (response.type === 1) {                   
+            if (response.type === 1) {
                 const updated = await fetchPinData(decodedId, ['safety']);
-                dispatch(setPinsByCategory({ safety: updated?.safety })); 
-
+                dispatch(setPinsByCategory({ safety: updated?.safety }));
+                onAfterSave?.();
             } else {
                 SetBackEndErrorsAPi(response, setFieldError);
+                onAfterSave?.();
             }
         } catch (error) {
             console.error('Location save failed:', error);
+            onAfterSave?.();
         }
     };
-    
+
     return { submit };
 };
