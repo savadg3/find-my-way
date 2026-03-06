@@ -451,30 +451,26 @@ export const findPinNodeId = (paths, pinId) => {
 
 // ── Auto-generate sub paths ───────────────────────────────────────────────────
 // For each pin that has no sub-path endpoint yet, find the nearest main-path
-// segment, snap there, and produce a new sub path + optional main-path update.
+// segment and create a sub-path identical to one drawn manually (pen tool
+// sub→main snap): a floating yellow anchor with snapPathId + snapT.
+// The main path is NOT modified — buildNavGraph handles connectivity via snapT.
 //
-// Returns { newSubPaths, updatedMainPaths }
-// Caller should dispatch bulkAddPaths(newSubPaths) and updatePathPoints per updatedMainPaths.
+// Returns { newSubPaths }
+// Caller dispatches bulkAddPaths(newSubPaths).
+// Main paths are NOT modified — graph connectivity is handled by buildNavGraph
+// via snapPathId/snapT on the sub-path endpoint, exactly like manual drawing.
 export const autoGenerateSubPaths = (paths, visiblePins, map) => {
   const mainPaths = paths.filter((p) => p.type === 'main');
-  if (mainPaths.length === 0) return { newSubPaths: [], updatedMainPaths: [] };
+  if (mainPaths.length === 0) return { newSubPaths: [] };
 
-  // Clone main paths so we can insert nodes without mutating Redux state
-  const mainClones = mainPaths.map((p) => ({
-    ...p,
-    points: p.points.map((pt) => ({ ...pt })),
-  }));
-
-  const newSubPaths      = [];
-  const updatedMainPaths = []; // { pathId, points }
+  const newSubPaths = [];
 
   for (const pin of visiblePins) {
     const pinId = pin.enc_id;
 
     // Skip if already connected — covers both cases:
-    //  • a sub-path whose endpoint anchors this pin (normal auto-generated or manual sub-path)
-    //  • a main-path that was drawn through this pin (pin is already on the main path,
-    //    so adding a redundant sub-path would create a double connection)
+    //  • a sub-path whose endpoint anchors this pin
+    //  • a main-path that was drawn directly through this pin
     const alreadyConnected = paths.some(
       (p) => p.points.some((pt) => pt.pinId === pinId)
     );
@@ -484,20 +480,21 @@ export const autoGenerateSubPaths = (paths, visiblePins, map) => {
     if (!pinPos) continue;
 
     // Markers use anchor='center', so pinPos IS the visual centre of the icon.
-    // Find nearest segment across all main paths (screen-space via projection)
+    // Find the nearest point on any main path in screen space.
     let best = null;
     let bestDistPx = Infinity;
     const screenPin = map.project(pinPos);
 
-    for (const mc of mainClones) {
-      if (mc.points.length < 2) continue;
-      const pxPoints = mc.points.map((pt) => map.project(pt.position));
+    for (const mp of mainPaths) {
+      if (mp.points.length < 2) continue;
+      const pxPoints = mp.points.map((pt) => map.project(pt.position));
 
+      // Arc-length totals for global-T calculation
       let acc = 0;
       const segs = [];
       let total = 0;
-      for (let i = 0; i < mc.points.length - 1; i++) {
-        const d = haversineM(mc.points[i].position, mc.points[i + 1].position);
+      for (let i = 0; i < mp.points.length - 1; i++) {
+        const d = haversineM(mp.points[i].position, mp.points[i + 1].position);
         segs.push(d);
         total += d;
       }
@@ -508,13 +505,12 @@ export const autoGenerateSubPaths = (paths, visiblePins, map) => {
         );
         if (dPx < bestDistPx) {
           bestDistPx = dPx;
-          const lngLat = map.unproject(point);
+          const lngLat  = map.unproject(point);
           const globalT = total > 0 ? (acc + segT * segs[i]) / total : 0;
           best = {
-            mainClone: mc,
-            segIndex:  i,
+            mainPathId: mp.id,
             globalT,
-            snapPos:   [lngLat.lng, lngLat.lat],
+            snapPos: [lngLat.lng, lngLat.lat],
           };
         }
         acc += segs[i];
@@ -523,36 +519,21 @@ export const autoGenerateSubPaths = (paths, visiblePins, map) => {
 
     if (!best) continue;
 
-    // Insert a snap node into the main path clone between segIndex and segIndex+1
-    const snapNodeId = uuid();
-    const snapNode = makePoint(best.snapPos, { id: snapNodeId });
-    best.mainClone.points.splice(best.segIndex + 1, 0, snapNode);
-
-    // Mark this main clone as updated
-    const already = updatedMainPaths.find((u) => u.pathId === best.mainClone.id);
-    if (!already) {
-      updatedMainPaths.push({
-        pathId: best.mainClone.id,
-        points: best.mainClone.points,
-      });
-    } else {
-      already.points = best.mainClone.points;
-    }
-
-    // Create the sub path — anchor='center' means pinPos IS the icon centre
+    // Build the sub-path identically to a manually drawn sub→main snap:
+    //   point[0] — pin anchor  (pinId links it to the map marker)
+    //   point[1] — floating yellow anchor on the main path
+    //              (snapPathId + snapT → buildNavGraph creates the virtual edge;
+    //               isSnap = !!snapPathId → nodesToGeoJSON renders it yellow)
+    // The main path is NOT modified; no shared UUID trick needed.
     newSubPaths.push({
-      id: uuid(),
+      id:   uuid(),
       type: 'sub',
       points: [
-        makePoint(pinPos, { pinId }),
-        makePoint(best.snapPos, {
-          id:         snapNodeId, // shared ID = zero-cost graph edge
-          snapPathId: best.mainClone.id,
-          snapT:      best.globalT,
-        }),
+        makePoint(pinPos,       { pinId }),
+        makePoint(best.snapPos, { snapPathId: best.mainPathId, snapT: best.globalT }),
       ],
     });
   }
 
-  return { newSubPaths, updatedMainPaths };
+  return { newSubPaths };
 };

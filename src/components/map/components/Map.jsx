@@ -11,7 +11,7 @@ import { useParams } from 'react-router-dom';
 import DrawingLayer, { DrawingSync } from './Map/Drawing/DrawingLayer';
 import DrawingManager from './Map/Drawing/DrawingManager';
 import ImageOverlayManager from './Map/Image/Imageoverlaymanager';
-import NavigationLayer, { NavSync } from './Map/Navigation/NavigationLayer';
+import NavigationLayer, { NavSync, NavVisibility } from './Map/Navigation/NavigationLayer';
 import NavigationManager from './Map/Navigation/NavigationManager';
 
 const MapComponent = () => {
@@ -94,9 +94,11 @@ const MapComponent = () => {
                     <ImageOverlayManager />
 
                     {/* Navigation paths — always mounted so sources exist;
-                        NavigationManager no-ops when activeTool is null */}
+                        NavigationManager no-ops when activeTool is null.
+                        NavVisibility hides all nav GL layers on non-navigation pages. */}
                     <NavigationLayer />
                     <NavSync />
+                    <NavVisibility />
                     <NavigationManager />
 
                 </>

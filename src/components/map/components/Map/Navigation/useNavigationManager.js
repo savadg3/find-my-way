@@ -16,7 +16,6 @@ import {
   clearNavSelection,
   bulkAddPaths,
   insertPointAtIndex,
-  updatePathPoints,
 } from '../../../../../store/slices/navigationSlice';
 import {
   findSnap,
@@ -689,13 +688,9 @@ export function useAutoGenerateSubPaths() {
       return true;
     });
 
-    const { newSubPaths, updatedMainPaths } = autoGenerateSubPaths(
-      paths, visiblePins, map
-    );
-
-    updatedMainPaths.forEach(({ pathId, points }) => {
-      dispatch(updatePathPoints({ pathId, points }));
-    });
+    // autoGenerateSubPaths now builds sub-paths exactly like manual drawing:
+    // floating anchor with snapPathId+snapT, no main-path modification needed.
+    const { newSubPaths } = autoGenerateSubPaths(paths, visiblePins, map);
 
     if (newSubPaths.length > 0) {
       dispatch(bulkAddPaths(newSubPaths));

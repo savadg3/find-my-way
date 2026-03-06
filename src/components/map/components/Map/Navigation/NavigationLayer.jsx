@@ -5,6 +5,7 @@
 
 import { useEffect, useRef } from 'react';
 import { useSelector }       from 'react-redux';
+import { useMatch }          from 'react-router-dom';
 import {
   pathsToLinesGeoJSON,
   nodesToGeoJSON,
@@ -248,6 +249,28 @@ export function NavSync() {
       navSourceRef.setPreview?.(null, null);
     }
   }, [inProgress]);
+
+  return null;
+}
+
+// ── NavVisibility ──────────────────────────────────────────────────────────────
+// Hides all navigation GL layers when the user is NOT on the navigation page,
+// and shows them when they are. Mount this alongside NavigationLayer + NavSync.
+export function NavVisibility() {
+  const map        = useSelector((s) => s.map.mapContainer);
+  const isNavPage  = !!useMatch('/project/:id/navigation');
+
+  useEffect(() => {
+    if (!map) return;
+    const visibility = isNavPage ? 'visible' : 'none';
+    Object.values(NAV_LAYERS).forEach((layerId) => {
+      try {
+        if (map.getLayer(layerId)) {
+          map.setLayoutProperty(layerId, 'visibility', visibility);
+        }
+      } catch { /* layer not yet added — safe to ignore */ }
+    });
+  }, [map, isNavPage]);
 
   return null;
 }
