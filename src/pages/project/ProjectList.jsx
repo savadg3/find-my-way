@@ -269,7 +269,8 @@ function ProjectList() {
       if (response.type === 1) {
         toast.success(data.message);
         if (data.message === "Project added successfully.") {
-          navigate(`/view-floor/${encode(data.id)}`);
+          // navigate(`/view-floor/${encode(data.id)}`);
+          navigate(`/project/${encode(data.id)}`);
         } else {
           closeModal();
           formData.enc_id ? getAllList() : getProjectList();

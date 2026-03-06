@@ -104,7 +104,7 @@ export default function useNavigationManager({ activeTool, activePath }) {
         [screenPt.x - 10, screenPt.y - 10],
         [screenPt.x + 10, screenPt.y + 10],
       ],
-      { layers: [NAV_LAYERS.nodes, NAV_LAYERS.nodesPin, NAV_LAYERS.nodesSnap] }
+      { layers: [NAV_LAYERS.nodes, NAV_LAYERS.nodesSnap] }
     );
     if (features.length === 0) return null;
     const p = features[0].properties;
@@ -205,12 +205,14 @@ export default function useNavigationManager({ activeTool, activePath }) {
         const { lng, lat } = e.lngLat;
         const { activePath: curPath, paths: curPaths } = stateRef.current;
 
-        // Snap detection
+        // Snap detection — wider pin threshold (25 px) so clicking anywhere on
+        // a pin icon reliably snaps to the pin's coordinate.
         const snap = findSnap({
           lngLat: [lng, lat],
           map,
           paths:  curPaths,
           visiblePins: visiblePins.current,
+          pinThresholdPx: 25,
         });
 
         let newPoint;

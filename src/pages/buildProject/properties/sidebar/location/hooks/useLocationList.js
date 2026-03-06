@@ -6,9 +6,10 @@ import { encode, decode, getCurrentUser } from '../../../../../../helpers/utils'
 import { setPinsByCategory, setEditingPinId, setSelectedPin } from '../../../../../../store/slices/projectItemSlice';
 import { deletePinApi, removePinApi, PlanExpiryDetails } from '../../../../Helpers/apis/otherApis';
 import { saveLocation } from '../services/locationService';
-import { fetchPinData } from '../../../../../../components/map/components/hooks/useLoadPins'; 
+import { fetchPinData } from '../../../../../../components/map/components/hooks/useLoadPins';
+import { SetBackEndErrorsAPi } from '../../../../../../hooks/setBEerror';
 
-export const useLocationList = ({ setModal }) => {
+export const useLocationList = ({ setModal, setPlanDetails }) => {
     const dispatch    = useDispatch();
     const navigate    = useNavigate();
     const { id }      = useParams();
@@ -32,18 +33,17 @@ export const useLocationList = ({ setModal }) => {
         );
     });
 
-    const handleAddNew = () => {
+    const handleAddNew = async () => {
 
         const isAtLimit = pinCount?.used_locations === pinCount?.total_locations;
 
         if (isAtLimit) {
-            const plan = PlanExpiryDetails(decodedId, setModal);
-            // dispatch(setSelectedPin({ ...plan }));
+            const plan = await PlanExpiryDetails(decodedId, setModal);
+            setPlanDetails?.(plan);
             return;
         }
- 
+
         document.getElementById('locationSubmitBtn')?.click();
-        // dispatch(setSelectedPin({ isDrop: false }));
     };
 
     const handleEdit = useCallback((location) => {
@@ -79,11 +79,6 @@ export const useLocationList = ({ setModal }) => {
     }, [dispatch, projectData, decodedId]);
 
     const handleCreateLocation = async (values, { setFieldError }) => {
-
-        if (values?.enc_id && values?.isDrop) {
-            handleAddNew();
-            return;
-        }
 
         const user       = getCurrentUser()?.user;
         const customerId = projectData?.enc_customer_id ?? user?.common_id;

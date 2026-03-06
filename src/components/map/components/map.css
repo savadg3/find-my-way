@@ -30,6 +30,8 @@
     background-size: contain;
     background-repeat: no-repeat;
     background-position: center;
+    position: absolute;
+    transform: translateX(-50%);
 }
 .mm-icon.marker-pop {
     animation: markerPop 0.25s ease-out;
