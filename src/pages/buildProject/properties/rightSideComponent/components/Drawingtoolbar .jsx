@@ -10,6 +10,7 @@ import {
 import { removeShapes } from '../../../../../store/slices/drawingSlice';
 import { removeItem }   from '../../../../../store/slices/imageOverlaySlice';
 import useImageImport from "../../../../../components/map/components/Map/Image/Useimageimport";
+import { CircleSvg, EraseSvg, FillSvg, ImportSvg, PolygonSvg, RectangleSvg } from "../../../../../components/common/svgIcons";
 // import useImageImport from './useImageImport';
 
 // ── Icons (unchanged) ─────────────────────────────────────────────────────────
@@ -19,9 +20,10 @@ const PenIcon = () => (
   </svg>
 );
 const HighlighterIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M15.232 5.232l3.536 3.536-7.071 7.07-3.536-3.535z"/><path d="M9.5 19.5l-3-3 1-4 3 3z"/><line x1="3" y1="21" x2="9.5" y2="19.5"/>
-  </svg>
+  // <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  //   <path d="M15.232 5.232l3.536 3.536-7.071 7.07-3.536-3.535z"/><path d="M9.5 19.5l-3-3 1-4 3 3z"/><line x1="3" y1="21" x2="9.5" y2="19.5"/>
+  // </svg>
+  <FillSvg fill="#A8ABAF"/>
 );
 const TextIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -29,9 +31,10 @@ const TextIcon = () => (
   </svg>
 );
 const EraserIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M20 20H7L3 16l10-10 7 7z"/><path d="M6.0001 13.9999L10 18"/>
-  </svg>
+  // <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  //   <path d="M20 20H7L3 16l10-10 7 7z"/><path d="M6.0001 13.9999L10 18"/>
+  // </svg>
+  <EraseSvg fill="#A8ABAF"/>
 );
 const SelectIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -39,9 +42,11 @@ const SelectIcon = () => (
   </svg>
 );
 const ImportSVGIcon = () => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
-  </svg>
+  // <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+  //   <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+  // </svg>
+
+  <ImportSvg fill={"#6a6d73"}/>
 );
 const PlusIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
@@ -60,19 +65,22 @@ const ChevronDown = () => (
   </svg>
 );
 const FreehandIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M3 17c3-3 4-7 8-7s5 4 8 1"/>
-  </svg>
+  // <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+  //   <path d="M3 17c3-3 4-7 8-7s5 4 8 1"/>
+  // </svg>
+  <PolygonSvg fill={'#A8ABAF'} />
 );
 const RectIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="4" y="6" width="16" height="12" rx="1"/>
-  </svg>
+  // <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+  //   <rect x="4" y="6" width="16" height="12" rx="1"/>
+  // </svg>
+  <RectangleSvg fill={'#A8ABAF'}/>
 );
 const CircleIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-    <circle cx="12" cy="12" r="8"/>
-  </svg>
+  // <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+  //   <circle cx="12" cy="12" r="8"/>
+  // </svg>
+  <CircleSvg fill={'#A8ABAF'}/>
 );
 const AlignLeftIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -273,7 +281,7 @@ export default function DrawingToolbar() {
               className="ref-btn"
               title="Delete selected"
               onClick={handleDelete}
-              style={{ color: '#e03131' }}
+              style={{ color: '#e03131',border:"none" }}
             >
               <TrashIcon />
               <span>Delete</span>

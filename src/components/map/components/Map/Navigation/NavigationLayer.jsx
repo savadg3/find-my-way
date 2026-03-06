@@ -47,8 +47,8 @@ export default function NavigationLayer() {
   useEffect(() => {
     if (!map) return;
 
-    // Shared teardown helper — used both by init() (defensive pre-clean)
-    // and by the effect cleanup / handleStyleData.
+    // Shared teardown helper — used by the effect cleanup and handleStyleData
+    // when a genuine style-swap has removed all sources.
     const teardown = () => {
       Object.values(NAV_LAYERS).forEach((l) => {
         try { if (map.getLayer(l)) map.removeLayer(l); } catch {}
@@ -63,13 +63,9 @@ export default function NavigationLayer() {
 
     const init = () => {
       if (initialised.current) return;
-      initialised.current = true;
-
-      // Defensive pre-clean: adding sources/layers fires 'styledata', which
-      // calls handleStyleData → init() again before initialised guard can stop
-      // it.  Removing anything that already exists avoids the "already exists"
-      // error on that second call.
-      teardown();
+      // NOTE: initialised.current is set AFTER all setup succeeds,
+      // so that a premature throw (e.g. "Style is not done loading")
+      // doesn't permanently block re-initialization.
 
       // ── Sources ──────────────────────────────────────────────────────
       map.addSource(NAV_SOURCES.lines, {
@@ -205,12 +201,27 @@ export default function NavigationLayer() {
         map.getSource(NAV_SOURCES.preview)
           ?.setData(previewToGeoJSON(inProgress, mousePos));
       };
+
+      // Mark fully initialised AFTER all setup succeeds.
+      // This mirrors the DrawingLayer pattern so that a premature throw
+      // (e.g. "Style is not done loading") doesn't permanently block retries.
+      initialised.current = true;
     };
 
     const handleStyleData = () => {
+      // styledata fires many times during loading (sprites, fonts, tiles).
+      // Only reinitialise when the style is fully loaded AND our sources are
+      // gone — identical to DrawingLayer's guard, preventing the
+      // constant teardown/reinit loop that the previous "always reinit"
+      // approach created.
+      if (!map.isStyleLoaded()) return;
+      if (map.getSource(NAV_SOURCES.lines)) return; // sources still exist — nothing to do
+
+      // Sources are gone (genuine style-swap) — reset and re-init.
       initialised.current = false;
-      // teardown() is called inside init() so navSourceRef handles are
-      // cleared there; no need to duplicate here.
+      navSourceRef.setLines   = null;
+      navSourceRef.setNodes   = null;
+      navSourceRef.setPreview = null;
       init();
     };
 

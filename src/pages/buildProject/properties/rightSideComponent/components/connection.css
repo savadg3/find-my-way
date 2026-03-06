@@ -58,6 +58,11 @@
     background: #e8f0fe;
     color: #1a73e8;
   }
+
+  .ct-tool-btn.active svg, .ct-tool-btn.active svg path{
+    stroke: #e8f0fe;
+    fill: #1a73e8;
+  }
   .ct-tool-btn:active { transform: scale(0.92); }
  
   .ct-divider {
