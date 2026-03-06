@@ -26,6 +26,9 @@ const initialState = {
   selectedPathId:  null,
   selectedPointId: null,
   inProgress:      null,    // { type, points: Point[] } while drawing
+  // Shortest-path result — set by findPath, cleared on unmount / new selection
+  // { positions: [[lng,lat],...], distanceM: number } | null
+  shortestPath:    null,
 };
 
 const navigationSlice = createSlice({
@@ -155,6 +158,15 @@ const navigationSlice = createSlice({
       state.selectedPathId  = null;
       state.selectedPointId = null;
     },
+
+    // ── Shortest-path result ──────────────────────────────────────────
+    // payload: { positions: [[lng,lat],...], distanceM: number }
+    setShortestPath(state, { payload }) {
+      state.shortestPath = payload;
+    },
+    clearShortestPath(state) {
+      state.shortestPath = null;
+    },
   },
 });
 
@@ -176,6 +188,8 @@ export const {
   insertPointAtIndex,
   updatePinConnectedPoints,
   clearAllNavPaths,
+  setShortestPath,
+  clearShortestPath,
 } = navigationSlice.actions;
 
 export default navigationSlice.reducer;

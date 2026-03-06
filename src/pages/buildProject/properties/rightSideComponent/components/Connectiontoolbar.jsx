@@ -106,7 +106,7 @@ export default function ConnectionToolbar() {
             onClick={autoGenerate}
             title="Auto-connect all pins to nearest main path"
           >
-            <BoltIcon />
+            {/* <BoltIcon /> */}
             Auto Generate Connections
           </button>
 

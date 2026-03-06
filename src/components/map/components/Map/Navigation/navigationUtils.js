@@ -328,7 +328,18 @@ export const makePoint = (position, extra = {}) => ({
 
 // ── Build graph for Dijkstra ──────────────────────────────────────────────────
 // Returns { nodes: { id: [lng,lat] }, adj: { id: [{ to, weight }] } }
-export const buildNavGraph = (paths) => {
+//
+// prioritizeMain (default true):
+//   Sub-path edges receive a 1 × 10⁹ m penalty so Dijkstra always routes
+//   through main-path edges when any main-path connection exists.
+//   The penalty is large enough to guarantee preference for main paths even
+//   when the main-path detour is thousands of metres longer than the sub-path
+//   shortcut.  Virtual snap-edges (sub-path → main-path handoff) are NOT
+//   penalised — they are the intended on/off ramp and must stay cheap.
+//   Call with prioritizeMain=false to get raw-distance routing (legacy).
+const SUB_PATH_PENALTY = 1e9; // 1 × 10⁹ m ≈ 1 000 000 km
+
+export const buildNavGraph = (paths, prioritizeMain = true) => {
   const nodes = {}; // id → [lng,lat]
   const adj   = {}; // id → [{to, weight}]
 
@@ -348,10 +359,15 @@ export const buildNavGraph = (paths) => {
     for (const pt of path.points) {
       ensureNode(pt.id, pt.position);
     }
+    // Sub-path segments get a massive penalty when prioritizeMain is on,
+    // so any route through the main-path network is always preferred.
+    // The penalty is additive (not multiplicative) so zero-length edges
+    // still cost the full penalty and Dijkstra can never "sneak through" them.
+    const subPenalty = (prioritizeMain && path.type === 'sub') ? SUB_PATH_PENALTY : 0;
     for (let i = 0; i < path.points.length - 1; i++) {
       const a = path.points[i];
       const b = path.points[i + 1];
-      const w = haversineM(a.position, b.position);
+      const w = haversineM(a.position, b.position) + subPenalty;
       addEdge(a.id, b.id, w);
     }
   }

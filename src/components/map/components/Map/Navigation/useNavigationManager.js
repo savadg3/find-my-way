@@ -222,6 +222,9 @@ export default function useNavigationManager({ activeTool, activePath }) {
           if (snap.type === 'pin') {
             // ── Pin anchor — always use pinId ──────────────────────────────
             newPoint = makePoint(snap.position, { pinId: snap.pinId });
+            // If we're already drawing (didn't start FROM this pin) finish here.
+            // If this IS the first point (starting a path from a pin) keep going.
+            if (localProgress !== null) shouldEnd = true;
 
           } else if (snap.type === 'node') {
             const snapPath  = curPaths.find((p) => p.id === snap.pathId);
@@ -288,18 +291,20 @@ export default function useNavigationManager({ activeTool, activePath }) {
               // ── Sub-path snapping to a main-path SEGMENT ───────────────
               // Floating yellow anchor — main path is NOT touched at all.
               // Graph connectivity is handled by buildNavGraph via snapT/snapPathId.
-              newPoint  = makePoint(snap.position, {
+              newPoint = makePoint(snap.position, {
                 snapPathId: snap.pathId,
                 snapT:      snap.t,
               });
-              shouldEnd = true;
+              // Already drawing → finish at this anchor.
+              // Not yet drawing → START drawing FROM this anchor (keep going).
+              if (localProgress !== null) shouldEnd = true;
 
             } else {
               // ── Any other segment snap (main→main, main→sub, sub→sub) ────
               // Plain junction node — NO snapPathId, so it won't render yellow
               // and won't be treated as a floating anchor.
-              // Graph connectivity comes from the shared UUID inserted into the
-              // target path via insertPointAtIndex.
+              // Always insert the node into the target path so the graph stays
+              // connected regardless of whether we're starting or finishing here.
               newPoint = makePoint(snap.position);
               dispatch(insertPointAtIndex({
                 pathId: snap.pathId,
@@ -312,7 +317,9 @@ export default function useNavigationManager({ activeTool, activePath }) {
                   snapT:      null,
                 },
               }));
-              shouldEnd = true;
+              // Already drawing → finish here (path is now connected to target).
+              // Not yet drawing → START drawing FROM this point on the line.
+              if (localProgress !== null) shouldEnd = true;
             }
           }
         } else {

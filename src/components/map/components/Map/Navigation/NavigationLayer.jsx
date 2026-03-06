@@ -15,29 +15,39 @@ import {
 
 // ── Source / Layer name constants ─────────────────────────────────────────────
 export const NAV_SOURCES = {
-  lines:   'nav-lines',
-  nodes:   'nav-nodes',
-  preview: 'nav-preview',
+  lines:     'nav-lines',
+  nodes:     'nav-nodes',
+  preview:   'nav-preview',
+  highlight: 'nav-highlight',   // shortest-path result
 };
 
 export const NAV_LAYERS = {
-  mainLine:     'nav-main-line',
-  subLine:      'nav-sub-line',
-  selectedLine: 'nav-selected-line',
-  hitLine:      'nav-hit-line',      // invisible wide line for easy click detection
-  nodes:        'nav-nodes-circle',
-  nodesPin:     'nav-nodes-pin',
-  nodesSnap:    'nav-nodes-snap',
-  previewLine:  'nav-preview-line',
-  previewDot:   'nav-preview-dot',
+  mainLine:       'nav-main-line',
+  subLine:        'nav-sub-line',
+  selectedLine:   'nav-selected-line',
+  hitLine:        'nav-hit-line',       // invisible wide line for easy click detection
+  nodes:          'nav-nodes-circle',
+  nodesPin:       'nav-nodes-pin',
+  nodesSnap:      'nav-nodes-snap',
+  previewLine:    'nav-preview-line',
+  previewDot:     'nav-preview-dot',
+  highlightLine:  'nav-highlight-line', // shortest-path solid red base
+  highlightDash:  'nav-highlight-dash', // animated dashes — direction cue
+  highlightArrow: 'nav-highlight-arrow',// direction chevron symbols
 };
 
 // ── Imperative handle ─────────────────────────────────────────────────────────
 // NavSync and useNavigationManager push data through here — zero re-renders.
 export const navSourceRef = {
-  setLines:   null, // (paths, selectedPathId) => void
-  setNodes:   null, // (paths, selectedPathId, selectedPointId) => void
-  setPreview: null, // (inProgress, mousePos?) => void
+  setLines:         null,  // (paths, selectedPathId) => void
+  setNodes:         null,  // (paths, selectedPathId, selectedPointId) => void
+  setPreview:       null,  // (inProgress, mousePos?) => void
+  setHighlight:     null,  // (positions: [lng,lat][] | null) => void
+  // ── Survival ref: last positions pushed to the highlight source.
+  // NavigationLayer.init() reads this after every reinit (style-swap / map
+  // reference change) so the red path is immediately restored without
+  // waiting for NavSync's shortestPath effect to re-fire.
+  _latestHighlight: null,  // [lng,lat][] | null
 };
 
 // ── NavigationLayer ───────────────────────────────────────────────────────────
@@ -48,22 +58,31 @@ export default function NavigationLayer() {
   useEffect(() => {
     if (!map) return;
 
+    // Animation frame ID for the dash-animation loop.
+    // Declared here so both init() and teardown() share the same reference.
+    let dashRafId = null;
+
     // Shared teardown helper — used by the effect cleanup and handleStyleData
     // when a genuine style-swap has removed all sources.
     const teardown = () => {
+      // Stop dash animation before removing layers
+      if (dashRafId) { cancelAnimationFrame(dashRafId); dashRafId = null; }
       Object.values(NAV_LAYERS).forEach((l) => {
         try { if (map.getLayer(l)) map.removeLayer(l); } catch {}
       });
       Object.values(NAV_SOURCES).forEach((s) => {
         try { if (map.getSource(s)) map.removeSource(s); } catch {}
       });
-      navSourceRef.setLines   = null;
-      navSourceRef.setNodes   = null;
-      navSourceRef.setPreview = null;
+      navSourceRef.setLines     = null;
+      navSourceRef.setNodes     = null;
+      navSourceRef.setPreview   = null;
+      navSourceRef.setHighlight = null;
     };
 
     const init = () => {
       if (initialised.current) return;
+      // Cancel any RAF from a previous init call (e.g. style-swap reinit)
+      if (dashRafId) { cancelAnimationFrame(dashRafId); dashRafId = null; }
       // NOTE: initialised.current is set AFTER all setup succeeds,
       // so that a premature throw (e.g. "Style is not done loading")
       // doesn't permanently block re-initialization.
@@ -193,6 +212,127 @@ export default function NavigationLayer() {
           ?.setData(previewToGeoJSON(inProgress, mousePos));
       };
 
+      // ── Shortest-path highlight ───────────────────────────────────────
+
+      // Build a rightward-pointing chevron arrow via canvas.
+      // MapLibre rotates it so its +x axis aligns with the line direction,
+      // making it an accurate forward-direction indicator.
+      const ARROW_SZ = 22;
+      const arrowCanvas = document.createElement('canvas');
+      arrowCanvas.width  = ARROW_SZ;
+      arrowCanvas.height = ARROW_SZ;
+      const arrowCtx = arrowCanvas.getContext('2d');
+      arrowCtx.fillStyle = 'rgba(255,255,255,0.95)';
+      arrowCtx.beginPath();
+      arrowCtx.moveTo(ARROW_SZ,          ARROW_SZ / 2);  // tip (right)
+      arrowCtx.lineTo(ARROW_SZ * 0.35,   0);             // upper-left
+      arrowCtx.lineTo(ARROW_SZ * 0.55,   ARROW_SZ / 2); // inner notch → chevron shape
+      arrowCtx.lineTo(ARROW_SZ * 0.35,   ARROW_SZ);     // lower-left
+      arrowCtx.closePath();
+      arrowCtx.fill();
+      if (!map.hasImage('nav-direction-arrow')) {
+        map.addImage(
+          'nav-direction-arrow',
+          arrowCtx.getImageData(0, 0, ARROW_SZ, ARROW_SZ),
+        );
+      }
+
+      map.addSource(NAV_SOURCES.highlight, {
+        type: 'geojson', data: emptyCol(),
+      });
+
+      // Layer 1 — solid red base (wide, rounded)
+      map.addLayer({
+        id: NAV_LAYERS.highlightLine, type: 'line', source: NAV_SOURCES.highlight,
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+        paint: {
+          'line-color':   '#e53935',  // vivid red
+          'line-width':   7,
+          'line-opacity': 0.95,
+        },
+      });
+
+      // Layer 2 — animated white dashes on top (direction cue)
+      // The dash pattern cycles via requestAnimationFrame below.
+      map.addLayer({
+        id: NAV_LAYERS.highlightDash, type: 'line', source: NAV_SOURCES.highlight,
+        layout: { 'line-cap': 'butt', 'line-join': 'round' },
+        paint: {
+          'line-color':     '#ffffff',
+          'line-width':     3,
+          'line-opacity':   0.85,
+          'line-dasharray': [0, 4, 3],
+        },
+      });
+
+      // Layer 3 — chevron arrow symbols placed along the line
+      map.addLayer({
+        id: NAV_LAYERS.highlightArrow, type: 'symbol', source: NAV_SOURCES.highlight,
+        layout: {
+          'symbol-placement':        'line',
+          'symbol-spacing':          80,
+          'icon-image':              'nav-direction-arrow',
+          'icon-size':               0.9,
+          'icon-rotation-alignment': 'map',
+          'icon-pitch-alignment':    'viewport',
+          'icon-allow-overlap':      true,
+          'icon-ignore-placement':   true,
+        },
+      });
+
+      navSourceRef.setHighlight = (positions) => {
+        // Persist so init() can restore after a style-swap / map-reinit.
+        navSourceRef._latestHighlight = positions ?? null;
+        const data = positions && positions.length >= 2
+          ? {
+              type: 'FeatureCollection',
+              features: [{
+                type: 'Feature',
+                geometry: { type: 'LineString', coordinates: positions },
+                properties: {},
+              }],
+            }
+          : emptyCol();
+        map.getSource(NAV_SOURCES.highlight)?.setData(data);
+      };
+
+      // ── Restore any previously displayed highlight ────────────────────
+      // This fires when NavigationLayer reinitialises after a style-swap or
+      // map-reference change.  NavSync's shortestPath useEffect won't re-fire
+      // (shortestPath in Redux is the same object), so we proactively restore
+      // the data here instead of relying on a Redux-triggered re-render.
+      if (navSourceRef._latestHighlight) {
+        navSourceRef.setHighlight(navSourceRef._latestHighlight);
+      }
+
+      // ── Animated dash loop ────────────────────────────────────────────
+      // Cycles through 14 dash-offset frames at ~50 ms each, creating a
+      // "flowing" illusion of motion along the line.  The loop runs
+      // whenever the highlight is initialised; it's cheap when the source
+      // has no data (empty FeatureCollection).
+      const dashFrames = [
+        [0, 4, 3], [0.5, 4, 2.5], [1, 4, 2],   [1.5, 4, 1.5],
+        [2, 4, 1], [2.5, 4, 0.5], [3, 4, 0],
+        [0, 0.5, 3, 3.5], [0, 1, 3, 3], [0, 1.5, 3, 2.5],
+        [0, 2, 3, 2],     [0, 2.5, 3, 1.5], [0, 3, 3, 1], [0, 3.5, 3, 0.5],
+      ];
+      let dashStep   = 0;
+      let lastDashTs = 0;
+      const DASH_MS  = 50; // ~20 fps → smooth but not CPU-heavy
+
+      const animateDash = (ts) => {
+        dashRafId = requestAnimationFrame(animateDash);
+        if (ts - lastDashTs < DASH_MS) return;
+        lastDashTs = ts;
+        try {
+          map.setPaintProperty(
+            NAV_LAYERS.highlightDash, 'line-dasharray', dashFrames[dashStep],
+          );
+        } catch { /* layer removed / not yet ready — safe to skip */ }
+        dashStep = (dashStep + 1) % dashFrames.length;
+      };
+      dashRafId = requestAnimationFrame(animateDash);
+
       // Mark fully initialised AFTER all setup succeeds.
       // This mirrors the DrawingLayer pattern so that a premature throw
       // (e.g. "Style is not done loading") doesn't permanently block retries.
@@ -210,9 +350,10 @@ export default function NavigationLayer() {
 
       // Sources are gone (genuine style-swap) — reset and re-init.
       initialised.current = false;
-      navSourceRef.setLines   = null;
-      navSourceRef.setNodes   = null;
-      navSourceRef.setPreview = null;
+      navSourceRef.setLines     = null;
+      navSourceRef.setNodes     = null;
+      navSourceRef.setPreview   = null;
+      navSourceRef.setHighlight = null;
       init();
     };
 
@@ -238,6 +379,7 @@ export function NavSync() {
   const selectedPathId  = useSelector((s) => s.navigation.selectedPathId);
   const selectedPointId = useSelector((s) => s.navigation.selectedPointId);
   const inProgress      = useSelector((s) => s.navigation.inProgress);
+  const shortestPath    = useSelector((s) => s.navigation.shortestPath);
 
   useEffect(() => {
     navSourceRef.setLines?.(paths, selectedPathId);
@@ -249,6 +391,11 @@ export function NavSync() {
       navSourceRef.setPreview?.(null, null);
     }
   }, [inProgress]);
+
+  // Push shortest-path result into the highlight GL source whenever it changes.
+  useEffect(() => {
+    navSourceRef.setHighlight?.(shortestPath?.positions ?? null);
+  }, [shortestPath]);
 
   return null;
 }
