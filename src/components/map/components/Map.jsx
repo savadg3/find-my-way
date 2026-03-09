@@ -7,11 +7,11 @@ import { useDispatch } from 'react-redux';
 import { useSelector } from 'react-redux';
 import { setIsConnectionEnabled, setPlacedLocation } from '../../../store/slices/verticalPlacementSlice';
 import { fetchFloorData } from './hooks/useLoadPins';
-import { useParams } from 'react-router-dom';
-import DrawingLayer, { DrawingSync } from './Map/Drawing/DrawingLayer';
+import { useMatch, useParams } from 'react-router-dom';
+import DrawingLayer, { DrawingSync, DrawingAutoSave } from './Map/Drawing/DrawingLayer';
 import DrawingManager from './Map/Drawing/DrawingManager';
 import ImageOverlayManager from './Map/Image/Imageoverlaymanager';
-import NavigationLayer, { NavSync, NavVisibility } from './Map/Navigation/NavigationLayer';
+import NavigationLayer, { NavSync, NavVisibility, NavAutoSave } from './Map/Navigation/NavigationLayer';
 import NavigationManager from './Map/Navigation/NavigationManager';
 
 const MapComponent = () => {
@@ -19,11 +19,11 @@ const MapComponent = () => {
     const [isMapReady, setIsMapReady]   = useState(false); 
     const [projectData, setProjectData] = useState(ProjectData);
 
-    const dispatch               = useDispatch()
-    const params               = useParams()
+    const dispatch               = useDispatch() 
     const currentFloor           = useSelector((state) => state.api.currentFloor);
     const isConnectionEnabled    = useSelector((state) => state.vertical.isConnectionEnabled);
     const isConnectionEnabledRef = useRef(isConnectionEnabled);
+    const isNavPage              = !!useMatch('/project/:id/navigation');
 
 
     useEffect(() => {
@@ -87,19 +87,24 @@ const MapComponent = () => {
 
                     <DrawingSync />
 
+                    <DrawingAutoSave />
+
                     <DrawingManager />
 
                     <MapDrawing map={mapRef.current} />
 
                     <ImageOverlayManager />
-
-                    {/* Navigation paths — always mounted so sources exist;
-                        NavigationManager no-ops when activeTool is null.
-                        NavVisibility hides all nav GL layers on non-navigation pages. */}
-                    <NavigationLayer />
-                    <NavSync />
-                    <NavVisibility />
-                    <NavigationManager />
+ 
+                    {
+                        isNavPage && (
+                        <>
+                            <NavigationLayer />
+                            <NavSync />
+                            <NavVisibility />
+                            <NavAutoSave />
+                            <NavigationManager />
+                        </>
+                    )}
 
                 </>
             )}

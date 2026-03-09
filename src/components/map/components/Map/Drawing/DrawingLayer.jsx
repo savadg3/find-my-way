@@ -5,7 +5,12 @@
 // so it NEVER re-renders due to drawing state changes.
 
 import { useEffect, useRef, useState } from 'react';
-import { useSelector }       from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
+import { useParams }                from 'react-router-dom';
+import { decode }                   from '../../../../../helpers/utils';
+import { setAllShapes, clearAllShapes } from '../../../../../store/slices/drawingSlice';
+import { setSaveStatus }            from '../../../../../store/slices/navigationSlice';
+import { saveDrawingShapes, loadDrawingShapes } from './drawingService';
 import { shapesToGeoJSON, emptyCollection } from './drawingUtils';
 
 export const SOURCES = {
@@ -169,6 +174,137 @@ export default function DrawingLayer() {
       });
     };
   }, [map]);
+
+  return null;
+}
+
+// ── DrawingAutoSave ───────────────────────────────────────────────────────────
+// Loads saved shapes on mount; debounced auto-save (1 s) on every shapes change.
+// Retries up to 3 times with exponential back-off. Falls back to localStorage
+// so no drawing is ever lost even when the server is unreachable.
+// Uses the shared setSaveStatus from navigationSlice (read by headerDiv).
+const DRW_LS_KEY    = (pid) => `drawing-shapes-${pid}`;
+const DRW_MAX_RETRY = 1;
+const DRW_RETRY_MS  = 2000;
+
+export function DrawingAutoSave() {
+  const dispatch   = useDispatch();
+  const shapes     = useSelector((s) => s.drawing.shapes);
+  const { id }     = useParams();
+  const decodedId  = decode(id);
+
+  const hasLoaded   = useRef(false);
+  const skipSaveRef = useRef(false);
+  const saveTimer   = useRef(null);
+  const statusTimer = useRef(null);
+  const saveVersion = useRef(0);
+
+  const markSaved = () => {
+    dispatch(setSaveStatus('saved'));
+    if (statusTimer.current) clearTimeout(statusTimer.current);
+    statusTimer.current = setTimeout(() => dispatch(setSaveStatus('idle')), 3000);
+  };
+
+  const attemptSave = (projectId, snapshot, version, attempt = 0) => {
+    if (version !== saveVersion.current) return;
+
+    saveDrawingShapes(projectId, snapshot)
+      .then((result) => {
+        if (version !== saveVersion.current) return;
+        if (result.type === 1) {
+          try { localStorage.setItem(DRW_LS_KEY(projectId), JSON.stringify(snapshot)); } catch {}
+          markSaved();
+        } else {
+          throw new Error(result.errormessage || 'Save failed');
+        }
+      })
+      .catch(() => {
+        if (version !== saveVersion.current) return;
+        if (attempt < DRW_MAX_RETRY - 1) {
+          setTimeout(
+            () => attemptSave(projectId, snapshot, version, attempt + 1),
+            DRW_RETRY_MS * Math.pow(2, attempt),
+          );
+        } else {
+          try { localStorage.setItem(DRW_LS_KEY(projectId), JSON.stringify(snapshot)); } catch {}
+          dispatch(setSaveStatus('failed'));
+        }
+      });
+  };
+
+  // ── Load on mount / project change ────────────────────────────────
+  useEffect(() => {
+    if (!decodedId) return;
+
+    hasLoaded.current = false;
+    dispatch(clearAllShapes());
+    dispatch(setSaveStatus('idle'));
+
+    const load = async () => {
+      try {
+        let savedShapes = await loadDrawingShapes(decodedId);
+
+        // Fallback to localStorage when backend has no shapes
+        if (!savedShapes?.length) {
+          try {
+            const raw = localStorage.getItem(DRW_LS_KEY(decodedId));
+            if (raw) savedShapes = JSON.parse(raw) ?? [];
+          } catch {}
+        }
+
+        if (savedShapes?.length > 0) {
+          skipSaveRef.current = true;
+          dispatch(setAllShapes(savedShapes));
+        }
+      } catch {
+        // Backend unreachable — try localStorage
+        try {
+          const raw = localStorage.getItem(DRW_LS_KEY(decodedId));
+          if (raw) {
+            const local = JSON.parse(raw) ?? [];
+            if (local.length > 0) {
+              skipSaveRef.current = true;
+              dispatch(setAllShapes(local));
+            }
+          }
+        } catch {}
+      } finally {
+        hasLoaded.current = true;
+      }
+    };
+
+    load();
+
+    return () => {
+      if (saveTimer.current)  clearTimeout(saveTimer.current);
+      if (statusTimer.current) clearTimeout(statusTimer.current);
+    };
+  }, [decodedId, dispatch]);
+
+  // ── Debounced auto-save on every shapes change ─────────────────────
+  useEffect(() => {
+    if (!hasLoaded.current) return;
+
+    if (skipSaveRef.current) {
+      skipSaveRef.current = false;
+      return;
+    }
+
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+
+    const snapshot = shapes;
+
+    saveTimer.current = setTimeout(() => {
+      saveVersion.current += 1;
+      const version = saveVersion.current;
+
+      // Optimistic localStorage write (survives tab close before server responds)
+      try { localStorage.setItem(DRW_LS_KEY(decodedId), JSON.stringify(snapshot)); } catch {}
+
+      dispatch(setSaveStatus('saving'));
+      attemptSave(decodedId, snapshot, version);
+    }, 1000);
+  }, [shapes, decodedId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return null;
 }

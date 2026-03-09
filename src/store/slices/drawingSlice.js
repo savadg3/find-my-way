@@ -35,6 +35,12 @@ const drawingSlice = createSlice({
       state.selectedIds = state.selectedIds.filter((id) => !ids.includes(id));
     },
 
+    // ── Replace all shapes (used by load-from-backend) ────────────
+    setAllShapes(state, { payload: shapes }) {
+      state.shapes     = shapes;
+      state.selectedIds = [];
+    },
+
     clearAllShapes(state) {
       state.shapes      = [];
       state.selectedIds = [];
@@ -84,6 +90,7 @@ export const {
   addShape,
   updateShape,
   removeShapes,
+  setAllShapes,
   clearAllShapes,
   setSelectedIds,
   toggleSelectedId,

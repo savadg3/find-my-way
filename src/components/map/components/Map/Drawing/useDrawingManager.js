@@ -149,36 +149,7 @@ export default function useDrawingManager({
             // ── FREEHAND polygon ──
             if (activeShape === 'freehand') {
                 let coords = [];
-                
-                const handleClick = (e) => {
-                    const { lng, lat } = e.lngLat;
-                    const pt = [lng, lat];
-                    
-                    console.log(coords.length,"object");
-                    // Snap-close if clicking near start
-                    if (coords.length >= 3 && isNearStart(pt, coords[0])) {
-                        commitPolygon(coords);
-                        return;
-                    }
-                    
-                    coords = [...coords, pt];
-                    dispatch(setInProgress({ shapeType: 'freehand', coords }));
-                };
-                
-                const handleDblClick = (e) => {
-                    e.preventDefault();
-                    if (coords.length >= 3) commitPolygon(coords);
-                };
-                
-                const handleMouseMove = (e) => {
-                    const { coords: currentCoords } = stateRef.current.inProgress
-                    ? { coords }
-                    : { coords: [] };
-                    if (coords.length === 0) return;
-                    const mousePos = [e.lngLat.lng, e.lngLat.lat];
-                    setPreviewData(map, buildPreviewGeoJSON({ shapeType: 'freehand', coords }, mousePos));
-                };
-                
+
                 const commitPolygon = (c) => {
                     const shape = makePolygonFeature(c, buildProps());
                     dispatch(addShape(shape));
@@ -186,11 +157,62 @@ export default function useDrawingManager({
                     coords = [];
                     setPreviewData(map, { type: 'FeatureCollection', features: [] });
                 };
-                
+
+                const handleClick = (e) => {
+                    const { lng, lat } = e.lngLat;
+                    const pt = [lng, lat];
+
+                    // Commit polygon if clicking near ANY already-placed vertex.
+                    // Skip the very last vertex (index coords.length-1) to avoid
+                    // an accidental immediate close right after placing a point.
+                    if (coords.length >= 3) {
+                        const nearExisting = coords
+                            .slice(0, -1)
+                            .some((v) => isNearStart(map, pt, v));
+                        if (nearExisting) {
+                            commitPolygon(coords);
+                            return;
+                        }
+                    }
+
+                    coords = [...coords, pt];
+                    dispatch(setInProgress({ shapeType: 'freehand', coords }));
+                };
+
+                const handleDblClick = (e) => {
+                    e.preventDefault();
+                    const { lng, lat } = e.lngLat;
+                    const pt = [lng, lat];
+
+                    // Browser fired 2 click events before this dblclick — each added
+                    // a point. Roll back to coords before those 2 ghost clicks.
+                    const base = coords.length >= 2 ? coords.slice(0, -2) : [];
+                    if (base.length < 1) return; // nothing drawn yet
+
+                    // If the dblclick landed on/near an existing vertex → commit
+                    // as-is (no extra point). Otherwise add the dblclick location
+                    // as the final point, then commit.
+                    const nearExisting =
+                        base.length >= 1 &&
+                        base.some((v) => isNearStart(map, pt, v));
+
+                    const final = nearExisting ? base : [...base, pt];
+
+                    if (final.length >= 3) {
+                        commitPolygon(final);
+                    }
+                };
+
+                const handleMouseMove = (e) => {
+                    if (coords.length === 0) return;
+                    const mousePos = [e.lngLat.lng, e.lngLat.lat];
+                    setPreviewData(map, buildPreviewGeoJSON({ shapeType: 'freehand', coords }, mousePos));
+                };
+
                 on('click', handleClick);
                 on('dblclick', handleDblClick);
                 on('mousemove', handleMouseMove);
-                
+
                 // ESC cancels
                 const handleKey = (e) => {
                     if (e.key === 'Escape') {

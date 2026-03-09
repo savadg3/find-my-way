@@ -29,6 +29,7 @@ const initialState = {
   // Shortest-path result — set by findPath, cleared on unmount / new selection
   // { positions: [[lng,lat],...], distanceM: number } | null
   shortestPath:    null,
+  saveStatus:      'idle',  // 'idle' | 'saving' | 'saved' | 'failed'
 };
 
 const navigationSlice = createSlice({
@@ -151,6 +152,11 @@ const navigationSlice = createSlice({
       });
     },
 
+    // ── Replace all paths (used by load-from-backend) ─────────────────
+    setAllPaths(state, { payload: paths }) {
+      state.paths = paths;
+    },
+
     // ── Clear all navigation paths ────────────────────────────────────
     clearAllNavPaths(state) {
       state.paths      = [];
@@ -166,6 +172,11 @@ const navigationSlice = createSlice({
     },
     clearShortestPath(state) {
       state.shortestPath = null;
+    },
+
+    // ── Save status (auto-save feedback) ──────────────────────────────
+    setSaveStatus(state, { payload }) {
+      state.saveStatus = payload;
     },
   },
 });
@@ -187,9 +198,11 @@ export const {
   bulkAddPaths,
   insertPointAtIndex,
   updatePinConnectedPoints,
+  setAllPaths,
   clearAllNavPaths,
   setShortestPath,
   clearShortestPath,
+  setSaveStatus,
 } = navigationSlice.actions;
 
 export default navigationSlice.reducer;
