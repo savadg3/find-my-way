@@ -4,8 +4,11 @@
 // re-renders due to path state changes, keeping it blink-free.
 
 import { useEffect, useRef } from 'react';
-import { useSelector }       from 'react-redux';
-import { useMatch }          from 'react-router-dom';
+import { useSelector, useDispatch } from 'react-redux';
+import { useMatch, useParams }      from 'react-router-dom';
+import { decode }                   from '../../../../../helpers/utils';
+import { setAllPaths, clearAllNavPaths, setSaveStatus } from '../../../../../store/slices/navigationSlice';
+import { saveNavigationPaths, loadNavigationPaths } from './navigationService';
 import {
   pathsToLinesGeoJSON,
   nodesToGeoJSON,
@@ -418,6 +421,142 @@ export function NavVisibility() {
       } catch { /* layer not yet added — safe to ignore */ }
     });
   }, [map, isNavPage]);
+
+  return null;
+}
+
+// ── NavAutoSave ────────────────────────────────────────────────────────────────
+// Loads saved navigation paths on mount and auto-saves after every change
+// (debounced 1 s, up to 3 retries, localStorage fallback).
+const LS_KEY = (projectId) => `nav-paths-${projectId}`;
+const MAX_RETRIES = 1;
+const RETRY_BASE_MS = 2000;
+
+export function NavAutoSave() {
+  const dispatch    = useDispatch();
+  const paths       = useSelector((s) => s.navigation.paths);
+  const { id }      = useParams();
+  const decodedId   = decode(id);
+
+  const hasLoaded    = useRef(false);
+  const skipSaveRef  = useRef(false);
+  const saveTimer    = useRef(null);
+  const statusTimer  = useRef(null);
+  const saveVersion  = useRef(0); // incremented each time a new debounce fires,
+                                  // so stale retries self-cancel
+
+  // ── Helpers ───────────────────────────────────────────────────────
+  const markSaved = () => {
+    dispatch(setSaveStatus('saved'));
+    if (statusTimer.current) clearTimeout(statusTimer.current);
+    statusTimer.current = setTimeout(() => dispatch(setSaveStatus('idle')), 3000);
+  };
+
+  // Recursive retry — cancels automatically if saveVersion has advanced
+  const attemptSave = (projectId, snapshot, version, attempt = 0) => {
+    if (version !== saveVersion.current) return; // newer save was scheduled, abort
+
+    saveNavigationPaths(projectId, snapshot)
+      .then((result) => {
+        if (version !== saveVersion.current) return;
+        if (result.type === 1) {
+          // Backend confirmed — update localStorage mirror
+          try { localStorage.setItem(LS_KEY(projectId), JSON.stringify(snapshot)); } catch {} 
+          markSaved();
+        } else {
+          throw new Error(result.errormessage || 'Save failed');
+        }
+      })
+      .catch(() => {
+        if (version !== saveVersion.current) return;
+        if (attempt < MAX_RETRIES - 1) {
+          // Retry with exponential back-off
+          setTimeout(
+            () => attemptSave(projectId, snapshot, version, attempt + 1),
+            RETRY_BASE_MS * Math.pow(2, attempt),
+          );
+        } else {
+          // All retries exhausted — write to localStorage so data is not lost
+          try { localStorage.setItem(LS_KEY(projectId), JSON.stringify(snapshot)); } catch {}
+          dispatch(setSaveStatus('failed'));
+        }
+      });
+  };
+
+  // ── Load on mount / project change ────────────────────────────────
+  useEffect(() => {
+    if (!decodedId) return;
+
+    hasLoaded.current = false;
+    dispatch(clearAllNavPaths());
+    dispatch(setSaveStatus('idle'));
+
+    const load = async () => {
+      try {
+        let savedPaths = await loadNavigationPaths(decodedId); 
+
+        // Fallback to localStorage when backend has no paths
+        if (!savedPaths?.length) {
+          try {
+            const raw = localStorage.getItem(LS_KEY(decodedId));
+            if (raw) savedPaths = JSON.parse(raw) ?? [];
+          } catch {}
+        }
+
+        if (savedPaths?.length > 0) {
+          skipSaveRef.current = true;
+          dispatch(setAllPaths(savedPaths));
+        }
+      } catch {
+        // Backend unreachable — try localStorage
+        try {
+          const raw = localStorage.getItem(LS_KEY(decodedId));
+          if (raw) {
+            const localPaths = JSON.parse(raw) ?? [];
+            if (localPaths.length > 0) {
+              skipSaveRef.current = true;
+              dispatch(setAllPaths(localPaths));
+            }
+          }
+        } catch {}
+      } finally {
+        hasLoaded.current = true;
+      }
+    };
+
+    load();
+
+    return () => {
+      if (saveTimer.current)  clearTimeout(saveTimer.current);
+      if (statusTimer.current) clearTimeout(statusTimer.current);
+    };
+  }, [decodedId, dispatch]);
+
+  // ── Debounced auto-save on every paths change ──────────────────────
+  useEffect(() => {
+    if (!hasLoaded.current) return;
+
+    if (skipSaveRef.current) {
+      skipSaveRef.current = false;
+      return;
+    }
+
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+
+    // Snapshot paths at schedule time so retries use the same data
+    const snapshot = paths;
+
+    saveTimer.current = setTimeout(() => {
+      saveVersion.current += 1;
+      const version = saveVersion.current;
+
+      // Optimistic localStorage write immediately (survives tab close)
+      try { localStorage.setItem(LS_KEY(decodedId), JSON.stringify(snapshot)); } catch {}
+
+      dispatch(setSaveStatus('saving'));
+      attemptSave(decodedId, snapshot, version);
+    }, 1000);
+  }, [paths, decodedId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return null;
 }

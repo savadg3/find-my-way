@@ -12,6 +12,13 @@ import { useDispatch } from "react-redux";
 import { useCallback, useEffect } from "react";
 import { getRequest } from "../../../../hooks/axiosClient";
 import { environmentaldatas } from "../../../../constant/defaultValues";
+import { useSelector } from "react-redux";
+
+const SAVE_STATUS_CONFIG = {
+  saving: { label: 'Saving…',      color: '#6b7280' },
+  saved:  { label: '✓ Saved',      color: '#16a34a' },
+  failed: { label: '✗ Save failed', color: '#dc2626' },
+};
 
 const ProjectHeaderDiv = () => {
     const {
@@ -26,6 +33,8 @@ const ProjectHeaderDiv = () => {
         onPublishClick,
         onExitClick,
     } = useProjectHeader();
+
+    const saveStatus  = useSelector((s) => s.navigation.saveStatus);
     
     // const { id }      = useParams();
     // const { image_url } = environmentaldatas;
@@ -99,7 +108,7 @@ const ProjectHeaderDiv = () => {
         
                 <div className="col-sm-5">
                     <div className="button-position-end">
-                        <div className="saved mr-4">
+                        {/* <div className="saved mr-4">
                             {savingTimer ? (
                                 <>
                                     <p>Saving</p>
@@ -111,7 +120,22 @@ const ProjectHeaderDiv = () => {
                                     <BsCloudCheck className="ml-2" fontSize={17} />
                                 </>
                             )}
-                        </div>
+                        </div> */}
+                        {saveStatus !== 'idle' && (
+                            <div className="mr-4" style={{
+                                fontSize:     "0.875rem",
+                                padding:      '3px 8px',
+                                color:        SAVE_STATUS_CONFIG[saveStatus]?.color,
+                                display:      'flex',
+                                alignItems:   'center',
+                                gap:          4,
+                            }}>
+                                {saveStatus === 'saving' && (
+                                <span className="spinner-border spinner-border-sm" style={{ width: 10, height: 10, borderWidth: 1.5 }} />
+                                )}
+                                {SAVE_STATUS_CONFIG[saveStatus]?.label}
+                            </div>
+                        )}
         
                         <Button
                             className={`btn-secondary btn-scndry mr-2 ${isDiscard !== 0 ? "btn-disabled-discard" : ""}`}

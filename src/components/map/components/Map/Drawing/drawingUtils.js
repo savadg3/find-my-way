@@ -243,9 +243,22 @@ export const distance = ([x1, y1], [x2, y2]) =>
 
 export const emptyCollection = () => ({ type: 'FeatureCollection', features: [] });
 
-export const SNAP_THRESHOLD = 0.0002;
-export const isNearStart = (point, start) =>
-  start && distance(point, start) < SNAP_THRESHOLD;
+// ── Snap-to-start: pixel-based, zoom-independent ─────────────────────────────
+// A fixed degree threshold (old approach) breaks at high zoom levels because
+// the entire visible area may span only a few hundredths of a degree — making
+// all 3 early clicks appear "close" to the start in geographic space.
+// Comparing screen-pixel distance instead keeps the snap zone a constant size
+// regardless of zoom level.
+export const SNAP_THRESHOLD_PX = 12; // pixels — comfortable click target
+
+export const isNearStart = (map, point, start) => {
+  if (!start || !map) return false;
+  const ps = map.project(start);
+  const pp = map.project(point);
+  const dx = pp.x - ps.x;
+  const dy = pp.y - ps.y;
+  return Math.sqrt(dx * dx + dy * dy) < SNAP_THRESHOLD_PX;
+};
 
 // Convert shapes[] → FeatureCollection including vertex + edge annotation features
 export const shapesToGeoJSON = (shapes, selectedIds = []) => {

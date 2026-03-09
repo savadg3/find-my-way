@@ -1,7 +1,3 @@
-// Connectiontoolbar.jsx
-// Navigation toolbar: pen / select / highlighter tools + main/sub path toggle.
-// All state lives in Redux navigationSlice so NavigationManager can read it.
-
 import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
@@ -16,25 +12,13 @@ import {
 import './connection.css';
 import { EraseSvg, PencilSvg, SelectSvg } from '../../../../../components/common/svgIcons';
 
-// ── Icons ─────────────────────────────────────────────────────────────────────
 const PenIcon = () => (
-  // <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-  //   <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/>
-  // </svg>
   <PencilSvg fill={'#A8ABAF'}/>
 );
 const SelectIcon = () => (
-  // <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-  //   <path d="M5 3l14 9-7 1-4 7z"/>
-  // </svg>
   <SelectSvg fill={'#A8ABAF'}/>
 );
 const HighlighterIcon = () => (
-  // <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-  //   <path d="M15.232 5.232l3.536 3.536-7.071 7.07-3.536-3.535z"/>
-  //   <path d="M9.5 19.5l-3-3 1-4 3 3z"/>
-  //   <line x1="3" y1="21" x2="9.5" y2="19.5"/>
-  // </svg>
   <EraseSvg fill={'#A8ABAF'}/>
 );
 const BoltIcon = () => (
@@ -48,19 +32,11 @@ const TrashIcon = () => (
     <path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
   </svg>
 );
-const PdfIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-    <polyline points="14 2 14 8 20 8"/>
-    <line x1="12" y1="18" x2="12" y2="12"/>
-    <line x1="9"  y1="15" x2="15" y2="15"/>
-  </svg>
-);
 
 export default function ConnectionToolbar() {
-  const dispatch   = useDispatch();
-  const activeTool = useSelector((s) => s.navigation.activeTool);
-  const activePath = useSelector((s) => s.navigation.activePath);
+  const dispatch    = useDispatch();
+  const activeTool  = useSelector((s) => s.navigation.activeTool);
+  const activePath  = useSelector((s) => s.navigation.activePath);
 
   const autoGenerate = useAutoGenerateSubPaths();
 
@@ -72,7 +48,6 @@ export default function ConnectionToolbar() {
 
   const showPathToggle = activeTool === 'pen';
 
-  // Activate pen by default when toolbar mounts; deactivate on unmount
   useEffect(() => {
     dispatch(setNavActiveTool('pen'));
     return () => {
@@ -84,7 +59,6 @@ export default function ConnectionToolbar() {
   return (
     <div className="ct-wrapper-body mt-2">
       <div className="ct-wrapper">
-        {/* ── Main bar ─────────────────────────────────────────────────── */}
         <div className="ct-bar">
           <div className="ct-tools">
             {tools.map((t) => (
@@ -127,7 +101,6 @@ export default function ConnectionToolbar() {
 
         </div>
 
-        {/* ── Path-type toggle (pen only) ───────────────────────────────── */}
         {showPathToggle && (
           <div className="ct-path-toggle">
             <button
