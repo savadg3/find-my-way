@@ -8,9 +8,10 @@ import { PlanExpiryDetails } from '../../../../Helpers/apis/otherApis';
 import { useBuildBeaconPayload } from './useBuildBeaconPayload';
 import { saveBeacon } from '../services/beaconService';
 
-export const useBeaconSubmit = ({ 
+export const useBeaconSubmit = ({
     setModal,
-    setPlanDetails, 
+    setPlanDetails,
+    onAfterSave,
 }) => {
     const dispatch   = useDispatch();
     const { id }     = useParams();
@@ -40,19 +41,22 @@ export const useBeaconSubmit = ({
             const response = await saveBeacon(payload);
             
             if (response.type === 1) {
-                const data = response.response?.data ?? {}; 
-                  
+                const data = response.response?.data ?? {};
+
                 const updated = await fetchPinData(decodedId, ['beacon']);
                 dispatch(setPinsByCategory({ beacon: updated?.beacon }));
-                
+
                 // setIsDirty(false);
+                onAfterSave?.();
             } else {
                 SetBackEndErrorsAPi(response, setFieldError);
+                onAfterSave?.();
             }
         } catch (error) {
             console.error('Location save failed:', error);
+            onAfterSave?.();
         }
     };
-    
+
     return { submit };
 };

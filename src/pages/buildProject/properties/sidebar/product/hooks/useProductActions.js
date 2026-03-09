@@ -9,12 +9,13 @@ import { saveProduct } from '../services/productService';
 import { useBuildProductPayload } from './useBuildProductPayload';
 import { useRef, useState } from 'react';
 
-export const useProductSubmit = ({ 
-    websiteLinks, 
+export const useProductSubmit = ({
+    websiteLinks,
     // setIsDirty,
     setModal,
     setPlanDetails,
-    specifications
+    specifications,
+    onAfterSave,
 }) => {
     const dispatch   = useDispatch();
     const { id }     = useParams();
@@ -46,20 +47,23 @@ export const useProductSubmit = ({
             const response = await saveProduct(payload);
             
             if (response.type === 1) {
-                const data = response.response?.data ?? {}; 
-                  
+                const data = response.response?.data ?? {};
+
                 const updated = await fetchPinData(decodedId, ['product']);
                 dispatch(setPinsByCategory({ product: updated?.product }));
-                
+
                 // setIsDirty(false);
+                onAfterSave?.();
             } else {
                 SetBackEndErrorsAPi(response, setFieldError);
+                onAfterSave?.();
             }
         } catch (error) {
             console.error('Location save failed:', error);
+            onAfterSave?.();
         }
     };
-    
+
     return { submit };
 };
 

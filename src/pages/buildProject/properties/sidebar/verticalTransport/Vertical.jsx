@@ -3,7 +3,7 @@ import { BsArrowLeftShort } from 'react-icons/bs';
 import { FiSearch } from 'react-icons/fi';
 import { GoPlus } from 'react-icons/go';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 
 import { useActiveTab } from '../../../../../components/map/components/hooks/useActiveTab';
 import { setEditingPinId } from '../../../../../store/slices/projectItemSlice';
@@ -20,8 +20,9 @@ const VerticalSideBar = () => {
     useActiveTab('vertical_transport');
     
     const dispatch    = useDispatch();
-    const navigate    = useNavigate(); 
-    
+    const navigate    = useNavigate();
+    const pinsLoaded  = useSelector((state) => state.api.pinsLoaded);
+
     const [mapDivSize, setMapDivSize] = useState(window.innerHeight - 80);
     
     const {
@@ -99,9 +100,15 @@ const VerticalSideBar = () => {
             </div>
 
             <div className='custom-scrollbar customScroll' style={{
-                height: mapDivSize - 246 
+                height: mapDivSize - 246
             }} >
-                {filteredList.map((vertical, idx) => (
+                {!pinsLoaded ? (
+                    <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 40 }}>
+                        <div className="spinner-border text-primary" role="status">
+                            <span className="sr-only">Loading…</span>
+                        </div>
+                    </div>
+                ) : filteredList.map((vertical, idx) => (
                     <VerticalItem
                         key={vertical.enc_id}
                         vertical={vertical}

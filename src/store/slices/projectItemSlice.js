@@ -6,6 +6,7 @@ const initialState = {
   editingPinId: null,
   // projectData: ProjectData,
   projectData: null,
+  pinsLoaded: false,
   allPins:{
     location:[],
     product:[],
@@ -42,8 +43,9 @@ const projectItemSlice = createSlice({
         ...action.payload
       };
     },
-    setAllPins(state, action) { 
+    setAllPins(state, action) {
       state.allPins = action.payload;
+      state.pinsLoaded = true;
     },
     setPinsByCategory(state, action) { 
       Object.assign(state.allPins, action.payload); 

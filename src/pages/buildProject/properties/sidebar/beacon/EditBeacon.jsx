@@ -1,7 +1,7 @@
 import { Formik } from 'formik';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { BsArrowLeftShort } from 'react-icons/bs';
-import { Button, Col, Row } from 'reactstrap'; 
+import { Button, Col, Row } from 'reactstrap';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, useParams } from 'react-router-dom';
 
@@ -12,13 +12,12 @@ import AutosaveForm from '../../../components/AutoSaveForm';
 import useFlyToPin from '../../../../../components/map/components/hooks/useFlyToPin';
 
 import { useBeaconSubmit } from './hooks/useBeaconActions';
-// import ProductFormFields from './components/ProductFormFields'; 
-import { FormInitializer } from '../../utils/pinServices';  
-import { fetchBeaconById, normalizeBeaconData } from './services/beaconService'; 
+import { FormInitializer } from '../../utils/pinServices';
+import { fetchBeaconById, normalizeBeaconData } from './services/beaconService';
 import BeaconFormFields from './components/BeaconFormFields';
 
 const EditBeacon = () => {
-    useActiveTab('beacon');  
+    useActiveTab('beacon');
 
     const dispatch     = useDispatch();
     const navigate     = useNavigate();
@@ -27,26 +26,28 @@ const EditBeacon = () => {
     const flyToPin     = useFlyToPin();
 
     const projectData = useSelector((state) => state.api.projectData);
- 
-    const [currentPinData, setCurrentPinData] = useState({});  
-    // const [specifications, setSpecifications] = useState([]); 
+
+    const [currentPinData, setCurrentPinData] = useState({});
     const [isDirty, setIsDirty]               = useState(false);
     const [color, setColor]                   = useState(null);
     const [openPicker, setOpenPicker]         = useState(null);
     const [planDetails, setPlanDetails]       = useState(null);
     const [planModal, setPlanModal]           = useState(false);
- 
-    useEffect(() => { 
+    const [isSaving, setIsSaving]             = useState(false);
+
+    const pendingNavigation = useRef(false);
+
+    useEffect(() => {
         if (!decodedSubid) return;
 
         const load = async () => {
             try {
                 const data = await fetchBeaconById(decodedSubid);
-                const { prefillData } = normalizeBeaconData(data); 
+                const { prefillData } = normalizeBeaconData(data);
 
                 dispatch(setEditingPinId(decodedSubid));
                 setCurrentPinData(prefillData);
- 
+
                 if (data?.positions) {
                     flyToPin(JSON.parse(data.positions));
                 }
@@ -57,23 +58,37 @@ const EditBeacon = () => {
 
         load();
     }, [decodedSubid]);
- 
-    const { submit } = useBeaconSubmit({ 
+
+    const handleAfterSave = useCallback(() => {
+        setIsSaving(false);
+        if (pendingNavigation.current) {
+            pendingNavigation.current = false;
+            navigate(-1);
+        }
+    }, [navigate]);
+
+    const { submit } = useBeaconSubmit({
         setCurrentPinData,
         setIsDirty,
         setPlanModal,
         setPlanDetails,
+        onAfterSave: handleAfterSave,
     });
 
-    const handleAutoSave = () => {
+    const handleAutoSave = useCallback(() => {
         document.getElementById('beaconSubmitBtn')?.click();
-    };
+    }, []);
 
     const goBack = () => {
-        handleAutoSave();
-        navigate(-1);
+        if (isDirty) {
+            setIsSaving(true);
+            pendingNavigation.current = true;
+            document.getElementById('beaconSubmitBtn')?.click();
+        } else {
+            navigate(-1);
+        }
     };
- 
+
     const initialValues = {
         beacon_name: '! New beacon',
         message: '',
@@ -95,6 +110,23 @@ const EditBeacon = () => {
             id="inner-customizer2"
             style={{ position: 'relative', height: window.innerHeight - 80, paddingBottom: 20 }}
         >
+            {/* Loading overlay shown while auto-saving before navigation */}
+            {isSaving && (
+                <div style={{
+                    position:        'absolute',
+                    top: 0, left: 0, right: 0, bottom: 0,
+                    backgroundColor: 'rgba(255, 255, 255, 0.75)',
+                    display:         'flex',
+                    alignItems:      'center',
+                    justifyContent:  'center',
+                    zIndex:          9999,
+                }}>
+                    <div className="spinner-border text-primary" role="status">
+                        <span className="sr-only">Saving…</span>
+                    </div>
+                </div>
+            )}
+
             <Row className="backRow">
                 <Col md={8}>
                     <h1>QR Code Beacon Details</h1>
@@ -107,18 +139,18 @@ const EditBeacon = () => {
             </Row>
 
             <Formik
-                initialValues={initialValues} 
+                initialValues={initialValues}
                 onSubmit={submit}
             >
                 {({ errors, values, touched, handleSubmit, handleChange, setFieldValue, setFieldError }) => (
-                    <> 
+                    <>
                         <FormInitializer currentPinData={currentPinData} />
 
                         {currentPinData?.position && !currentPinData?.enc_id && (
                             <AutosaveForm handleSubmit={handleAutoSave} />
                         )}
 
-                        <form 
+                        <form
                             className="av-tooltip tooltip-label-bottom formGroups"
                             onSubmit={handleSubmit}
                         >
@@ -139,8 +171,6 @@ const EditBeacon = () => {
                                         setOpenPicker={setOpenPicker}
                                         setSelBeaconDtls={setCurrentPinData}
                                         setIsDirty={setIsDirty}
-                                        // setMaxContentLimit={setMaxContentLimit}
-                                        // maxContentLimit={maxContentLimit}
                                         projectSettings={projectData}
                                     />
                                 </div>

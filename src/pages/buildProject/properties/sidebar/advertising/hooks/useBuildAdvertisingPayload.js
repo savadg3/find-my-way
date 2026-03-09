@@ -67,6 +67,7 @@ export const useAdvertisingSubmit = ({
     setCroppedImage,
     setBlobImage,
     setPreviewImage,
+    onAfterSave,
 }) => {
     const navigate = useNavigate()
     const { id, subid } = useParams();
@@ -89,16 +90,20 @@ export const useAdvertisingSubmit = ({
                 setPreviewImage(null);
                 setIsDirty(false);
 
-                let enc_id = response?.response?.data?.enc_id    
-                if(enc_id){
-                    navigate(`/project/${id}/advertisements`)
+                let enc_id = response?.response?.data?.enc_id;
+                if (enc_id) {
+                    navigate(`/project/${id}/advertisements`);
+                } else {
+                    onAfterSave?.();
                 }
-            } else { 
+            } else {
                 SetBackEndErrorsAPi(response, {setFieldError});
+                onAfterSave?.();
             }
- 
+
         } catch (error) {
             console.error('Advertisement save failed:', error);
+            onAfterSave?.();
         }
     };
 

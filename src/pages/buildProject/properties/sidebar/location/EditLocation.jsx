@@ -1,5 +1,5 @@
 import { Formik, useFormikContext } from 'formik';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { BsArrowLeftShort } from 'react-icons/bs';
 import { Button, Col, Row } from 'reactstrap';
 import * as Yup from 'yup';
@@ -13,10 +13,9 @@ import AutosaveForm from '../../../components/AutoSaveForm';
 
 import { fetchLocationById, normalizeLocationData } from './services/locationService';
 import { useLocationSubmit, usePromotionSubmit } from './hooks/useLocationActions';
-import LocationFormFields from './components/LocationFormFields'; 
-import useFlyToPin from '../../../../../components/map/components/hooks/useFlyToPin'; 
+import LocationFormFields from './components/LocationFormFields';
+import useFlyToPin from '../../../../../components/map/components/hooks/useFlyToPin';
 import { FormInitializer } from '../../utils/pinServices';
-// import useInitializeForm from '../../utils/pinServices';
 
 // ── Validation ─────────────────────────────────────────────────────────────────
 
@@ -43,9 +42,9 @@ const EditLocation = () => {
 
     const dispatch       = useDispatch();
     const navigate       = useNavigate();
-    const { subid }  = useParams();
+    const { id, subid }  = useParams();
     const decodedSubid   = decode(subid);
- 
+
     const projectData    = useSelector((state) => state.api.projectData);
     const flyToPin       = useFlyToPin();
 
@@ -64,9 +63,11 @@ const EditLocation = () => {
     const [maxContentLimit, setMaxContentLimit] = useState(false);
     const [planDetails, setPlanDetails]       = useState(null);
     const [modal, setModal]                   = useState(false);
+    const [isSaving, setIsSaving]             = useState(false);
 
     // boundaryAttributes mutated by map interactions — use a ref to avoid stale closures
     const boundaryAttributesRef = useRef(undefined);
+    const pendingNavigation     = useRef(false);
 
     // ── Fetch pin data on mount / subid change ──
     useEffect(() => {
@@ -76,15 +77,12 @@ const EditLocation = () => {
             try {
                 const data = await fetchLocationById(decodedSubid);
                 const { prefillData, normalizedPromotions, websiteLinks, hours } = normalizeLocationData(data);
-                dispatch(setEditingPinId(decodedSubid)); 
+                dispatch(setEditingPinId(decodedSubid));
                 setCurrentPinData(prefillData);
                 setPromotions(normalizedPromotions);
                 setwebsiteLinks(websiteLinks);
                 setHours(hours);
-                // setTimeout(() => {
-                    flyToPin(JSON.parse(data?.positions)); 
-                // }, 2000);
-        
+                flyToPin(JSON.parse(data?.positions));
             } catch (err) {
                 console.error('Failed to load location:', err);
             }
@@ -93,13 +91,22 @@ const EditLocation = () => {
         load();
     }, [decodedSubid]);
 
-    const { submit } = useLocationSubmit({ 
+    const handleAfterSave = useCallback(() => {
+        setIsSaving(false);
+        if (pendingNavigation.current) {
+            pendingNavigation.current = false;
+            navigate(-1);
+        }
+    }, [navigate]);
+
+    const { submit } = useLocationSubmit({
         websiteLinks,
         hours,
         isBoundary,
-        boundaryAttributesRef, 
+        boundaryAttributesRef,
         setModal,
         setPlanDetails,
+        onAfterSave: handleAfterSave,
     });
 
     const { handleSubmit: submitPromotion } = usePromotionSubmit({
@@ -110,16 +117,20 @@ const EditLocation = () => {
         promotionError,
     });
 
-    const handleAutoSave = () => {
+    const handleAutoSave = useCallback(() => {
         document.getElementById('locationSubmitBtn')?.click();
-    };
+    }, []);
 
     const goBack = () => {
-        // if(isDirty) return
-        handleAutoSave();
-        navigate(-1);
+        if (isDirty) {
+            setIsSaving(true);
+            pendingNavigation.current = true;
+            document.getElementById('locationSubmitBtn')?.click();
+        } else {
+            navigate(-1);
+        }
     };
- 
+
     const initialValues = {
         location_name:  '! New location',
         message:        '',
@@ -136,14 +147,29 @@ const EditLocation = () => {
         ...currentPinData,
     };
 
-    
-
     return (
         <div
             className="bar"
             id="inner-customizer2"
             style={{ position: 'relative', height: window.innerHeight - 80, paddingBottom: 20 }}
         >
+            {/* Loading overlay shown while auto-saving before navigation */}
+            {isSaving && (
+                <div style={{
+                    position:        'absolute',
+                    top: 0, left: 0, right: 0, bottom: 0,
+                    backgroundColor: 'rgba(255, 255, 255, 0.75)',
+                    display:         'flex',
+                    alignItems:      'center',
+                    justifyContent:  'center',
+                    zIndex:          9999,
+                }}>
+                    <div className="spinner-border text-primary" role="status">
+                        <span className="sr-only">Saving…</span>
+                    </div>
+                </div>
+            )}
+
             <Row className="backRow">
                 <Col md={8}>
                     <h1>Location Pin Details</h1>
@@ -162,9 +188,8 @@ const EditLocation = () => {
             >
                 {({ errors, values, touched, handleSubmit, handleChange, setFieldValue, setFieldError }) => (
                     <>
+                        <FormInitializer currentPinData={currentPinData} />
 
-                    <FormInitializer currentPinData={currentPinData} />
- 
                         {currentPinData?.position && !currentPinData?.enc_id && (
                             <AutosaveForm handleSubmit={handleAutoSave} />
                         )}
