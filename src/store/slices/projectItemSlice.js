@@ -7,6 +7,7 @@ const initialState = {
   // projectData: ProjectData,
   projectData: null,
   pinsLoaded: false,
+  showLocationPicker: false,
   allPins:{
     location:[],
     product:[],
@@ -15,7 +16,7 @@ const initialState = {
     safety:[],
     vertical:[],
     vertical_transport:[],
-  }, 
+  },
   floorList : [],
   currentFloor : null,
   selectedPin:{},
@@ -60,11 +61,14 @@ const projectItemSlice = createSlice({
       state.currentFloor = action.payload;
     },
     setSelectedPin(state, action) {
-      // state.selectedPin = action.payload; 
+      // state.selectedPin = action.payload;
       state.selectedPin = {
         ...state.selectedPin,
         ...action.payload
       };
+    },
+    setShowLocationPicker(state, action) {
+      state.showLocationPicker = action.payload;
     },
   },
 });
@@ -78,7 +82,8 @@ export const {
   setPinCount,
   setCurrentFloor,
   setPinsByCategory,
-  setSelectedPin
+  setSelectedPin,
+  setShowLocationPicker,
 } = projectItemSlice.actions;
 
 export default projectItemSlice.reducer;

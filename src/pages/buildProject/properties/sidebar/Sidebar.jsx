@@ -1,8 +1,7 @@
-import React from 'react'; 
-import swal from 'sweetalert';
-import { useNavigate } from 'react-router-dom'; 
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import './sidebar.css' 
+import './sidebar.css'
 
 const NAV_ITEMS = [
   { type: 'settings',          typeId: 1,  label: 'Project Settings',    route: 'settings' },
@@ -15,32 +14,26 @@ const NAV_ITEMS = [
   { type: 'verticalTransport', typeId: 8,  label: 'Vertical Transports', route: 'vertical-transport' },
   { type: 'traversable',       typeId: 2,  label: 'Navigation Path',     route: 'navigation' },
   { type: 'advertisements',    typeId: 9,  label: 'Advertising Banners', route: 'advertisements' },
-]; 
+];
 
-const confirmNavigation = (onConfirm) => {
-  swal({
-    title: 'Are you sure?',
-    text: 'Do you want to navigate?',
-    icon: 'warning',
-    buttons: {
-      cancel: { text: 'No',  value: false, visible: true, className: 'btn-danger',  closeModal: true },
-      confirm: { text: 'Yes', value: true,  visible: true, className: 'btn-success', closeModal: true },
-    },
-  }).then((confirmed) => {
-    if (confirmed) onConfirm();
-  });
-}; 
+/** Items that are always accessible regardless of whether a location has been set. */
+const ALWAYS_ENABLED = new Set(['settings']);
 
-const NavItem = ({ label, isActive, onClick }) => (
+const NavItem = ({ label, isActive, onClick, disabled }) => (
   <button
     type="button"
     role="tab"
     aria-selected={isActive}
     aria-label={label}
-    title={label}
+    title={disabled ? 'Set a project location first' : label}
     onClick={onClick}
-    className={`sidebar-nav-item${isActive ? ' sidebar-nav-item--active' : ''}`}
-  > 
+    disabled={disabled}
+    className={[
+      'sidebar-nav-item',
+      isActive ? 'sidebar-nav-item--active'   : '',
+      disabled ? 'sidebar-nav-item--disabled' : '',
+    ].filter(Boolean).join(' ')}
+  >
     <span className="sidebar-nav-item__label">{label}</span>
   </button>
 );
@@ -55,20 +48,15 @@ const HelpLink = ({ href }) => (
   >
     <span>Help</span>
   </a>
-); 
+);
 
 const SideBar = ({ onIconClick, hasPendingChanges = false }) => {
-  const activeTab = useSelector((state) => state.api.activeTab);
-  const navigate = useNavigate()
+  const activeTab   = useSelector((state) => state.api.activeTab);
+  const projectData = useSelector((state) => state.api.projectData);
+  const navigate    = useNavigate();
 
-  const handleNavClick = (route) => {
-    if (hasPendingChanges) {
-      confirmNavigation(() => onIconClick(type));
-    } else {
-      onIconClick(type);
-      navigate(route)
-    }
-  };
+  // All items except Project Settings are locked until an initial location is saved.
+  const hasLocation = !!projectData?.positions;
 
   return (
     <aside
@@ -83,13 +71,15 @@ const SideBar = ({ onIconClick, hasPendingChanges = false }) => {
       >
         {NAV_ITEMS.map(({ type, label, route }) => {
           const isActive = activeTab === type;
+          const disabled = !hasLocation && !ALWAYS_ENABLED.has(type);
           return (
             <NavItem
               key={type}
               label={label}
               isActive={isActive}
-              onClick={() => navigate(route)}
-            /> 
+              disabled={disabled}
+              onClick={() => !disabled && navigate(route)}
+            />
           );
         })}
       </nav>

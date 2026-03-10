@@ -11,3 +11,81 @@ margin: 0;
 .bar{
     min-width: 410px;
 }
+
+/* ── Location Selection ─────────────────────────────────────── */
+.loc-tabs {
+    display: flex;
+    gap: 0;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 12px;
+}
+.loc-tab {
+    flex: 1;
+    padding: 7px 12px;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    background: #f9fafb;
+    border: none;
+    cursor: pointer;
+    color: #374151;
+    transition: background 0.15s, color 0.15s;
+}
+.loc-tab + .loc-tab { border-left: 1px solid #d1d5db; }
+.loc-tab--active { background: #3b82f6; color: #fff; }
+
+.loc-hint { font-size: 0.8rem; color: #6b7280; margin-bottom: 8px; }
+.loc-save-btn   { margin-top: 10px; width: 100%; font-size: 0.875rem; }
+.loc-cancel-btn { margin-top:  6px; width: 100%; font-size: 0.875rem; }
+
+/* Active location card */
+.loc-active-wrap {
+    background: #f0f9ff;
+    border: 1px solid #bae6fd;
+    border-radius: 8px;
+    padding: 12px 14px;
+}
+.loc-active-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+.loc-active-title  { font-size: 0.8125rem; font-weight: 600; color: #0369a1; }
+.loc-badge-active  { background: #16a34a; color: #fff; font-size: 0.7rem; font-weight: 600; padding: 2px 8px; border-radius: 12px; }
+.loc-active-address { font-size: 0.8125rem; color: #1f2937; margin-bottom: 4px; line-height: 1.4; }
+.loc-active-coords  { font-size: 0.75rem;   color: #6b7280; margin-bottom: 4px; }
+.loc-active-radius  { font-size: 0.75rem;   color: #6b7280; margin-bottom: 10px; }
+.loc-change-btn {
+    font-size: 0.8rem; color: #3b82f6; background: none;
+    border: 1px solid #3b82f6; border-radius: 5px;
+    padding: 4px 12px; cursor: pointer; transition: background 0.15s;
+}
+.loc-change-btn:hover { background: #eff6ff; }
+
+/* Address search dropdown */
+.loc-address-wrap { position: relative; margin-bottom: 10px; }
+.loc-address-input { width: 100%; font-size: 0.875rem; }
+.loc-suggestions {
+    position: absolute; z-index: 9999;
+    top: calc(100% + 2px); left: 0; right: 0;
+    background: #fff; border: 1px solid #d1d5db;
+    border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    list-style: none; margin: 0; padding: 0;
+    max-height: 180px; overflow-y: auto;
+}
+.loc-suggestions li {
+    display: flex; flex-direction: column;
+    padding: 8px 12px; cursor: pointer;
+    border-bottom: 1px solid #f3f4f6;
+    transition: background 0.1s;
+}
+.loc-suggestions li:hover  { background: #f0f9ff; }
+.loc-suggestions li:last-child { border-bottom: none; }
+.loc-suggestion-name { font-size: 0.8125rem; font-weight: 500; color: #111827; }
+.loc-suggestion-sub  { font-size: 0.75rem; color: #6b7280; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* .custom-scrollbar{
+    height:calc(100vh - 90px) !important
+} */

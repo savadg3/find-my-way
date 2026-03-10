@@ -20,7 +20,7 @@ const AdvertisingSideBar = () => {
     const navigate    = useNavigate();
     const pinsLoaded  = useSelector((state) => state.api.pinsLoaded);
 
-    const [mapDivSize, setMapDivSize] = useState(window.innerHeight - 80);
+    const [mapDivSize, setMapDivSize] = useState(window.innerHeight);
     
     const {
         filteredList,
@@ -37,7 +37,7 @@ const AdvertisingSideBar = () => {
     }, []);  
     
     useEffect(() => {
-        const handleResize = () => setMapDivSize(window.innerHeight - 80);
+        const handleResize = () => setMapDivSize(window.innerHeight);
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, []);
