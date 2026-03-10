@@ -15,7 +15,8 @@ import ImageUploader from '../../../../../components/constants/imageCropNew';
 import ColorPicker from '../../../../../components/common/Colorpicker';
 import { environmentaldatas } from '../../../../../constant/defaultValues';
 import AutosaveForm from '../../../components/AutoSaveForm';
-import { setProjectData } from '../../../../../store/slices/projectItemSlice';
+import { setProjectData, setShowLocationPicker } from '../../../../../store/slices/projectItemSlice';
+import { clearSelection } from '../../../../../store/slices/drawingSlice';
 import { useProjectHeader } from '../../../Helpers/pageDiv/ProjectHeaderContext';
 import './ProjectSettingsSideBar.css';
 
@@ -123,6 +124,67 @@ const LogoField = ({ logoUrl, fileKey, onFileSelect, onDelete, errors, touched }
     );
 };
 
+// ── Location Section (above Details) ─────────────────────────────────────────
+// Shows an active location card (if set) or a "Set Project Location" button.
+// The actual map picker lives on the right side (LocationPickerPanel).
+function LocationSection({ projectData, dispatch }) {
+    const hasLocation = !!projectData?.positions;
+    const pos    = projectData?.positions;
+    const radius = projectData?.location_radius ?? 1;
+    const addr   = projectData?.location_address ?? '';
+    const lng    = pos?.x ?? 0;
+    const lat    = pos?.y ?? 0;
+
+    const coordLabel = pos
+        ? `${Math.abs(lat).toFixed(4)}° ${lat >= 0 ? 'N' : 'S'}, ${Math.abs(lng).toFixed(4)}° ${lng >= 0 ? 'E' : 'W'}`
+        : '';
+
+    const openPicker = () => dispatch(setShowLocationPicker(true));
+
+    return (
+        <>
+            <SectionHeader title="Location" style={{ marginTop: 0 }} />
+
+            <div className="pl-4 pr-4 pb-3">
+                {hasLocation ? (
+                    <div className="loc-active-wrap">
+                        <div className="loc-active-header">
+                            <span className="loc-active-title">Active Location</span>
+                            <span className="loc-badge-active">Active</span>
+                        </div>
+                        {addr && <p className="loc-active-address">{addr}</p>}
+                        <p className="loc-active-coords">{coordLabel}</p>
+                        <p className="loc-active-radius">
+                            Boundary Radius: {Number(radius).toFixed(1)} km
+                        </p>
+                        <button
+                            type="button"
+                            className="loc-change-btn"
+                            onClick={openPicker}
+                        >
+                            Change Location
+                        </button>
+                    </div>
+                ) : (
+                    <div>
+                        <p className="loc-hint">
+                            No location set. Set a location to enable the map and other features.
+                        </p>
+                        <button
+                            type="button"
+                            className="btn btn-primary loc-save-btn"
+                            onClick={openPicker}
+                        >
+                            Set Project Location
+                        </button>
+                    </div>
+                )}
+            </div>
+        </>
+    );
+}
+
+// ── Main form ─────────────────────────────────────────────────────────────────
 const ProjectSettingsForm = ({
     logoState,
     setLogoState,
@@ -140,8 +202,11 @@ const ProjectSettingsForm = ({
     setDirty,
     getProjectById,
     dispatch,
+    projectData,
+    decodedId,
 }) => {
-    const navigate = useNavigate();
+    const navigate    = useNavigate();
+    const hasLocation = !!projectData?.positions;
 
     const {
         values,
@@ -159,10 +224,12 @@ const ProjectSettingsForm = ({
     };
 
     const goback = async () => {
+        dispatch(clearSelection());
         if (isDirty) {
             await handleAutoSave();
         }
         await getProjectById();
+        dispatch(setShowLocationPicker(false));
         navigate(-1);
     };
 
@@ -207,105 +274,114 @@ const ProjectSettingsForm = ({
                 <AutosaveForm handleSubmit={handleAutoSave} />
 
                 <form onSubmit={(e) => handleSubmit(e, setFieldError)} noValidate>
-                    <div className="custom-scrollbar customScroll" style={{ height: '100%' }}>
+                    <div className="custom-scrollbar customScroll" style={{ height:'calc(100vh - 90px)' }}>
 
-                        <SectionHeader title="Details" style={{ marginTop: 0 }} />
+                        {/* ── Location — above Details ── */}
+                        <LocationSection
+                            projectData={projectData}
+                            dispatch={dispatch}
+                        />
+                        {hasLocation && <>
 
-                        <div className="pl-4 pr-4">
-                            <LogoField
-                                logoUrl={logoState.url || (typeof values.logo === 'string' ? values.logo : '')}
-                                fileKey={fileKey}
-                                onFileSelect={handleFileSelect}
-                                onDelete={handleDeleteLogo}
-                                errors={errors}
-                                touched={touched}
-                            />
+                            <SectionHeader title="Details" />
 
-                            <div className="marginBottom mt-3">
-                                <Label htmlFor="error_reporting_email" className="form-labels">
-                                    Error Report Recipient{' '}
-                                    <span className="asterisk" aria-hidden="true">*</span>
-                                </Label>
-                                <Field
-                                    id="error_reporting_email"
-                                    name="error_reporting_email"
-                                    type="email"
-                                    className="form-control"
-                                    placeholder="Please enter an email address"
-                                    autoComplete="off"
-                                    value={values.error_reporting_email ?? ''}
-                                    onChange={(e) => {
-                                        setDirty(true);
-                                        handleChange(e);
-                                    }}
-                                    aria-invalid={!!(errors.error_reporting_email && touched.error_reporting_email)}
+                            <div className="pl-4 pr-4">
+                                <LogoField
+                                    logoUrl={logoState.url || (typeof values.logo === 'string' ? values.logo : '')}
+                                    fileKey={fileKey}
+                                    onFileSelect={handleFileSelect}
+                                    onDelete={handleDeleteLogo}
+                                    errors={errors}
+                                    touched={touched}
                                 />
-                                <FieldError
-                                    error={errors.error_reporting_email}
-                                    touched={touched.error_reporting_email}
+
+                                <div className="marginBottom mt-3">
+                                    <Label htmlFor="error_reporting_email" className="form-labels">
+                                        Error Report Recipient{' '}
+                                        <span className="asterisk" aria-hidden="true">*</span>
+                                    </Label>
+                                    <Field
+                                        id="error_reporting_email"
+                                        name="error_reporting_email"
+                                        type="email"
+                                        className="form-control"
+                                        placeholder="Please enter an email address"
+                                        autoComplete="off"
+                                        value={values.error_reporting_email ?? ''}
+                                        onChange={(e) => {
+                                            setDirty(true);
+                                            handleChange(e);
+                                        }}
+                                        aria-invalid={!!(errors.error_reporting_email && touched.error_reporting_email)}
+                                    />
+                                    <FieldError
+                                        error={errors.error_reporting_email}
+                                        touched={touched.error_reporting_email}
+                                    />
+                                </div>
+
+                                <ImageUploader
+                                    onSubmit={handleCropComplete}
+                                    onCancel={() => {}}
+                                    sourceImageUrl={previewImage}
+                                    setSourceImageUrl={setPreviewImage}
+                                    openCropModal={cropModalOpen}
+                                    setOpenCropModal={setCropModalOpen}
+                                    toggle={() => setCropModalOpen((v) => !v)}
+                                    setFieldValue={setFieldValue}
+                                    name="logo"
+                                    setPostCall={() => {}}
+                                    page="projectsettings"
+                                    imgAspect={160 / 70}
                                 />
                             </div>
 
-                            <ImageUploader
-                                onSubmit={handleCropComplete}
-                                onCancel={() => {}}
-                                sourceImageUrl={previewImage}
-                                setSourceImageUrl={setPreviewImage}
-                                openCropModal={cropModalOpen}
-                                setOpenCropModal={setCropModalOpen}
-                                toggle={() => setCropModalOpen((v) => !v)}
-                                setFieldValue={setFieldValue}
-                                name="logo"
-                                setPostCall={() => {}}
-                                page="projectsettings"
-                                imgAspect={160 / 70}
-                            />
-                        </div>
+                            <SectionHeader title="Default Styles" />
 
-                        <SectionHeader title="Default Styles" />
+                            <div className="pl-4 pr-4" style={{ marginBottom: 18.75 }}>
+                                {PIN_COLOR_FIELDS.map((item) => (
+                                    <ColorPicker
+                                        key={item.name}
+                                        label={item.label}
+                                        name={item.name}
+                                        value={values[item.name] ?? '#320101'}
+                                        color={color}
+                                        setColor={setColor}
+                                        onChange={setColor}
+                                        setFieldValue={setFieldValue}
+                                        isOpen={openPicker === item.name}
+                                        setOpenPicker={setOpenPicker}
+                                        onClick={() => setOpenPicker(item.name)}
+                                        setDirty={setDirty}
+                                    />
+                                ))}
 
-                        <div className="pl-4 pr-4" style={{ marginBottom: 18.75 }}>
-                            {PIN_COLOR_FIELDS.map((item) => (
-                                <ColorPicker
-                                    key={item.name}
-                                    label={item.label}
-                                    name={item.name}
-                                    value={values[item.name] ?? '#320101'}
-                                    color={color}
-                                    setColor={setColor}
-                                    onChange={setColor}
-                                    setFieldValue={setFieldValue}
-                                    isOpen={openPicker === item.name}
-                                    setOpenPicker={setOpenPicker}
-                                    onClick={() => setOpenPicker(item.name)}
-                                    setDirty={setDirty}
+                                <BorderWidthField
+                                    label="Navigation Path Thickness"
+                                    name="navigation_thick"
+                                    value={values.navigation_thick ?? 3}
+                                    onChange={handleChange}
                                 />
-                            ))}
 
-                            <BorderWidthField
-                                label="Navigation Path Thickness"
-                                name="navigation_thick"
-                                value={values.navigation_thick ?? 3}
-                                onChange={handleChange}
-                            />
+                                {STYLE_COLOR_FIELDS.map((item) => (
+                                    <ColorPicker
+                                        key={item.name}
+                                        label={item.label}
+                                        name={item.name}
+                                        value={values[item.name] ?? item.default}
+                                        color={color ?? values[item.name]}
+                                        setColor={setColor}
+                                        onChange={setColor}
+                                        setFieldValue={setFieldValue}
+                                        isOpen={openPicker === item.name}
+                                        setOpenPicker={setOpenPicker}
+                                        onClick={() => setOpenPicker(item.name)}
+                                        setDirty={setDirty}
+                                    />
+                                ))}
+                            </div>
+                        </>}
 
-                            {STYLE_COLOR_FIELDS.map((item) => (
-                                <ColorPicker
-                                    key={item.name}
-                                    label={item.label}
-                                    name={item.name}
-                                    value={values[item.name] ?? item.default}
-                                    color={color ?? values[item.name]}
-                                    setColor={setColor}
-                                    onChange={setColor}
-                                    setFieldValue={setFieldValue}
-                                    isOpen={openPicker === item.name}
-                                    setOpenPicker={setOpenPicker}
-                                    onClick={() => setOpenPicker(item.name)}
-                                    setDirty={setDirty}
-                                />
-                            ))}
-                        </div>
 
                         <button id="projectSettingsBtn" type="submit" hidden aria-hidden="true">
                             Submit
@@ -317,6 +393,7 @@ const ProjectSettingsForm = ({
     );
 };
 
+// ── Container ─────────────────────────────────────────────────────────────────
 const ProjectSettingsSideBar = () => {
     const { id }    = useParams();
     const dispatch  = useDispatch();
@@ -412,6 +489,8 @@ const ProjectSettingsSideBar = () => {
                     setDirty={setDirty}
                     getProjectById={getProjectById}
                     dispatch={dispatch}
+                    projectData={projectData}
+                    decodedId={decodedId}
                 />
             </Formik>
         </aside>

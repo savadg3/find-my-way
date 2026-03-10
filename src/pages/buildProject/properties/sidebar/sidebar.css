@@ -52,9 +52,16 @@
 
 .sidebar-nav-item:hover, .sidebar-nav-item:focus-visible,.sidebar-nav-item--active  {
     color: #ffffff ;
-    background-color: #26a3db ; 
+    background-color: #26a3db ;
     outline: none;
-} 
+}
+
+/* Disabled sidebar items — shown when no project location has been set yet */
+.sidebar-nav-item--disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none;
+}
 
 .sidebar-nav-item__label {
     white-space: nowrap;
@@ -84,3 +91,8 @@
     color: white ;   
     outline: 0;
 } 
+
+#root{
+    max-height: 100vh;
+    overflow-y: hidden;
+}

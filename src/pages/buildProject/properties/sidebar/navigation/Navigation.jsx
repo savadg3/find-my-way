@@ -25,7 +25,7 @@ function Navigation() {
     const paths       = useSelector((s) => s.navigation.paths);
     const shortestPath = useSelector((s) => s.navigation.shortestPath);
 
-    const [mapDivSize, setMapDivSize] = useState(window.innerHeight - 80);
+    const [mapDivSize, setMapDivSize] = useState(window.innerHeight);
     const [options, setOptions]       = useState([]);
     const [pathError, setPathError]   = useState(null);
     const [currentFormDetails, setCurrentFormDetails] = useState({
@@ -41,7 +41,7 @@ function Navigation() {
 
     // Responsive height
     useEffect(() => {
-        const handleResize = () => setMapDivSize(window.innerHeight - 80);
+        const handleResize = () => setMapDivSize(window.innerHeight);
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, []);

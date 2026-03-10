@@ -10,6 +10,7 @@ import {
 } from "../apis/otherApis";
 import { decode } from "../../../../helpers/utils";
 import { setCurrentFloor, setFloorList, setPinCount, setPinsByCategory, setProjectData } from "../../../../store/slices/projectItemSlice";
+import { setMapCenter } from "../../../../store/slices/mapSlice";
 import { useDispatch } from "react-redux";
 import { environmentaldatas } from "../../../../constant/defaultValues";
 import { useLoadPins } from "../../../../components/map/components/hooks/useLoadPins";
@@ -64,13 +65,24 @@ export const ProjectHeaderProvider = ({ children }) => {
             const value = {
                 ...data,
                 ...newValue,
-                width: data?.width ? Number(data.width) : null,
+                width:  data?.width  ? Number(data.width)  : null,
                 height: data?.height ? Number(data.height) : null,
-                location: [75.78044926997217, 11.258814157509704],
-                logo:data?.logo ? image_url + data?.logo : ""
+                logo:   data?.logo   ? image_url + data?.logo : "",
+
+                positions : {
+                    x: 76.06419342644011,
+                    y: 11.194910038185512
+                },
+                location_radius:  1,
+                location_address: "Areacode - Manjeri Road, Kunimmal, Kavanoor, Ernad, Malappuram, Kerala, 673644, India",
             };
-            
+
             dispatch(setProjectData(value));
+
+            // If the project already has a saved location, set the map centre.
+            if (data?.positions?.x != null && data?.positions?.y != null) {
+                dispatch(setMapCenter([data.positions.x, data.positions.y]));
+            }
             
             setProjectSettingData(value);
             setProjectSettings(value);

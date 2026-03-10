@@ -27,7 +27,7 @@ const AmenitySideBar = () => {
     const decodedId   = decode(id);
     const pinsLoaded  = useSelector((state) => state.api.pinsLoaded);
 
-    const [mapDivSize, setMapDivSize] = useState(window.innerHeight - 80);
+    const [mapDivSize, setMapDivSize] = useState(window.innerHeight );
     const [amenityIcons, setAmenityIcons] = useState([]); 
     
     const {
@@ -55,7 +55,7 @@ const AmenitySideBar = () => {
     }
     
     useEffect(() => {
-        const handleResize = () => setMapDivSize(window.innerHeight - 80);
+        const handleResize = () => setMapDivSize(window.innerHeight);
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, []);
@@ -95,6 +95,7 @@ const AmenitySideBar = () => {
                         <form
                             id="productForm"
                             className="av-tooltip tooltip-label-bottom formGroups"
+                            style={{height:"calc(100vh - 90px)"}}
                             onSubmit={(e) => handleSubmit(e)}
                         >
                             { 
@@ -134,7 +135,7 @@ const AmenitySideBar = () => {
                                     </div>
 
                                     <div className='custom-scrollbar customScroll' style={{
-                                        height: mapDivSize - 246
+                                        height: "100%"
                                     }} >
                                         {!pinsLoaded ? (
                                             <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 40 }}>

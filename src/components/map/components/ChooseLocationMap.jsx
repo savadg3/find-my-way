@@ -61,8 +61,7 @@ const LocationMapComponent = () => {
 
         toggle()
     }
-
-    console.log(projectData);
+ 
     return (
         <div className="app">  
 

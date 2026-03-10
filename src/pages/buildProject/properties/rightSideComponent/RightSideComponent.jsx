@@ -3,7 +3,6 @@ import { useDrop } from 'react-dnd';
 import { useDispatch, useSelector } from 'react-redux';
 
 import MapComponent from '../../../../components/map/components/Map';
-import LocationMapComponent from '../../../../components/map/components/ChooseLocationMap';
 import CustomDropdown2, { CustomDropdown3 } from '../../../../components/common/CustomDropDown2';
 import { ProjectData } from '../../../../components/map/mapData';
 import { setCurrentFloor, setPinsByCategory } from '../../../../store/slices/projectItemSlice';
@@ -17,30 +16,30 @@ import { normalizeProductData,  saveProduct  } from '../sidebar/product/services
 import { normalizeBeaconData,   saveBeacon   } from '../sidebar/beacon/services/beaconService';
 import { normalizeAmenityData,  saveAmenity  } from '../sidebar/amenity/services/amenityService';
 import { normalizeSafetyData,   saveSafety   } from '../sidebar/safety/services/safetyService';
-import Select from 'react-dropdown-select';
-import { toast } from 'react-toastify'; 
+import { toast } from 'react-toastify';
 import DrawingToolbar from './components/Drawingtoolbar ';
 import ConnectionToolbar from './components/Connectiontoolbar';
 import { useMatch } from 'react-router-dom';
+import LocationPickerPanel from './LocationPickerPanel';
 
 const customStyles = {
     control: (provided) => ({
         ...provided,
-        height: '30px', 
+        height: '30px',
         minHeight: '30px',
-        fontSize: '0.875rem', 
-        borderRadius: '4px', 
-        borderColor: '#F5F6F7', 
+        fontSize: '0.875rem',
+        borderRadius: '4px',
+        borderColor: '#F5F6F7',
     }),
-    
+
     option: (provided) => ({
         ...provided,
-        fontSize: '0.875rem', 
+        fontSize: '0.875rem',
     }),
 
     singleValue: (provided) => ({
         ...provided,
-        fontSize: '0.875rem', 
+        fontSize: '0.875rem',
         position: 'absolute',
         top: '40%',
         transform: 'translateY(-50%)',
@@ -48,20 +47,20 @@ const customStyles = {
 
     placeholder: (provided) => ({
         ...provided,
-        fontSize: '0.875rem', 
+        fontSize: '0.875rem',
         position: 'absolute',
         top: '40%',
         transform: 'translateY(-50%)',
-        color: '#d4d4d4', 
+        color: '#d4d4d4',
     }),
 
     indicatorSeparator: () => ({
-        display: 'none', 
+        display: 'none',
     }),
-    
+
     dropdownIndicator: (provided) => ({
         ...provided,
-        padding: '4px', 
+        padding: '4px',
     }),
 };
 
@@ -227,6 +226,8 @@ function RightSideComponent() {
     const currentFloor           = useSelector((state) => state.api.currentFloor);
     const floorList              = useSelector((state) => state.api.floorList);
     const isConnectionEnabled    = useSelector((state) => state.vertical.isConnectionEnabled);
+    const showLocationPicker     = useSelector((state) => state.api.showLocationPicker);
+
     // Use useMatch for reliable route detection — handles trailing slashes and
     // any URL normalisation React Router applies, unlike manual string splitting.
     const isNavigation = !!useMatch('/project/:id/navigation');
@@ -234,6 +235,7 @@ function RightSideComponent() {
 
     const handleDrop = useHandleDrop({ projectData, currentFloor, dispatch });
 
+    // All hook calls must be before any conditional returns (rules of hooks)
     const [, dropLocation] = usePinDrop('location', map, handleDrop);
     const [, dropProduct]  = usePinDrop('product',  map, handleDrop);
     const [, dropBeacon]   = usePinDrop('beacon',   map, handleDrop);
@@ -248,8 +250,6 @@ function RightSideComponent() {
         dropSafety(el);
     };
 
-    if (!ProjectData.location) return <LocationMapComponent />;
-
     const floorOptions = useMemo(
         () =>
             (floorList ?? []).map((item) => ({
@@ -257,39 +257,56 @@ function RightSideComponent() {
                 value: item?.enc_id,
             })),
         [floorList]
-    ); 
-    
-    const selectedOption = useMemo(() => { 
+    );
+
+    const selectedOption = useMemo(() => {
         const found = floorOptions.find(
             (option) => String(option.value) === String(currentFloor?.enc_id)
         );
-        return found ? found : {}; 
+        return found ? found : {};
     }, [floorOptions, currentFloor]);
 
-    const onChange = (e) =>{
-        if(isConnectionEnabled){
-            toast.warning("Please click on map to add Vertical Transport"); 
-        }else{
+    const onChange = (e) => {
+        if (isConnectionEnabled) {
+            toast.warning("Please click on map to add Vertical Transport");
+        } else {
             const found = floorList.find(
                 (option) => String(option.enc_id) === String(e?.value)
             );
-     
-            dispatch(setCurrentFloor(found))
+            dispatch(setCurrentFloor(found));
         }
+    };
+
+    // ── Conditional rendering (after all hooks) ───────────────────────────────
+
+    // Show the location picker panel whenever requested (initial set OR change)
+    if (showLocationPicker) {
+        return <LocationPickerPanel />;
     }
-     
+
+    // No location set and picker not open — hide the map entirely.
+    // The user must first set a location via Project Settings.
+    if (!projectData?.positions) return null;
+
+    // Normal map view
     return (
         <div className="pin-drag-drop-div position-relative" ref={setDropRef}>
 
-            {!isFloorplan && <div className='d-flex position-absolute top-2 left-2 z-10'>
-                <div style={{minWidth : "150px"}}>   
-                    <CustomDropdown3 options={floorOptions} onChange={(e)=> onChange(e)} selectedValue={selectedOption} /> 
+            {!isFloorplan && (
+                <div className='d-flex position-absolute top-2 left-2 z-10'>
+                    <div style={{ minWidth: "150px" }}>
+                        <CustomDropdown3
+                            options={floorOptions}
+                            onChange={(e) => onChange(e)}
+                            selectedValue={selectedOption}
+                        />
+                    </div>
                 </div>
-            </div>} 
+            )}
 
-            {isFloorplan && <DrawingToolbar/>}
+            {isFloorplan && <DrawingToolbar />}
 
-            {isNavigation && <ConnectionToolbar />} 
+            {isNavigation && <ConnectionToolbar />}
 
             <MapComponent projectData={projectData} />
         </div>

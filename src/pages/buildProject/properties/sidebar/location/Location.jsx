@@ -61,7 +61,9 @@ const LocationSidebar = () => {
         <div
             className="bar"
             id="inner-customizer2"
-            style={{ position: 'relative', height: mapDivSize, paddingBottom: 20 }}
+            style={{ position: 'relative', 
+                // height: mapDivSize,
+                 paddingBottom: 20 }}
         >
             <Row className="backRow">
                 <Col md={8}>
@@ -129,7 +131,8 @@ const LocationSidebar = () => {
                         {/* ── List ── */}
                         <div
                             className="custom-scrollbar customScroll"
-                            style={{ height: mapDivSize - 140 }}
+                            // style={{ height: mapDivSize - 140 }}
+                            style={{height:'calc(100vh - 220px)'}}
                         >
                             {!pinsLoaded ? (
                                 <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 40 }}>

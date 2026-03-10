@@ -179,7 +179,7 @@ const FloorPlanView = () => {
                             className="av-tooltip tooltip-label-bottom formGroups"
                             onSubmit={handleSubmit}
                         >
-                            <div className="custom-scrollbar customScroll">
+                            <div className="custom-scrollbar customScroll" style={{height:'calc(100vh - 90px)'}}>
                                 <div className="bar-sub">
                                     <div className="bar-sub-header" style={{ marginTop: 0 }}>
                                         <p style={{ marginTop: 0 }}>Details</p>

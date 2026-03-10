@@ -17,7 +17,7 @@ export const useSafetyList = () => {
     const projectData = useSelector((state) => state.api.projectData);
     const allPins     = useSelector((state) => state.api.allPins);
 
-    const safetyList = allPins?.safety ?? [];  
+    const safetyList = allPins?.safety ?? [];   
 
     const [searchTerm, setSearchTerm] = useState('');
 

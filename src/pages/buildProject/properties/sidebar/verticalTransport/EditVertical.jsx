@@ -161,7 +161,7 @@ const EditVertical = () => {
         <div
             className="bar"
             id="inner-customizer2"
-            style={{ position: 'relative', height: window.innerHeight - 80, paddingBottom: 20 }}
+            style={{ position: 'relative', height: window.innerHeight, paddingBottom: 20 }}
         >
             {/* Loading overlay shown while auto-saving before navigation */}
             {isSaving && (

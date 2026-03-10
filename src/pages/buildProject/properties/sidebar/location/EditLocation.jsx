@@ -151,9 +151,11 @@ const EditLocation = () => {
         <div
             className="bar"
             id="inner-customizer2"
-            style={{ position: 'relative', height: window.innerHeight - 80, paddingBottom: 20 }}
-        >
-            {/* Loading overlay shown while auto-saving before navigation */}
+            style={{ position: 'relative', 
+                // height: window.innerHeight - 80,
+                height: "100%",
+                 paddingBottom: 20 }}
+        > 
             {isSaving && (
                 <div style={{
                     position:        'absolute',

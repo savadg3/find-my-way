@@ -175,7 +175,7 @@ const AdvertisementFormFields = ({
     <div>
         <SectionHeader title="Details" style={{ marginTop: 0 }} />
 
-        <div className="pl-4 pr-4"> 
+        <div className="pl-4 "> 
             <div className="marginBottom d-flex">
                 <Label className="form-labels mr-3">Name</Label>
                 <div style={{ width: '100%' }}>

@@ -86,7 +86,7 @@ const EditAdvertising = () => {
         <div
             className="bar"
             id="inner-customizer2"
-            style={{ position: 'relative', height: window.innerHeight - 80, paddingBottom: 20 }}
+            style={{ position: 'relative', height: "calc(100vh - 50px)", paddingBottom: 20 }}
         >
             {/* Loading overlay shown while saving */}
             {isSaving && (
@@ -133,12 +133,12 @@ const EditAdvertising = () => {
                         <FormInitializer currentPinData={currentPinData} />
 
                         <form
-                            className="av-tooltip tooltip-label-bottom formGroups"
+                            className="av-tooltip tooltip-label-bottom formGroups h-100"
                             onSubmit={handleSubmit}
                         >
                             <div
                                 className="custom-scrollbar customScroll"
-                                style={{ height: window.innerHeight - 80 }}
+                                style={{ height: "100%" }}
                             >
                                 <div className="bar-sub">
                                     <AdvertisementFormFields

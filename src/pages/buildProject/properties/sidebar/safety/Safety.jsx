@@ -27,7 +27,7 @@ const SafetySideBar = () => {
     const decodedId   = decode(id);
     const pinsLoaded  = useSelector((state) => state.api.pinsLoaded);
 
-    const [mapDivSize, setMapDivSize] = useState(window.innerHeight - 80);
+    const [mapDivSize, setMapDivSize] = useState(window.innerHeight );
     const [safetyIcons, setSafetyIcons] = useState([]); 
     
     const {
@@ -55,7 +55,7 @@ const SafetySideBar = () => {
     }
     
     useEffect(() => {
-        const handleResize = () => setMapDivSize(window.innerHeight - 80);
+        const handleResize = () => setMapDivSize(window.innerHeight);
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, []);
@@ -134,7 +134,7 @@ const SafetySideBar = () => {
                                     </div>
 
                                     <div className='custom-scrollbar customScroll' style={{
-                                        height: mapDivSize - 246
+                                        height: mapDivSize - 200
                                     }} >
                                         {!pinsLoaded ? (
                                             <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 40 }}>
