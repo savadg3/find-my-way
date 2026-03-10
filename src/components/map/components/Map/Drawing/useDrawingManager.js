@@ -66,7 +66,7 @@ export default function useDrawingManager({
     
     // Keep refs so event callbacks always see latest values without re-binding
     const stateRef = useRef({});
-    stateRef.current = { activeTool, activeShape, strokeColor, strokeWidth, fillColor, shapes, selectedIds };
+    stateRef.current = { activeTool, activeShape, strokeColor, strokeWidth, fillColor, fontFamily, fontSize, bold, textAlign, shapes, selectedIds };
     
     // Drag-move state
     const dragRef = useRef({ active: false, startLngLat: null, shapeIds: [], origGeometries: {} });
@@ -90,10 +90,10 @@ export default function useDrawingManager({
         ];
         
         const features = map.queryRenderedFeatures(bbox, {
+            // Text shapes are handled by TextOverlay (HTML) — no MapLibre layers for them.
             layers: [
                 LAYERS.fill, LAYERS.stroke,
                 LAYERS.selectedFill, LAYERS.selectedStroke,
-                LAYERS.text,
             ],
         });
         
@@ -149,7 +149,7 @@ export default function useDrawingManager({
             // ── FREEHAND polygon ──
             if (activeShape === 'freehand') {
                 let coords = [];
-
+                
                 const commitPolygon = (c) => {
                     const shape = makePolygonFeature(c, buildProps());
                     dispatch(addShape(shape));
@@ -157,62 +157,62 @@ export default function useDrawingManager({
                     coords = [];
                     setPreviewData(map, { type: 'FeatureCollection', features: [] });
                 };
-
+                
                 const handleClick = (e) => {
                     const { lng, lat } = e.lngLat;
                     const pt = [lng, lat];
-
+                    
                     // Commit polygon if clicking near ANY already-placed vertex.
                     // Skip the very last vertex (index coords.length-1) to avoid
                     // an accidental immediate close right after placing a point.
                     if (coords.length >= 3) {
                         const nearExisting = coords
-                            .slice(0, -1)
-                            .some((v) => isNearStart(map, pt, v));
+                        .slice(0, -1)
+                        .some((v) => isNearStart(map, pt, v));
                         if (nearExisting) {
                             commitPolygon(coords);
                             return;
                         }
                     }
-
+                    
                     coords = [...coords, pt];
                     dispatch(setInProgress({ shapeType: 'freehand', coords }));
                 };
-
+                
                 const handleDblClick = (e) => {
                     e.preventDefault();
                     const { lng, lat } = e.lngLat;
                     const pt = [lng, lat];
-
+                    
                     // Browser fired 2 click events before this dblclick — each added
                     // a point. Roll back to coords before those 2 ghost clicks.
                     const base = coords.length >= 2 ? coords.slice(0, -2) : [];
                     if (base.length < 1) return; // nothing drawn yet
-
+                    
                     // If the dblclick landed on/near an existing vertex → commit
                     // as-is (no extra point). Otherwise add the dblclick location
                     // as the final point, then commit.
                     const nearExisting =
-                        base.length >= 1 &&
-                        base.some((v) => isNearStart(map, pt, v));
-
+                    base.length >= 1 &&
+                    base.some((v) => isNearStart(map, pt, v));
+                    
                     const final = nearExisting ? base : [...base, pt];
-
+                    
                     if (final.length >= 3) {
                         commitPolygon(final);
                     }
                 };
-
+                
                 const handleMouseMove = (e) => {
                     if (coords.length === 0) return;
                     const mousePos = [e.lngLat.lng, e.lngLat.lat];
                     setPreviewData(map, buildPreviewGeoJSON({ shapeType: 'freehand', coords }, mousePos));
                 };
-
+                
                 on('click', handleClick);
                 on('dblclick', handleDblClick);
                 on('mousemove', handleMouseMove);
-
+                
                 // ESC cancels
                 const handleKey = (e) => {
                     if (e.key === 'Escape') {
@@ -254,7 +254,7 @@ export default function useDrawingManager({
                         strokeWidth: stateRef.current.strokeWidth,
                         fillColor: stateRef.current.fillColor,
                     });
-
+                    
                     console.log(shape, "shape");
                     dispatch(addShape(shape));
                     setPreviewData(map, { type: 'FeatureCollection', features: [] });
@@ -351,36 +351,52 @@ export default function useDrawingManager({
             
             const handleClick = (e) => {
                 const { lng, lat } = e.lngLat;
-                
-                // Create a floating input at the click position
-                const canvas    = map.getCanvas();
-                const rect      = canvas.getBoundingClientRect();
-                const pixel     = map.project([lng, lat]);
-                
-                const input = document.createElement('input');
-                input.type  = 'text';
-                input.placeholder = 'Type text…';
-                Object.assign(input.style, {
+
+                // Create a floating textarea at the click position.
+                // Use textarea (not input) so the user can write multi-line
+                // text / stanzas — plain Enter adds a newline,
+                // Ctrl+Enter (or ⌘+Enter) commits.
+                const canvas = map.getCanvas();
+                const rect   = canvas.getBoundingClientRect();
+                const pixel  = map.project([lng, lat]);
+
+                const ta = document.createElement('textarea');
+                ta.placeholder = 'Type text… (Ctrl+Enter to confirm)';
+                ta.rows        = 1;
+                Object.assign(ta.style, {
                     position:   'fixed',
                     left:       `${rect.left + pixel.x}px`,
                     top:        `${rect.top  + pixel.y}px`,
                     zIndex:     9999,
                     fontSize:   `${stateRef.current.fontSize || 14}px`,
-                    fontFamily: stateRef.current.fontFamily || 'Arial',
+                    fontFamily: stateRef.current.fontFamily  || 'Arial',
                     fontWeight: stateRef.current.bold ? 'bold' : 'normal',
                     border:     '1px dashed #1a73e8',
                     background: 'rgba(255,255,255,0.9)',
-                    padding:    '2px 4px',
-                    minWidth:   '80px',
+                    padding:    '2px 6px',
+                    minWidth:   '120px',
                     outline:    'none',
+                    resize:     'none',
+                    overflow:   'hidden',
+                    lineHeight: '1.2',
                 });
-                
-                document.body.appendChild(input);
-                input.focus();
-                
+
+                document.body.appendChild(ta);
+                ta.focus();
+
+                // Auto-grow height as user types
+                const autoResize = () => {
+                    ta.style.height = 'auto';
+                    ta.style.height = ta.scrollHeight + 'px';
+                };
+                ta.addEventListener('input', autoResize);
+
+                let committed = false;
                 const commit = () => {
-                    const text = input.value.trim();
-                    if (text) {
+                    if (committed) return;
+                    committed = true;
+                    const text = ta.value; // preserve newlines — do NOT trim
+                    if (text.trim()) {
                         const shape = makeTextFeature([lng, lat], text, {
                             strokeColor: stateRef.current.strokeColor,
                             fontFamily:  stateRef.current.fontFamily,
@@ -390,13 +406,22 @@ export default function useDrawingManager({
                         });
                         dispatch(addShape(shape));
                     }
-                    input.remove();
+                    ta.remove();
                 };
-                
-                input.addEventListener('blur', commit);
-                input.addEventListener('keydown', (e) => {
-                    if (e.key === 'Enter') commit();
-                    if (e.key === 'Escape') input.remove();
+
+                ta.addEventListener('blur', commit);
+                ta.addEventListener('keydown', (ev) => {
+                    // Ctrl+Enter or ⌘+Enter → commit
+                    if (ev.key === 'Enter' && (ev.ctrlKey || ev.metaKey)) {
+                        ev.preventDefault();
+                        commit();
+                    }
+                    // Escape → cancel without saving
+                    if (ev.key === 'Escape') {
+                        committed = true; // block blur commit
+                        ta.remove();
+                    }
+                    // Plain Enter adds a newline naturally (textarea default)
                 });
             };
             
@@ -542,157 +567,158 @@ export default function useDrawingManager({
                     
                     // Update MapLibre source imperatively — zero React/Redux, zero blink
                     const newGeometry   = { ...shape.geometry, coordinates: [coords] };
-                    const updatedShapes = shapesRef.current.map((s) =>
-                        s.id === parentId ? { ...s, geometry: newGeometry } : s
-                );
-                drawingSourceRef.isDragging = true;
-                setShapesOnly(updatedShapes, selectedIdsRef.current);
-                vertexDragRef.liveGeometry = { id: parentId, geometry: newGeometry };
-                return;
-            }
-            
-            // Whole-shape drag
-            if (dragRef.current.active) {
-                dragRef.current.moved = true;
-                const { startLngLat, shapeIds, origGeometries } = dragRef.current;
-                const dlng = lngLat[0] - startLngLat[0];
-                const dlat = lngLat[1] - startLngLat[1];
+                    const updatedShapes = shapesRef.current.map((s) =>  s.id === parentId ? { ...s, geometry: newGeometry } : s );
+                    drawingSourceRef.isDragging = true;
+                    setShapesOnly(updatedShapes, selectedIdsRef.current);
+                    vertexDragRef.liveGeometry = { id: parentId, geometry: newGeometry };
+                    return;
+                }
                 
-                // Update MapLibre source imperatively — zero React/Redux, zero blink
-                const geomUpdates = {};
-                shapeIds.forEach((id) => {
-                    const orig = origGeometries[id];
-                    if (!orig) return;
-                    geomUpdates[id] = translateGeometry(orig, dlng, dlat);
-                });
-                const updatedShapes = shapesRef.current.map((s) =>
-                    geomUpdates[s.id] ? { ...s, geometry: geomUpdates[s.id] } : s
-            );
-            drawingSourceRef.isDragging = true;
-            setShapesOnly(updatedShapes, selectedIdsRef.current);
-            dragRef.current.liveGeomUpdates = geomUpdates;
-            return;
+                // Whole-shape drag
+                if (dragRef.current.active) {
+                    dragRef.current.moved = true;
+                    const { startLngLat, shapeIds, origGeometries } = dragRef.current;
+                    const dlng = lngLat[0] - startLngLat[0];
+                    const dlat = lngLat[1] - startLngLat[1];
+                    
+                    // Update MapLibre source imperatively — zero React/Redux, zero blink
+                    const geomUpdates = {};
+                    shapeIds.forEach((id) => {
+                        const orig = origGeometries[id];
+                        if (!orig) return;
+                        geomUpdates[id] = translateGeometry(orig, dlng, dlat);
+                    });
+                    const updatedShapes = shapesRef.current.map((s) => geomUpdates[s.id] ? { ...s, geometry: geomUpdates[s.id] } : s );
+                    drawingSourceRef.isDragging = true;
+                    setShapesOnly(updatedShapes, selectedIdsRef.current);
+                    dragRef.current.liveGeomUpdates = geomUpdates;
+                    return;
+                }
+                
+                // Hover cursor — show grab on shapes, crosshair on vertices
+                const vertex = vertexHitTest(e.point);
+                if (vertex) {
+                    setCursor('crosshair');
+                    return;
+                }
+                const ids = hitTest(e.point);
+                setCursor(ids.length > 0 ? 'move' : 'default');
+            };
+            
+            // ── MouseUp ──────────────────────────────────────────────────────────
+            const handleMouseUp = () => {
+                // Clear drag gate FIRST so DrawingLayer effect can run after commit
+                drawingSourceRef.isDragging = false;
+                
+                // ── Vertex drag commit ─────────────────────────────────────────
+                if (vertexDragRef.active) {
+                    if (vertexDragRef.liveGeometry) {
+                        dispatch(updateShape(vertexDragRef.liveGeometry));
+                    }
+                    vertexDragRef.active       = false;
+                    vertexDragRef.parentId     = null;
+                    vertexDragRef.vertexIndex  = null;
+                    vertexDragRef.liveGeometry = null;
+                    map.dragPan.enable();
+                    setCursor('default');
+                    return;
+                }
+                // ── Shape drag commit ──────────────────────────────────────────
+                if (dragRef.current.active) {
+                    const { liveGeomUpdates } = dragRef.current;
+                    if (liveGeomUpdates) {
+                        Object.entries(liveGeomUpdates).forEach(([id, geometry]) => {
+                            dispatch(updateShape({ id, geometry }));
+                        });
+                    }
+                    map.dragPan.enable();
+                    setTimeout(() => {
+                        dragRef.current = { active: false, moved: false, liveGeomUpdates: null };
+                    }, 10);
+                }
+            };
+            
+            on('click',     handleClick);
+            on('mousedown', handleMouseDown);
+            on('mousemove', handleMouseMove);
+            on('mouseup',   handleMouseUp);
+            
+            // Delete key
+            const handleKey = (e) => {
+                if (e.key === 'Delete' || e.key === 'Backspace') {
+                    const { selectedIds } = stateRef.current;
+                    if (selectedIds.length > 0) dispatch(removeShapes(selectedIds));
+                }
+            };
+            window.addEventListener('keydown', handleKey);
+            cleanups.push(() => window.removeEventListener('keydown', handleKey));
         }
         
-        // Hover cursor — show grab on shapes, crosshair on vertices
-        const vertex = vertexHitTest(e.point);
-        if (vertex) {
-            setCursor('crosshair');
-            return;
-        }
-        const ids = hitTest(e.point);
-        setCursor(ids.length > 0 ? 'move' : 'default');
-    };
+        // ──────────────────────────────────────────────────────────────────────
+        return () => cleanups.forEach((fn) => fn());
+    }, [map, activeTool, activeShape, dispatch, hitTest, setCursor]);
     
-    // ── MouseUp ──────────────────────────────────────────────────────────
-    const handleMouseUp = () => {
-        // Clear drag gate FIRST so DrawingLayer effect can run after commit
-        drawingSourceRef.isDragging = false;
+    // ── Sync toolbar changes to selected shapes in real-time ────────────────
+    // Only fires when the user actively changes a toolbar value while shapes
+    // are selected — not on tool switch (selectedIds would be empty then).
+    const prevToolbarRef = useRef({});
+    useEffect(() => {
+        const prev = prevToolbarRef.current;
+
+        // Detect which properties actually changed so we only update those
+        const changed = {};
+        if (strokeColor !== prev.strokeColor) changed.strokeColor = strokeColor;
+        if (strokeWidth !== prev.strokeWidth) changed.strokeWidth = strokeWidth;
+        if (fillColor   !== prev.fillColor)   changed.fillColor   = fillColor;
+        if (fontFamily  !== prev.fontFamily)  changed.fontFamily  = fontFamily;
+        if (fontSize    !== prev.fontSize)    changed.fontSize    = fontSize;
+        if (bold        !== prev.bold)        changed.bold        = bold;
+        if (textAlign   !== prev.textAlign)   changed.textAlign   = textAlign;
+
+        // Always update prevToolbarRef — even when nothing is selected.
+        // Without this, prev stays as {} forever while no shape is selected,
+        // so every property looks "changed" the moment a shape gets selected,
+        // causing updateSelectedShapes to fire with stale/default values and
+        // overwrite the shape's custom styles.
+        prevToolbarRef.current = { strokeColor, strokeWidth, fillColor, fontFamily, fontSize, bold, textAlign };
+
+        if (selectedIds.length === 0) return;
+        if (Object.keys(changed).length > 0) {
+            dispatch(updateSelectedShapes(changed));
+        }
+    }, [strokeColor, strokeWidth, fillColor, fontFamily, fontSize, bold, textAlign]);
+    
+    // ── When selection changes, sync toolbar state FROM selected shape ────────
+    // So toolbar reflects the selected shape's existing styles.
+    useEffect(() => {
+        if (selectedIds.length === 0) return;
+        const { shapes } = stateRef.current;
+        const shape = shapes.find((s) => s.id === selectedIds[0]);
+        if (!shape) return;
+        const p = shape.properties;
         
-        // ── Vertex drag commit ─────────────────────────────────────────
-        if (vertexDragRef.active) {
-            if (vertexDragRef.liveGeometry) {
-                dispatch(updateShape(vertexDragRef.liveGeometry));
-            }
-            vertexDragRef.active       = false;
-            vertexDragRef.parentId     = null;
-            vertexDragRef.vertexIndex  = null;
-            vertexDragRef.liveGeometry = null;
-            map.dragPan.enable();
-            setCursor('default');
-            return;
-        }
-        // ── Shape drag commit ──────────────────────────────────────────
-        if (dragRef.current.active) {
-            const { liveGeomUpdates } = dragRef.current;
-            if (liveGeomUpdates) {
-                Object.entries(liveGeomUpdates).forEach(([id, geometry]) => {
-                    dispatch(updateShape({ id, geometry }));
-                });
-            }
-            map.dragPan.enable();
-            setTimeout(() => {
-                dragRef.current = { active: false, moved: false, liveGeomUpdates: null };
-            }, 10);
-        }
-    };
+        // Import setters from drawingToolbarSlice — dispatch to sync toolbar UI
+        // Only update if value differs to avoid infinite loops
+        const updates = [
+            ['strokeColor', p.strokeColor],
+            ['strokeWidth', p.strokeWidth],
+            ['fillColor',   p.fillColor],
+            ['fontFamily',  p.fontFamily],
+            ['fontSize',    p.fontSize],
+            ['bold',        p.bold],
+            ['textAlign',   p.textAlign],
+        ].filter(([, v]) => v !== undefined);
+        
+        updates.forEach(([key, value]) => {
+            dispatch({ type: `drawingToolbar/set${key.charAt(0).toUpperCase() + key.slice(1)}`, payload: value });
+        });
+    }, [selectedIds]);
     
-    on('click',     handleClick);
-    on('mousedown', handleMouseDown);
-    on('mousemove', handleMouseMove);
-    on('mouseup',   handleMouseUp);
+    // ── Keep stateRef.inProgress up-to-date for freehand handler ────────────
+    const inProgress = useSelector((s) => s.drawing.inProgress);
+    useEffect(() => {
+        stateRef.current.inProgress = inProgress;
+    }, [inProgress]);
     
-    // Delete key
-    const handleKey = (e) => {
-        if (e.key === 'Delete' || e.key === 'Backspace') {
-            const { selectedIds } = stateRef.current;
-            if (selectedIds.length > 0) dispatch(removeShapes(selectedIds));
-        }
-    };
-    window.addEventListener('keydown', handleKey);
-    cleanups.push(() => window.removeEventListener('keydown', handleKey));
-}
-
-// ──────────────────────────────────────────────────────────────────────
-return () => cleanups.forEach((fn) => fn());
-}, [map, activeTool, activeShape, dispatch, hitTest, setCursor]);
-
-// ── Sync toolbar changes to selected shapes in real-time ────────────────
-// Only fires when the user actively changes a toolbar value while shapes
-// are selected — not on tool switch (selectedIds would be empty then).
-const prevToolbarRef = useRef({});
-useEffect(() => {
-    if (selectedIds.length === 0) return;
-    const prev = prevToolbarRef.current;
-    
-    // Detect which properties actually changed so we only update those
-    const changed = {};
-    if (strokeColor !== prev.strokeColor) changed.strokeColor = strokeColor;
-    if (strokeWidth !== prev.strokeWidth) changed.strokeWidth = strokeWidth;
-    if (fillColor   !== prev.fillColor)   changed.fillColor   = fillColor;
-    if (fontFamily  !== prev.fontFamily)  changed.fontFamily  = fontFamily;
-    if (fontSize    !== prev.fontSize)    changed.fontSize    = fontSize;
-    if (bold        !== prev.bold)        changed.bold        = bold;
-    if (textAlign   !== prev.textAlign)   changed.textAlign   = textAlign;
-    
-    if (Object.keys(changed).length > 0) {
-        dispatch(updateSelectedShapes(changed));
-    }
-    
-    prevToolbarRef.current = { strokeColor, strokeWidth, fillColor, fontFamily, fontSize, bold, textAlign };
-}, [strokeColor, strokeWidth, fillColor, fontFamily, fontSize, bold, textAlign]);
-
-// ── When selection changes, sync toolbar state FROM selected shape ────────
-// So toolbar reflects the selected shape's existing styles.
-useEffect(() => {
-    if (selectedIds.length === 0) return;
-    const { shapes } = stateRef.current;
-    const shape = shapes.find((s) => s.id === selectedIds[0]);
-    if (!shape) return;
-    const p = shape.properties;
-    
-    // Import setters from drawingToolbarSlice — dispatch to sync toolbar UI
-    // Only update if value differs to avoid infinite loops
-    const updates = [
-        ['strokeColor', p.strokeColor],
-        ['strokeWidth', p.strokeWidth],
-        ['fillColor',   p.fillColor],
-        ['fontFamily',  p.fontFamily],
-        ['fontSize',    p.fontSize],
-        ['bold',        p.bold],
-        ['textAlign',   p.textAlign],
-    ].filter(([, v]) => v !== undefined);
-    
-    updates.forEach(([key, value]) => {
-        dispatch({ type: `drawingToolbar/set${key.charAt(0).toUpperCase() + key.slice(1)}`, payload: value });
-    });
-}, [selectedIds]);
-
-// ── Keep stateRef.inProgress up-to-date for freehand handler ────────────
-const inProgress = useSelector((s) => s.drawing.inProgress);
-useEffect(() => {
-    stateRef.current.inProgress = inProgress;
-}, [inProgress]);
-
-// ── Keep stateRef.inProgress up-to-date ─────────────────────────────────
+    // ── Keep stateRef.inProgress up-to-date ─────────────────────────────────
 }

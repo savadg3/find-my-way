@@ -136,8 +136,11 @@ const StrokeControl = ({ value, onChange }) => {
   );
 };
 
-const FONTS = ["Arial", "Georgia", "Verdana", "Times New Roman", "Courier New", "Trebuchet MS"];
-const SIZES = [8, 10, 12, 14, 16, 18, 24, 32, 48, 64];
+const FONTS = [
+  'Arial', 'Roboto', 'Impact', 'Times New Roman', 'Courier New',
+  'Verdana', 'Georgia', 'Garamond', 'monospace',
+];
+const SIZES = [ 8, 9, 10, 11, 12, 14, 16, 18, 20, 22, 24, 26, 28, 36, 48, 72,];
 
 const FontFamilyPicker = ({ value, onChange }) => {
   const [open, setOpen] = useState(false);
@@ -194,10 +197,16 @@ export default function DrawingToolbar() {
     };
   }, [dispatch]);
 
-  // Selection state — used to show/hide the delete button
+  // Selection state — used to show/hide the delete button and text sub-toolbar
   const selectedIds      = useSelector((s) => s.drawing.selectedIds);
+  const shapes           = useSelector((s) => s.drawing.shapes);
   const selectedImageId  = useSelector((s) => s.imageOverlay.selectedId);
   const hasSelection     = selectedIds.length > 0 || selectedImageId !== null;
+
+  // Is the first selected shape a text shape?
+  const selectedIsText =
+    selectedIds.length > 0 &&
+    shapes.find((s) => s.id === selectedIds[0])?.properties?.shapeType === 'text';
 
   const handleDelete = () => {
     if (selectedIds.length > 0)   dispatch(removeShapes(selectedIds));
@@ -224,7 +233,9 @@ export default function DrawingToolbar() {
   ];
 
   const showShapeBar = activeTool === "pen";
-  const showTextBar  = activeTool === "text";
+  // Show text formatting bar when: text tool is active, OR select tool is
+  // active and the currently selected shape is a text shape.
+  const showTextBar  = activeTool === "text" || (activeTool === "select" && selectedIsText);
 
   return (
     <div className="scene mt-2">

@@ -65,3 +65,7 @@
     0%   { transform: rotate(-6deg); }
     100% { transform: rotate(6deg);  }
 }
+
+.map-text {
+  font-family: var(--map-font) !important;
+}

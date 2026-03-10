@@ -10,6 +10,7 @@ import { fetchFloorData } from './hooks/useLoadPins';
 import { useMatch, useParams } from 'react-router-dom';
 import DrawingLayer, { DrawingSync, DrawingAutoSave } from './Map/Drawing/DrawingLayer';
 import DrawingManager from './Map/Drawing/DrawingManager';
+import TextOverlay from './Map/Drawing/TextOverlay';
 import ImageOverlayManager from './Map/Image/Imageoverlaymanager';
 import NavigationLayer, { NavSync, NavVisibility, NavAutoSave } from './Map/Navigation/NavigationLayer';
 import NavigationManager from './Map/Navigation/NavigationManager';
@@ -59,7 +60,7 @@ const MapComponent = () => {
     }, [dispatch, currentFloor]);
     
     return (
-        <div className="app">  
+        <div className="app" style={{ position: 'relative' }}>
 
             <BaseMap
                 ref={mapRef}
@@ -90,6 +91,8 @@ const MapComponent = () => {
                     <DrawingAutoSave />
 
                     <DrawingManager />
+
+                    <TextOverlay />
 
                     <MapDrawing map={mapRef.current} />
 

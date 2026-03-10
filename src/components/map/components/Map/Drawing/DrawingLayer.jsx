@@ -29,7 +29,8 @@ export const LAYERS = {
   previewFill:    'drawing-preview-fill',
   previewVertex:  'drawing-preview-vertex',
   previewEdge:    'drawing-preview-edge',
-  text:           'drawing-text',
+  // NOTE: text shapes are rendered by TextOverlay.jsx (HTML overlay) so
+  // they support arbitrary CSS fonts.  No MapLibre symbol layers needed.
 };
 
 const prop = (name) => ['get', name];
@@ -99,11 +100,7 @@ export default function DrawingLayer() {
         layout: { 'text-field': prop('label'), 'text-font': ['Open Sans Regular'], 'text-size': 11, 'text-allow-overlap': true, 'text-ignore-placement': true, 'text-anchor': 'center' },
         paint: { 'text-color': '#222222', 'text-halo-color': '#ffffff', 'text-halo-width': 1.5 },
       });
-      map.addLayer({ id: LAYERS.text, type: 'symbol', source: SOURCES.shapes,
-        filter: ['all', ['==', ['geometry-type'], 'Point'], ['==', prop('shapeType'), 'text']],
-        layout: { 'text-field': prop('text'), 'text-font': ['Open Sans Regular'], 'text-size': prop('fontSize'), 'text-justify': prop('textAlign'), 'text-anchor': 'top-left', 'text-allow-overlap': true },
-        paint: { 'text-color': prop('strokeColor'), 'text-halo-color': '#fff', 'text-halo-width': 1.5 },
-      });
+      // Text shapes are rendered by TextOverlay.jsx (HTML overlay) — no MapLibre layers here.
       map.addLayer({ id: LAYERS.previewLine, type: 'line', source: SOURCES.preview,
         filter: ['!=', ['geometry-type'], 'Point'],
         paint: { 'line-color': '#1a73e8', 'line-width': 2, 'line-dasharray': [4, 3], 'line-opacity': 0.9 },
@@ -282,7 +279,8 @@ export function DrawingAutoSave() {
   }, [decodedId, dispatch]);
 
   // ── Debounced auto-save on every shapes change ─────────────────────
-  useEffect(() => {
+  useEffect(() => { 
+
     if (!hasLoaded.current) return;
 
     if (skipSaveRef.current) {
@@ -300,6 +298,7 @@ export function DrawingAutoSave() {
 
       // Optimistic localStorage write (survives tab close before server responds)
       try { localStorage.setItem(DRW_LS_KEY(decodedId), JSON.stringify(snapshot)); } catch {}
+
 
       dispatch(setSaveStatus('saving'));
       attemptSave(decodedId, snapshot, version);
