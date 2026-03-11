@@ -475,8 +475,8 @@ export const findPinNodeId = (paths, pinId) => {
 // Caller dispatches bulkAddPaths(newSubPaths).
 // Main paths are NOT modified — graph connectivity is handled by buildNavGraph
 // via snapPathId/snapT on the sub-path endpoint, exactly like manual drawing.
-export const autoGenerateSubPaths = (paths, visiblePins, map) => {
-  const mainPaths = paths.filter((p) => p.type === 'main');
+export const autoGenerateSubPaths = (paths, visiblePins, map, currentFloor) => {
+  const mainPaths = paths.filter((p) => p.type === 'main' && p.floorId == currentFloor?.enc_id);
   if (mainPaths.length === 0) return { newSubPaths: [] };
 
   const newSubPaths = [];
@@ -544,6 +544,7 @@ export const autoGenerateSubPaths = (paths, visiblePins, map) => {
     newSubPaths.push({
       id:   uuid(),
       type: 'sub',
+      floorId: currentFloor?.enc_id,
       points: [
         makePoint(pinPos,       { pinId }),
         makePoint(best.snapPos, { snapPathId: best.mainPathId, snapT: best.globalT }),
@@ -551,5 +552,6 @@ export const autoGenerateSubPaths = (paths, visiblePins, map) => {
     });
   }
 
+  console.log({newSubPaths,paths,mainPaths});
   return { newSubPaths };
 };

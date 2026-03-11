@@ -57,7 +57,7 @@ const navigationSlice = createSlice({
     },
 
     // ── Commit a completed path ────────────────────────────────────────
-    addPath(state, { payload }) {
+    addPath(state, { payload }) { 
       // payload: { type, points }
       state.paths.push({ id: uuid(), ...payload });
       state.inProgress = null;

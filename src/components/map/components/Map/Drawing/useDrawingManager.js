@@ -54,19 +54,22 @@ export default function useDrawingManager({
 }) {
     const dispatch   = useDispatch();
     const map        = useSelector((s) => s.map.mapContainer);
-    
+
+    // Floor scoping — every shape created is stamped with the current floor's id
+    const currentFloor = useSelector((s) => s.api.currentFloor);
+
     const shapes      = useSelector((s) => s.drawing.shapes);
     const selectedIds = useSelector((s) => s.drawing.selectedIds);
-    
+
     // Always-current refs — readable inside event callbacks without re-binding
     const shapesRef       = useRef(shapes);
     const selectedIdsRef  = useRef(selectedIds);
     useEffect(() => { shapesRef.current      = shapes;      }, [shapes]);
     useEffect(() => { selectedIdsRef.current = selectedIds; }, [selectedIds]);
-    
+
     // Keep refs so event callbacks always see latest values without re-binding
     const stateRef = useRef({});
-    stateRef.current = { activeTool, activeShape, strokeColor, strokeWidth, fillColor, fontFamily, fontSize, bold, textAlign, shapes, selectedIds };
+    stateRef.current = { activeTool, activeShape, strokeColor, strokeWidth, fillColor, fontFamily, fontSize, bold, textAlign, shapes, selectedIds, currentFloor };
     
     // Drag-move state
     const dragRef = useRef({ active: false, startLngLat: null, shapeIds: [], origGeometries: {} });
@@ -140,10 +143,11 @@ export default function useDrawingManager({
         if (activeTool === 'pen') {
             setCursor('crosshair');
             
-            // Shared props builder
+            // Shared props builder — includes the current floor so every
+            // shape is scoped to the floor on which it was drawn.
             const buildProps = () => {
-                const { strokeColor, strokeWidth, fillColor } = stateRef.current;
-                return defaultProps({ strokeColor, strokeWidth, fillColor });
+                const { strokeColor, strokeWidth, fillColor, currentFloor } = stateRef.current;
+                return defaultProps({ strokeColor, strokeWidth, fillColor, floorId: currentFloor?.enc_id });
             };
             
             // ── FREEHAND polygon ──
@@ -252,7 +256,8 @@ export default function useDrawingManager({
                     const shape = makeRectFeature(startLngLat, end, {
                         ...stateRef.current.strokeColor && { strokeColor: stateRef.current.strokeColor },
                         strokeWidth: stateRef.current.strokeWidth,
-                        fillColor: stateRef.current.fillColor,
+                        fillColor:   stateRef.current.fillColor,
+                        floorId:     stateRef.current.currentFloor?.enc_id,
                     });
                     
                     console.log(shape, "shape");
@@ -294,6 +299,7 @@ export default function useDrawingManager({
                         strokeColor: stateRef.current.strokeColor,
                         strokeWidth: stateRef.current.strokeWidth,
                         fillColor:   stateRef.current.fillColor,
+                        floorId:     stateRef.current.currentFloor?.enc_id,
                     });
                     dispatch(addShape(shape));
                     setPreviewData(map, { type: 'FeatureCollection', features: [] });
@@ -403,6 +409,7 @@ export default function useDrawingManager({
                             fontSize:    stateRef.current.fontSize,
                             bold:        stateRef.current.bold,
                             textAlign:   stateRef.current.textAlign,
+                            floorId:     stateRef.current.currentFloor?.enc_id,
                         });
                         dispatch(addShape(shape));
                     }

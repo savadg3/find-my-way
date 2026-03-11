@@ -12,11 +12,15 @@ import { useProjectHeader } from '../../../Helpers/pageDiv/ProjectHeaderContext'
 import FloorItem from './components/FloorItem';
 import AddFloorPlanModal from './components/AddFloorPlanModal';
 import { useFloorPlanActions } from './hooks/useFloorPlanActions';
+import { setCurrentFloor } from '../../../../../store/slices/projectItemSlice';
+import { useDispatch } from 'react-redux';
 
 const FloorPlan = () => {
-    const navigate    = useNavigate();
-    const projectData = useSelector((state) => state.api.projectData);
-    const { getProjectById } = useProjectHeader();
+    const navigate            = useNavigate();
+    const dispatch            = useDispatch();
+    const floorList           = useSelector((state) => state.api.floorList);
+    const projectData         = useSelector((state) => state.api.projectData);
+    const { getProjectById }  = useProjectHeader();
 
     const [floorPlans, setFloorPlans] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
@@ -47,7 +51,15 @@ const FloorPlan = () => {
 
     const handleModalClose = () => setModal(false);
 
-    const handleEdit = (plan) => navigate(encode(plan.enc_id));
+    const handleEdit = (plan) => {
+        const found = floorList.find(
+            (option) => String(option.enc_id) === String(plan?.enc_id)
+        );
+        if(found?.enc_id){
+            dispatch(setCurrentFloor(found));
+            navigate(encode(plan.enc_id))
+        }
+    };
 
     const goBack = () => {
         if (loading) return;

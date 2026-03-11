@@ -47,15 +47,23 @@ export default function useNavigationManager({ activeTool, activePath }) {
   const currentFloor= useSelector((s) => s.api.currentFloor);
   const activeTab   = useSelector((s) => s.api.activeTab);
 
-  const paths           = useSelector((s) => s.navigation.paths);
+  const allPaths        = useSelector((s) => s.navigation.paths);
   const selectedPathId  = useSelector((s) => s.navigation.selectedPathId);
   const selectedPointId = useSelector((s) => s.navigation.selectedPointId);
   const inProgress      = useSelector((s) => s.navigation.inProgress);
+
+  // Filter paths to the currently active floor so that all manager logic
+  // (hit-tests, graph builds, snap detection) operates only on this floor's
+  // connection data.  NavSync independently filters before pushing to MapLibre,
+  // so hit-tests (which query rendered features) stay consistent. 
+  const floorId = currentFloor?.enc_id ?? null;
+  const paths   = allPaths.filter((p) => p.floorId === floorId);
 
   // Always-current refs so event callbacks never capture stale closures
   const stateRef = useRef({});
   stateRef.current = {
     activeTool, activePath, paths, selectedPathId, selectedPointId, inProgress,
+    currentFloor,
   };
 
   // All visible pins (same logic as MapMarkers)
@@ -178,7 +186,7 @@ export default function useNavigationManager({ activeTool, activePath }) {
             }
 
             if (mergedPoints && mergedPoints.length >= 2) {
-              dispatch(addPath({ type: localProgress.type, points: mergedPoints }));
+              dispatch(addPath({ type: localProgress.type, points: mergedPoints, floorId: stateRef.current.currentFloor?.enc_id }));
               dispatch(removePath(targetPath.id));
               localProgress = null;
               pushPreview(null);
@@ -187,7 +195,7 @@ export default function useNavigationManager({ activeTool, activePath }) {
           }
         }
 
-        dispatch(addPath({ type: localProgress.type, points: localProgress.points }));
+        dispatch(addPath({ type: localProgress.type, points: localProgress.points, floorId: stateRef.current.currentFloor?.enc_id }));
         localProgress = null;
         pushPreview(null);
       };
@@ -694,10 +702,8 @@ export function useAutoGenerateSubPaths() {
       if (activeTab !== 'all' && pin?.category !== activeTab) return false;
       return true;
     });
-
-    // autoGenerateSubPaths now builds sub-paths exactly like manual drawing:
-    // floating anchor with snapPathId+snapT, no main-path modification needed.
-    const { newSubPaths } = autoGenerateSubPaths(paths, visiblePins, map);
+ 
+    const { newSubPaths } = autoGenerateSubPaths(paths, visiblePins, map, currentFloor);
 
     if (newSubPaths.length > 0) {
       dispatch(bulkAddPaths(newSubPaths));
