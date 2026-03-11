@@ -42,7 +42,7 @@ export const useSafetyList = () => {
         ); 
         if(found?.enc_id){
             dispatch(setCurrentFloor(found));
-        }  
+        }   
         navigate(encode(safety.enc_id));
         dispatch(setEditingPinId(safety.enc_id));
     }, [navigate, dispatch]);

@@ -78,17 +78,17 @@ const buildHourObject = (hours = {}) => {
 const PIN_CONFIG = {
     location: {
         dragType:    'LocationPin',
-        dragKey:     'location',
+        dragKey:     "location",
         saveFn:      saveLocation,
         normalizeFn: normalizeLocationData,
         buildExtra:  (normalized, prod, projectData) => ({
-            location_name:       prod.location_name ?? '! New location',
-            location_color:      prod.location_color ?? projectData?.location_color,
-            boundary_color:      prod.boundary_color ?? '#26A3DB',
+            location_name:       prod?.location_name ?? '! New location',
+            location_color:      prod?.location_color ?? projectData?.location_color,
+            boundary_color:      prod?.boundary_color ?? '#26A3DB',
             boundary_attributes: null,
-            contact:             prod.contact,
-            description:         prod.description,
-            tags:                sanitizeTags(prod.tags),
+            contact:             prod?.contact,
+            description:         prod?.description,
+            tags:                sanitizeTags(prod?.tags),
             website:             JSON.stringify(normalized.websiteLinks ?? []),
             ...buildHourObject(normalized.hours),
         }),
@@ -96,16 +96,16 @@ const PIN_CONFIG = {
 
     product: {
         dragType:    'productpin',
-        dragKey:     'location',
+        dragKey:     "product",
         saveFn:      saveProduct,
         normalizeFn: normalizeProductData,
         buildExtra:  (normalized, prod, projectData) => ({
-            product_name:   prod.product_name  ?? '! New product',
-            product_color:  prod.product_color ?? projectData?.product_color,
-            product_code:   prod.product_code,
+            product_name:   prod?.product_name  ?? '! New product',
+            product_color:  prod?.product_color ?? projectData?.product_color,
+            product_code:   prod?.product_code,
             boundary_color: null,
-            description:    prod.description,
-            tags:           sanitizeTags(prod.tags),
+            description:    prod?.description,
+            tags:           sanitizeTags(prod?.tags),
             website:        JSON.stringify(normalized.websiteLinks      ?? []),
             specifications: JSON.stringify(normalized.specificationsArray ?? []),
         }),
@@ -113,43 +113,43 @@ const PIN_CONFIG = {
 
     beacon: {
         dragType:    'beaconpin',
-        dragKey:     'location',
+        dragKey:     "beacon",
         saveFn:      saveBeacon,
         normalizeFn: normalizeBeaconData,
         buildExtra:  (normalized, prod, projectData) => ({
-            beacon_name:      prod.beacon_name ?? '! New beacon',
-            beacon_color:     prod.beacon_color     ?? projectData?.beacon_color,
-            bg_color:         prod.bg_color         ?? projectData?.beacon_color,
-            heading:          prod.heading,
-            heading_color:    prod.heading_color,
-            subheading:       prod.subheading,
-            subheading_color: prod.subheading_color,
-            content_color:    prod.content_color,
-            message:          prod.message,
+            beacon_name:      prod?.beacon_name ?? '! New beacon',
+            beacon_color:     prod?.beacon_color     ?? projectData?.beacon_color,
+            bg_color:         prod?.bg_color         ?? projectData?.beacon_color,
+            heading:          prod?.heading,
+            heading_color:    prod?.heading_color,
+            subheading:       prod?.subheading,
+            subheading_color: prod?.subheading_color,
+            content_color:    prod?.content_color,
+            message:          prod?.message,
         }),
     },
 
     amenity: {
         dragType:    'amenitypin',
-        dragKey:     'location',
+        dragKey:     "amenity",
         saveFn:      saveAmenity,
         normalizeFn: normalizeAmenityData,
         buildExtra:  (normalized, prod, projectData) => ({
-            amenity_name:  prod.amenity_name ?? '! New amenity',
-            icon_id:       prod.icon_id      ?? 1,
-            amenity_color: prod.amenity_color ?? projectData?.amenity_color,
+            amenity_name:  prod?.amenity_name ?? '! New amenity',
+            icon_id:       prod?.icon_id      ?? 1,
+            amenity_color: prod?.amenity_color ?? projectData?.amenity_color,
         }),
     },
 
     safety: {
         dragType:    'safetypin',
-        dragKey:     'location',
+        dragKey:     'safety',
         saveFn:      saveSafety,
         normalizeFn: normalizeSafetyData,
         buildExtra:  (normalized, prod, projectData) => ({
-            safety_name:  prod.safety_name  ?? '! New safety',
-            icon_id:      prod.icon_id      ?? 7,
-            safety_color: prod.safety_color ?? projectData?.safety_color,
+            safety_name:  prod?.safety_name  ?? '! New safety',
+            icon_id:      prod?.icon_id      ?? 7,
+            safety_color: prod?.safety_color ?? projectData?.safety_color,
         }),
     },
 };
@@ -182,8 +182,8 @@ const buildPayload = ({ prod, pointer, projectData, currentFloor, pinType }) => 
         ...config.buildExtra(normalized, prod, projectData),
     };
 
-    if (prod.enc_id) {
-        base.id           = prod.enc_id;
+    if (prod?.enc_id) {
+        base.id           = prod?.enc_id;
         base.is_published = '0';
         base.discard      = '1';
         base.publish      = '1';
@@ -196,6 +196,8 @@ const useHandleDrop = ({ projectData, currentFloor, dispatch }) => {
     return useCallback(async (prod, pointer, pinType) => {
         const config   = PIN_CONFIG[pinType];
         const payload  = buildPayload({ prod, pointer, projectData, currentFloor, pinType });
+        // console.log(prod, projectData, "prod, projectData");
+        // return
         const response = await config.saveFn(payload);
 
         if (response.type === 1) {
@@ -211,6 +213,8 @@ const usePinDrop = (pinType, map, onDrop) => {
     return useDrop({
         accept: dragType,
         drop: (item, monitor) => {
+            // console.log({item, dragKey, pinType, drop:item[dragKey]}, "assad");
+            // console.log({item, pinType, dragType, dragKey}, "assad");
             if (!map) return;
             const pointer = getDropPosition(map, monitor);
             if (!pointer) return;
@@ -273,7 +277,6 @@ function RightSideComponent() {
             const found = floorList.find(
                 (option) => String(option.enc_id) === String(e?.value)
             );
-            console.log(found);
             dispatch(setCurrentFloor(found));
         }
     };
