@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, useParams } from 'react-router-dom';
 import swal from 'sweetalert';
 import { encode, decode, getCurrentUser } from '../../../../../../helpers/utils';
-import { setPinsByCategory, setEditingPinId } from '../../../../../../store/slices/projectItemSlice';
+import { setPinsByCategory, setEditingPinId, setCurrentFloor } from '../../../../../../store/slices/projectItemSlice';
 import { deletePinApi, removePinApi } from '../../../../Helpers/apis/otherApis'; 
 import { fetchPinData } from '../../../../../../components/map/components/hooks/useLoadPins';  
 import { saveAmenity } from '../services/amenityService';
@@ -16,6 +16,7 @@ export const useAmenityList = () => {
  
     const projectData = useSelector((state) => state.api.projectData);
     const allPins     = useSelector((state) => state.api.allPins);
+    const floorList   = useSelector((s) => s.api.floorList);
 
     const amenityList = allPins?.amenity ?? [];  
 
@@ -36,6 +37,12 @@ export const useAmenityList = () => {
     };
 
     const handleEdit = useCallback((amenity) => {
+        const found = floorList.find(
+            (option) => String(option.enc_id) === String(amenity?.fp_id)
+        ); 
+        if(found?.enc_id){
+            dispatch(setCurrentFloor(found));
+        }  
         navigate(encode(amenity.enc_id));
         dispatch(setEditingPinId(amenity.enc_id));
     }, [navigate, dispatch]);
