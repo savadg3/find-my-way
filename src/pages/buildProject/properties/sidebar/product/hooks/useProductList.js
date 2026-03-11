@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, useParams } from 'react-router-dom';
 import swal from 'sweetalert';
 import { encode, decode, getCurrentUser } from '../../../../../../helpers/utils';
-import { setPinsByCategory, setEditingPinId, setSelectedPin } from '../../../../../../store/slices/projectItemSlice';
+import { setPinsByCategory, setEditingPinId, setSelectedPin, setCurrentFloor } from '../../../../../../store/slices/projectItemSlice';
 import { deletePinApi, removePinApi, PlanExpiryDetails } from '../../../../Helpers/apis/otherApis'; 
 import { fetchPinData } from '../../../../../../components/map/components/hooks/useLoadPins'; 
 import { saveProduct } from '../services/productService';
@@ -17,6 +17,7 @@ export const useProductList = ({ setModal }) => {
     const pinCount    = useSelector((state) => state.api.pinCount);
     const projectData = useSelector((state) => state.api.projectData);
     const allPins     = useSelector((state) => state.api.allPins);
+    const floorList     = useSelector((s) => s.api.floorList);
 
     const productList = allPins?.product ?? []; 
 
@@ -45,6 +46,12 @@ export const useProductList = ({ setModal }) => {
     };
 
     const handleEdit = useCallback((product) => {
+        const found = floorList.find(
+            (option) => String(option.enc_id) === String(product?.fp_id)
+        ); 
+        if(found?.enc_id){
+            dispatch(setCurrentFloor(found));
+        }  
         navigate(encode(product.enc_id));
         dispatch(setEditingPinId(product.enc_id));
     }, [navigate, dispatch]);

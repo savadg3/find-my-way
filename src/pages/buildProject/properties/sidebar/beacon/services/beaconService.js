@@ -9,8 +9,7 @@ export const saveBeacon = async (payload) => {
     return response;
 };
 
-export const normalizeBeaconData = (data = {}) => {
-    console.log(data);
+export const normalizeBeaconData = (data = {}) => { 
     const positions = safeJsonParse(data.positions, null);
  
     let prefillData = {
