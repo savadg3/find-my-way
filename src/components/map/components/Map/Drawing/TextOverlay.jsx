@@ -88,11 +88,12 @@ function EditTextarea({ value, onChange, onCommit, onCancel, textStyle }) {
 
 // ── Main overlay component ────────────────────────────────────────────────────
 export default function TextOverlay() {
-    const dispatch    = useDispatch();
-    const map         = useSelector(s => s.map.mapContainer);
-    const shapes      = useSelector(s => s.drawing.shapes);
-    const selectedIds = useSelector(s => s.drawing.selectedIds);
-    const activeTool  = useSelector(s => s.drawingToolbar.activeTool);
+    const dispatch     = useDispatch();
+    const map          = useSelector(s => s.map.mapContainer);
+    const shapes       = useSelector(s => s.drawing.shapes);
+    const selectedIds  = useSelector(s => s.drawing.selectedIds);
+    const activeTool   = useSelector(s => s.drawingToolbar.activeTool);
+    const currentFloor = useSelector(s => s.api.currentFloor);
 
     // ── Re-render when the map moves so pixel positions stay in sync ──────────
     const [, setTick] = useState(0);
@@ -235,7 +236,11 @@ export default function TextOverlay() {
 
     if (!map) return null;
 
-    const textShapes  = shapes.filter(s => s.properties?.shapeType === 'text');
+    // Only show text shapes belonging to the currently active floor.
+    const floorId    = currentFloor?.enc_id ?? null;
+    const textShapes = shapes.filter(
+        s => s.properties?.shapeType === 'text' && s.properties?.floorId === floorId,
+    );
     const canInteract = activeTool === 'select' || activeTool === 'eraser';
 
     return (

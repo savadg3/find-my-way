@@ -3,11 +3,11 @@
 // Data is pushed imperatively through navSourceRef — this component never
 // re-renders due to path state changes, keeping it blink-free.
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useMatch, useParams }      from 'react-router-dom';
 import { decode }                   from '../../../../../helpers/utils';
-import { setAllPaths, clearAllNavPaths, setSaveStatus } from '../../../../../store/slices/navigationSlice';
+import { setAllPaths, clearAllNavPaths, clearNavSelection, setSaveStatus } from '../../../../../store/slices/navigationSlice';
 import { saveNavigationPaths, loadNavigationPaths } from './navigationService';
 import {
   pathsToLinesGeoJSON,
@@ -283,8 +283,7 @@ export default function NavigationLayer() {
         },
       });
 
-      navSourceRef.setHighlight = (positions) => {
-        // Persist so init() can restore after a style-swap / map-reinit.
+      navSourceRef.setHighlight = (positions) => { 
         navSourceRef._latestHighlight = positions ?? null;
         const data = positions && positions.length >= 2
           ? {
@@ -298,21 +297,10 @@ export default function NavigationLayer() {
           : emptyCol();
         map.getSource(NAV_SOURCES.highlight)?.setData(data);
       };
-
-      // ── Restore any previously displayed highlight ────────────────────
-      // This fires when NavigationLayer reinitialises after a style-swap or
-      // map-reference change.  NavSync's shortestPath useEffect won't re-fire
-      // (shortestPath in Redux is the same object), so we proactively restore
-      // the data here instead of relying on a Redux-triggered re-render.
+ 
       if (navSourceRef._latestHighlight) {
         navSourceRef.setHighlight(navSourceRef._latestHighlight);
-      }
-
-      // ── Animated dash loop ────────────────────────────────────────────
-      // Cycles through 14 dash-offset frames at ~50 ms each, creating a
-      // "flowing" illusion of motion along the line.  The loop runs
-      // whenever the highlight is initialised; it's cheap when the source
-      // has no data (empty FeatureCollection).
+      } 
       const dashFrames = [
         [0, 4, 3], [0.5, 4, 2.5], [1, 4, 2],   [1.5, 4, 1.5],
         [2, 4, 1], [2.5, 4, 0.5], [3, 4, 0],
@@ -321,7 +309,7 @@ export default function NavigationLayer() {
       ];
       let dashStep   = 0;
       let lastDashTs = 0;
-      const DASH_MS  = 50; // ~20 fps → smooth but not CPU-heavy
+      const DASH_MS  = 50; 
 
       const animateDash = (ts) => {
         dashRafId = requestAnimationFrame(animateDash);
@@ -331,27 +319,17 @@ export default function NavigationLayer() {
           map.setPaintProperty(
             NAV_LAYERS.highlightDash, 'line-dasharray', dashFrames[dashStep],
           );
-        } catch { /* layer removed / not yet ready — safe to skip */ }
+        } catch { }
         dashStep = (dashStep + 1) % dashFrames.length;
       };
       dashRafId = requestAnimationFrame(animateDash);
-
-      // Mark fully initialised AFTER all setup succeeds.
-      // This mirrors the DrawingLayer pattern so that a premature throw
-      // (e.g. "Style is not done loading") doesn't permanently block retries.
+ 
       initialised.current = true;
     };
 
-    const handleStyleData = () => {
-      // styledata fires many times during loading (sprites, fonts, tiles).
-      // Only reinitialise when the style is fully loaded AND our sources are
-      // gone — identical to DrawingLayer's guard, preventing the
-      // constant teardown/reinit loop that the previous "always reinit"
-      // approach created.
+    const handleStyleData = () => { 
       if (!map.isStyleLoaded()) return;
-      if (map.getSource(NAV_SOURCES.lines)) return; // sources still exist — nothing to do
-
-      // Sources are gone (genuine style-swap) — reset and re-init.
+      if (map.getSource(NAV_SOURCES.lines)) return;   
       initialised.current = false;
       navSourceRef.setLines     = null;
       navSourceRef.setNodes     = null;
@@ -374,28 +352,39 @@ export default function NavigationLayer() {
   return null;
 }
 
-// ── NavSync ───────────────────────────────────────────────────────────────────
-// Separate component: subscribes to Redux navigation state and pushes it into
-// MapLibre imperatively. Isolated so NavigationLayer never re-renders on data.
+// ── NavSync ─────────────────────────────────────────────────────────────────── 
 export function NavSync() {
-  const paths           = useSelector((s) => s.navigation.paths);
+  const dispatch        = useDispatch();
+  const allPaths        = useSelector((s) => s.navigation.paths);
   const selectedPathId  = useSelector((s) => s.navigation.selectedPathId);
   const selectedPointId = useSelector((s) => s.navigation.selectedPointId);
   const inProgress      = useSelector((s) => s.navigation.inProgress);
   const shortestPath    = useSelector((s) => s.navigation.shortestPath);
+  const currentFloor    = useSelector((s) => s.api.currentFloor);
+
+  const floorId = currentFloor?.enc_id ?? null;
+ 
+  const floorPaths = useMemo(
+    () => allPaths.filter((p) => p.floorId === floorId),
+    [allPaths, floorId],
+  );
+ 
 
   useEffect(() => {
-    navSourceRef.setLines?.(paths, selectedPathId);
-    navSourceRef.setNodes?.(paths, selectedPathId, selectedPointId);
-  }, [paths, selectedPathId, selectedPointId]);
+    navSourceRef.setLines?.(floorPaths, selectedPathId);
+    navSourceRef.setNodes?.(floorPaths, selectedPathId, selectedPointId);
+  }, [floorPaths, selectedPathId, selectedPointId]);
+ 
+  useEffect(() => {
+    dispatch(clearNavSelection());
+  }, [floorId, dispatch]);
 
   useEffect(() => {
     if (!inProgress) {
       navSourceRef.setPreview?.(null, null);
     }
   }, [inProgress]);
-
-  // Push shortest-path result into the highlight GL source whenever it changes.
+ 
   useEffect(() => {
     navSourceRef.setHighlight?.(shortestPath?.positions ?? null);
   }, [shortestPath]);
@@ -403,9 +392,7 @@ export function NavSync() {
   return null;
 }
 
-// ── NavVisibility ──────────────────────────────────────────────────────────────
-// Hides all navigation GL layers when the user is NOT on the navigation page,
-// and shows them when they are. Mount this alongside NavigationLayer + NavSync.
+// ── NavVisibility ────────────────────────────────────────────────────────────── 
 export function NavVisibility() {
   const map        = useSelector((s) => s.map.mapContainer);
   const isNavPage  = !!useMatch('/project/:id/navigation');
@@ -418,7 +405,7 @@ export function NavVisibility() {
         if (map.getLayer(layerId)) {
           map.setLayoutProperty(layerId, 'visibility', visibility);
         }
-      } catch { /* layer not yet added — safe to ignore */ }
+      } catch {}
     });
   }, [map, isNavPage]);
 
@@ -426,8 +413,7 @@ export function NavVisibility() {
 }
 
 // ── NavAutoSave ────────────────────────────────────────────────────────────────
-// Loads saved navigation paths on mount and auto-saves after every change
-// (debounced 1 s, up to 3 retries, localStorage fallback).
+ 
 const LS_KEY = (projectId) => `nav-paths-${projectId}`;
 const MAX_RETRIES = 1;
 const RETRY_BASE_MS = 2000;
@@ -442,25 +428,21 @@ export function NavAutoSave() {
   const skipSaveRef  = useRef(false);
   const saveTimer    = useRef(null);
   const statusTimer  = useRef(null);
-  const saveVersion  = useRef(0); // incremented each time a new debounce fires,
-                                  // so stale retries self-cancel
-
-  // ── Helpers ───────────────────────────────────────────────────────
+  const saveVersion  = useRef(0);  
+ 
   const markSaved = () => {
     dispatch(setSaveStatus('saved'));
     if (statusTimer.current) clearTimeout(statusTimer.current);
     statusTimer.current = setTimeout(() => dispatch(setSaveStatus('idle')), 3000);
   };
-
-  // Recursive retry — cancels automatically if saveVersion has advanced
+ 
   const attemptSave = (projectId, snapshot, version, attempt = 0) => {
-    if (version !== saveVersion.current) return; // newer save was scheduled, abort
+    if (version !== saveVersion.current) return;  
 
     saveNavigationPaths(projectId, snapshot)
       .then((result) => {
         if (version !== saveVersion.current) return;
-        if (result.type === 1) {
-          // Backend confirmed — update localStorage mirror
+        if (result.type === 1) { 
           try { localStorage.setItem(LS_KEY(projectId), JSON.stringify(snapshot)); } catch {} 
           markSaved();
         } else {
@@ -469,21 +451,18 @@ export function NavAutoSave() {
       })
       .catch(() => {
         if (version !== saveVersion.current) return;
-        if (attempt < MAX_RETRIES - 1) {
-          // Retry with exponential back-off
+        if (attempt < MAX_RETRIES - 1) { 
           setTimeout(
             () => attemptSave(projectId, snapshot, version, attempt + 1),
             RETRY_BASE_MS * Math.pow(2, attempt),
           );
-        } else {
-          // All retries exhausted — write to localStorage so data is not lost
+        } else { 
           try { localStorage.setItem(LS_KEY(projectId), JSON.stringify(snapshot)); } catch {}
           dispatch(setSaveStatus('failed'));
         }
       });
   };
-
-  // ── Load on mount / project change ────────────────────────────────
+ 
   useEffect(() => {
     if (!decodedId) return;
 
@@ -494,8 +473,7 @@ export function NavAutoSave() {
     const load = async () => {
       try {
         let savedPaths = await loadNavigationPaths(decodedId); 
-
-        // Fallback to localStorage when backend has no paths
+ 
         if (!savedPaths?.length) {
           try {
             const raw = localStorage.getItem(LS_KEY(decodedId));
@@ -507,8 +485,7 @@ export function NavAutoSave() {
           skipSaveRef.current = true;
           dispatch(setAllPaths(savedPaths));
         }
-      } catch {
-        // Backend unreachable — try localStorage
+      } catch { 
         try {
           const raw = localStorage.getItem(LS_KEY(decodedId));
           if (raw) {
@@ -545,6 +522,7 @@ export function NavAutoSave() {
 
     // Snapshot paths at schedule time so retries use the same data
     const snapshot = paths;
+
 
     saveTimer.current = setTimeout(() => {
       saveVersion.current += 1;

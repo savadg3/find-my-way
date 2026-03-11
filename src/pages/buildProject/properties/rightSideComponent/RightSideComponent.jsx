@@ -273,6 +273,7 @@ function RightSideComponent() {
             const found = floorList.find(
                 (option) => String(option.enc_id) === String(e?.value)
             );
+            console.log(found);
             dispatch(setCurrentFloor(found));
         }
     };

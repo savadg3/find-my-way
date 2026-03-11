@@ -4,11 +4,11 @@
 // this component has NO useSelector on shapes/selectedIds,
 // so it NEVER re-renders due to drawing state changes.
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useParams }                from 'react-router-dom';
 import { decode }                   from '../../../../../helpers/utils';
-import { setAllShapes, clearAllShapes } from '../../../../../store/slices/drawingSlice';
+import { setAllShapes, clearAllShapes, clearSelection } from '../../../../../store/slices/drawingSlice';
 import { setSaveStatus }            from '../../../../../store/slices/navigationSlice';
 import { saveDrawingShapes, loadDrawingShapes } from './drawingService';
 import { shapesToGeoJSON, emptyCollection } from './drawingUtils';
@@ -313,9 +313,24 @@ export function DrawingAutoSave() {
 // Isolated here so DrawingLayer itself never re-renders from data changes.
 // Import and mount this alongside <DrawingLayer /> in MapComponent.
 export function DrawingSync() {
-  const shapes      = useSelector((s) => s.drawing.shapes);
-  const selectedIds = useSelector((s) => s.drawing.selectedIds);
-  const inProgress  = useSelector((s) => s.drawing.inProgress);
+  const dispatch     = useDispatch();
+  const shapes       = useSelector((s) => s.drawing.shapes);
+  const selectedIds  = useSelector((s) => s.drawing.selectedIds);
+  const inProgress   = useSelector((s) => s.drawing.inProgress);
+  const currentFloor = useSelector((s) => s.api.currentFloor);
+
+  const floorId = currentFloor?.enc_id ?? null;
+
+  // Only push the current floor's shapes into MapLibre.
+  // Shapes for other floors stay in Redux (so they're saved) but are invisible.
+  const floorShapes = useMemo(
+    () => shapes.filter((s) => s.properties?.floorId === floorId),
+    [shapes, floorId],
+  );
+  const floorSelectedIds = useMemo(
+    () => selectedIds.filter((id) => floorShapes.some((s) => String(s.id) === id)),
+    [selectedIds, floorShapes],
+  );
 
   // Incremented whenever DrawingLayer finishes (re-)initializing,
   // so we re-push existing shapes into the freshly created source.
@@ -326,9 +341,15 @@ export function DrawingSync() {
   }, []);
 
   useEffect(() => {
-    if (drawingSourceRef.isDragging) return;   // drag handler owns the source
-    drawingSourceRef.setShapesData?.(shapes, selectedIds);
-  }, [shapes, selectedIds, initCount]);
+    if (drawingSourceRef.isDragging) return; // drag handler owns the source
+    drawingSourceRef.setShapesData?.(floorShapes, floorSelectedIds);
+  }, [floorShapes, floorSelectedIds, initCount]);
+
+  // Clear any selection when the active floor changes so a shape from the
+  // previous floor is never left "selected" while invisible.
+  useEffect(() => {
+    dispatch(clearSelection());
+  }, [floorId, dispatch]);
 
   useEffect(() => {
     if (!inProgress) {
