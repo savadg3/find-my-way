@@ -11,10 +11,11 @@ const FieldError = ({ error, touched }) =>
 
 const normalizeOptions = (options) =>
     options.map((item) => ({
-        pin_id: item?.enc_id,
-        id:     item?.enc_id ?? item?.id,
-        value:     item?.enc_id ?? item?.id,
-        label:  item?.title,
+        pin_id : item?.enc_id,
+        id     : item?.enc_id ?? item?.id,
+        value  : item?.enc_id ?? item?.id,
+        // label  : item?.title,
+        label  : `${item?.title } ${item.floor_plan ? `(${item.floor_plan})` : ''}`,
     }));
 
 const findOption = (options, e) =>{
@@ -131,7 +132,7 @@ const NavigationTestForm = ({
     switchFloor,
     showPath,
     handleEndDirectionclick,
-}) => {
+}) => {  
     const normalizedOptions = normalizeOptions(options);  
 
     const handleFromChange = (e) => {

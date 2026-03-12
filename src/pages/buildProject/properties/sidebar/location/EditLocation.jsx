@@ -16,8 +16,8 @@ import { useLocationSubmit, usePromotionSubmit } from './hooks/useLocationAction
 import LocationFormFields from './components/LocationFormFields';
 import useFlyToPin from '../../../../../components/map/components/hooks/useFlyToPin';
 import { FormInitializer } from '../../utils/pinServices';
-
-// ── Validation ─────────────────────────────────────────────────────────────────
+import { Loader } from '../../utils/commonComponent';
+ 
 
 const urlRegex = /^(https?:\/\/)?([\w-]+\.)+[\w-]{2,}(\/[^\s]*)?$/i;
 
@@ -34,11 +34,10 @@ const validationSchema = Yup.object().shape({
         })
     ),
 });
-
-// ── Component ──────────────────────────────────────────────────────────────────
+ 
 
 const EditLocation = () => {
-    useActiveTab('location');
+    useActiveTab('all');
 
     const dispatch       = useDispatch();
     const navigate       = useNavigate();
@@ -47,8 +46,7 @@ const EditLocation = () => {
 
     const projectData    = useSelector((state) => state.api.projectData);
     const flyToPin       = useFlyToPin();
-
-    // ── Local state ──
+ 
     const [currentPinData, setCurrentPinData] = useState({});
     const [hours, setHours]                   = useState({});
     const [promotions, setPromotions]         = useState([]);
@@ -64,16 +62,16 @@ const EditLocation = () => {
     const [planDetails, setPlanDetails]       = useState(null);
     const [modal, setModal]                   = useState(false);
     const [isSaving, setIsSaving]             = useState(false);
-
-    // boundaryAttributes mutated by map interactions — use a ref to avoid stale closures
+    const [loading, setLoading]               = useState(false);
+ 
     const boundaryAttributesRef = useRef(undefined);
     const pendingNavigation     = useRef(false);
-
-    // ── Fetch pin data on mount / subid change ──
+ 
     useEffect(() => {
         if (!decodedSubid) return;
 
         const load = async () => {
+            setLoading(true)
             try {
                 const data = await fetchLocationById(decodedSubid);
                 const { prefillData, normalizedPromotions, websiteLinks, hours } = normalizeLocationData(data);
@@ -82,9 +80,13 @@ const EditLocation = () => {
                 setPromotions(normalizedPromotions);
                 setwebsiteLinks(websiteLinks);
                 setHours(hours);
-                flyToPin(JSON.parse(data?.positions));
+                if(data?.positions){
+                    flyToPin(JSON.parse(data?.positions));
+                }
+                setLoading(false)
             } catch (err) {
                 console.error('Failed to load location:', err);
+                setLoading(false)
             }
         };
 
@@ -156,20 +158,8 @@ const EditLocation = () => {
                 height: "100%",
                  paddingBottom: 20 }}
         > 
-            {isSaving && (
-                <div style={{
-                    position:        'absolute',
-                    top: 0, left: 0, right: 0, bottom: 0,
-                    backgroundColor: 'rgba(255, 255, 255, 0.75)',
-                    display:         'flex',
-                    alignItems:      'center',
-                    justifyContent:  'center',
-                    zIndex:          9999,
-                }}>
-                    <div className="spinner-border text-primary" role="status">
-                        <span className="sr-only">Saving…</span>
-                    </div>
-                </div>
+            {(isSaving || loading) && (
+                <Loader/> 
             )}
 
             <Row className="backRow">

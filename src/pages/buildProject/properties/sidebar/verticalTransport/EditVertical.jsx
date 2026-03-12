@@ -17,9 +17,10 @@ import VerticalTransportFormFields from './components/VerticalTransportFormField
 import { useVerticalSubmit } from './hooks/useVerticalActions';
 import { toast } from 'react-toastify';
 import { setPlacedLocation } from '../../../../../store/slices/verticalPlacementSlice';
+import { Loader } from '../../utils/commonComponent';
 
 const EditVertical = () => {
-    useActiveTab('vertical_transport');
+    useActiveTab('all');
 
     const dispatch     = useDispatch();
     const navigate     = useNavigate();
@@ -39,6 +40,7 @@ const EditVertical = () => {
     const [verticalIcons, setVerticalIcons]   = useState([]);
     const [newPinAdded, setNewPinAdded]       = useState(false);
     const [isSaving, setIsSaving]             = useState(false);
+    const [loading, setLoading]               = useState(false);
 
     const pendingNavigation = useRef(false);
 
@@ -49,18 +51,21 @@ const EditVertical = () => {
         if (!decodedSubid) return;
 
         const load = async () => {
+            setLoading(true)
             try {
                 const data = await fetchVerticalById(decodedSubid);
                 const { prefillData } = normalizeVerticalData(data);
-
+                
                 dispatch(setEditingPinId(decodedSubid));
                 setCurrentPinData(prefillData);
-
+                
                 if (data?.positions) {
                     flyToPin(JSON.parse(data.positions));
                 }
+                setLoading(false)
             } catch (err) {
                 console.error('Failed to load product:', err);
+                setLoading(false)
             }
         };
 
@@ -163,21 +168,8 @@ const EditVertical = () => {
             id="inner-customizer2"
             style={{ position: 'relative', height: window.innerHeight, paddingBottom: 20 }}
         >
-            {/* Loading overlay shown while auto-saving before navigation */}
-            {isSaving && (
-                <div style={{
-                    position:        'absolute',
-                    top: 0, left: 0, right: 0, bottom: 0,
-                    backgroundColor: 'rgba(255, 255, 255, 0.75)',
-                    display:         'flex',
-                    alignItems:      'center',
-                    justifyContent:  'center',
-                    zIndex:          9999,
-                }}>
-                    <div className="spinner-border text-primary" role="status">
-                        <span className="sr-only">Saving…</span>
-                    </div>
-                </div>
+            {(isSaving || loading) && (
+                <Loader/> 
             )}
 
             <Row className="backRow">

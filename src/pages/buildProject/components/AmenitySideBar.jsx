@@ -61,7 +61,7 @@ const AmenitySideBar = ({
     onEditAmenity
 }) => {
 
-    useActiveTab('amenity');
+    useActiveTab('all');
     const [mapDivSize, setMapDivSize] = useState(window.innerHeight - 70)
     const [backClick, setBackClick] = useState(false);
     const [color, setColor] = useState(null);

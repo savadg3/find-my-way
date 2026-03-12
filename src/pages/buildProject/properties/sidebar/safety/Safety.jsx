@@ -19,7 +19,7 @@ import { decode } from '../../../../../helpers/utils';
 
 const SafetySideBar = () => {
 
-    useActiveTab('safety');
+    useActiveTab('all');
     
     const dispatch    = useDispatch();
     const navigate    = useNavigate();

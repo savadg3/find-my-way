@@ -62,6 +62,7 @@ export const ProjectHeaderProvider = ({ children }) => {
             ? { password: 111111, confirm_password: 111111 }
             : {};
             
+            let center = JSON.parse(data?.center)
             const value = {
                 ...data,
                 ...newValue,
@@ -69,17 +70,16 @@ export const ProjectHeaderProvider = ({ children }) => {
                 height: data?.height ? Number(data.height) : null,
                 logo:   data?.logo   ? image_url + data?.logo : "",
 
-                positions : {
-                    x: 76.06419342644011,
-                    y: 11.194910038185512
-                },
-                location_radius:  1,
-                location_address: "Areacode - Manjeri Road, Kunimmal, Kavanoor, Ernad, Malappuram, Kerala, 673644, India",
+                positions : center ? {
+                    x: center?.lng,
+                    y: center?.lat
+                } : null,
+                location_radius:  data?.radius_km ?? null,
+                location_address: data?.address ?? null,
             };
-
+ 
             dispatch(setProjectData(value));
-
-            // If the project already has a saved location, set the map centre.
+ 
             if (data?.positions?.x != null && data?.positions?.y != null) {
                 dispatch(setMapCenter([data.positions.x, data.positions.y]));
             }

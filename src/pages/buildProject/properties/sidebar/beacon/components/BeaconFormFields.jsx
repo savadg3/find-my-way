@@ -77,7 +77,7 @@ const BeaconFormFields = ({
                 <FieldError error={errors.beacon_name} touched={touched.beacon_name} />
             </div>
  
-            <SectionHeader title="QR Beacon Poster Content" style={{ marginTop: 12 }} />
+            {/* <SectionHeader title="QR Beacon Poster Content" style={{ marginTop: 12 }} />
 
             <div className="pl-4 pr-4">
                 <SimpleField
@@ -94,25 +94,8 @@ const BeaconFormFields = ({
                     value={values.subheading}
                     onChange={makeChangeHandler('subheading')}
                     onKeyDown={blockEnter}
-                />
-
-                {/* <div className="marginBottom">
-                    <Label className="form-labels">Content</Label>
-                    <TextEditor
-                        name="message"
-                        value={values.message}
-                        setFieldValue={setFieldValue}
-                        setSelBeaconDtls={setSelBeaconDtls}
-                        // setMaxContentLimit={setMaxContentLimit}
-                        setIsDirty={setIsDirty}
-                    /> */}
-                    {/* {maxContentLimit && (
-                        <div className="text-danger mt-1">
-                            The maximum limit has been exceeded. The characters will be automatically trimmed while saving.
-                        </div>
-                    )} */}
-                {/* </div> */}
-            </div>
+                /> 
+            </div> */}
  
             <SectionHeader title="Style" />
 

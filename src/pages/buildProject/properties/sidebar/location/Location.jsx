@@ -18,7 +18,7 @@ import { useLocationList } from './hooks/useLocationList';
 import LocationItem from './components/LocationItem';
 
 const LocationSidebar = () => {
-    useActiveTab('location');
+    useActiveTab('all');
 
     const dispatch    = useDispatch();
     const navigate    = useNavigate();
@@ -127,8 +127,7 @@ const LocationSidebar = () => {
                                 </span>
                             </div>
                         </div>
-
-                        {/* ── List ── */}
+ 
                         <div
                             className="custom-scrollbar customScroll"
                             // style={{ height: mapDivSize - 140 }}

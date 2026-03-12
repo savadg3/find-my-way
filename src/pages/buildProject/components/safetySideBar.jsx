@@ -66,7 +66,7 @@ const SafetySideBar = ({
     onEditSafety
 }) => {
 
-    useActiveTab('safety'); 
+    useActiveTab('all'); 
     const editingPinId = useSelector(state => state.api.editingPinId); 
     const allPins      = useSelector(state => state.api.allPins);
     const pinCount     = useSelector(state => state.api.pinCount); 

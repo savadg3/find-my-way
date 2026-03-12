@@ -21,9 +21,10 @@ function Navigation() {
     const dispatch    = useDispatch();
     const navigate    = useNavigate();
 
-    const allPins     = useSelector((s) => s.api.allPins);
-    const paths       = useSelector((s) => s.navigation.paths);
+    const allPins      = useSelector((s) => s.api.allPins);
+    const paths        = useSelector((s) => s.navigation.paths);
     const shortestPath = useSelector((s) => s.navigation.shortestPath);
+    const currentFloor = useSelector((s) => s.api.currentFloor);
 
     const [mapDivSize, setMapDivSize] = useState(window.innerHeight);
     const [options, setOptions]       = useState([]);
@@ -32,33 +33,29 @@ function Navigation() {
         from: '',
         to:   '',
     });
-
-    // Build the options list from all pins that have a position
+ 
     useEffect(() => {
-        const flat = Object.values(allPins).flat();
+        const { vertical, vertical_transport, ...restPins } = allPins || {}; 
+        const flat = Object.values(restPins).flat();
         setOptions(flat.filter((pin) => !!pin?.positions));
     }, [allPins]);
-
-    // Responsive height
+ 
     useEffect(() => {
         const handleResize = () => setMapDivSize(window.innerHeight);
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
-    // Note: we intentionally do NOT clear shortestPath on unmount.
-    // NavVisibility hides all nav layers when not on the nav page, so the
-    // highlight is invisible anyway.  Clearing here was the bug — it wiped
-    // Redux state whenever the component briefly unmounted, which made the
-    // red highlight disappear whenever the user changed tools or drew paths.
-    // The Clear button is the only explicit way to dismiss the highlight.
+    const goBack = () => { 
+        navigate(-1); 
+    };
 
-    const goBack = () => { navigate(-1); };
-
-    // ── Find shortest path between two pins ───────────────────────────────────
     const findPath = () => {
         const fromPinId = currentFormDetails?.from_pin_id;
-        const toPinId   = currentFormDetails?.to_pin_id;
+        const toPinId   = currentFormDetails?.to_pin_id; 
+
+        let floorPath = paths.filter((item) => item?.floorId == currentFloor?.enc_id)
+
 
         setPathError(null);
         dispatch(clearShortestPath());
@@ -72,8 +69,8 @@ function Navigation() {
             return;
         }
 
-        const startId = findPinNodeId(paths, fromPinId);
-        const endId   = findPinNodeId(paths, toPinId);
+        const startId = findPinNodeId(floorPath, fromPinId);
+        const endId   = findPinNodeId(floorPath, toPinId);
 
         if (!startId) {
             setPathError('The "From" pin is not connected to any navigation path. Draw a connection first.');
@@ -83,24 +80,17 @@ function Navigation() {
             setPathError('The "To" pin is not connected to any navigation path. Draw a connection first.');
             return;
         }
-
-        // prioritizeMain=true — sub-path edges carry a 1e9 m penalty so
-        // Dijkstra always routes through the main-path network when possible,
-        // only falling back to sub paths when there is no other connection.
-        const { nodes, adj } = buildNavGraph(paths, true);
+        
+        const { nodes, adj } = buildNavGraph(floorPath, true);
         const result = dijkstra(nodes, adj, startId, endId);
 
         if (!result) {
             setPathError('No connected path found between the selected locations.');
             return;
         }
-
-        // Reconstruct [lng, lat] positions from node IDs.
+ 
         const positions = result.nodeIds.map((id) => nodes[id]);
 
-        // Recompute true geographic distance by summing haversine between
-        // consecutive waypoints.  Dijkstra's cost includes sub-path penalties
-        // used for routing preference and must NOT be shown to the user.
         let realDistanceM = 0;
         for (let i = 1; i < positions.length; i++) {
             realDistanceM += haversineM(positions[i - 1], positions[i]);
@@ -109,7 +99,6 @@ function Navigation() {
         dispatch(setShortestPath({ positions, distanceM: realDistanceM }));
     };
 
-    // ── Clear the highlighted path ─────────────────────────────────────────────
     const clearPath = () => {
         dispatch(clearShortestPath());
         setPathError(null);

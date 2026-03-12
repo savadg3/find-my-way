@@ -1,4 +1,4 @@
-// ImageOverlayManager.jsx
+
 import { useEffect, useRef, useCallback } from 'react';
 import { useDispatch, useSelector }        from 'react-redux';
 import {
@@ -6,29 +6,16 @@ import {
 } from '../../../../../store/slices/imageOverlaySlice';
 import { clearSelection } from '../../../../../store/slices/drawingSlice';
 import { getCenter } from './imageOverlayUtils';
-
-// Fixed logical size for the selection-outline div.
-// The matrix3d homography maps this 100×100 div to the actual image quad.
+import { NAV_LAYERS } from '../Navigation/NavigationLayer';
+ 
 const OW = 100;
 const OH = 100;
-
-// Screen-space sizes for the handles — these are always in real CSS pixels,
-// never affected by the matrix3d scale of the outline div.
-const HANDLE_R  =  10;   // corner handle radius (px) — matches drawing circle-radius
-const ROT_R     =  10;   // rotate handle radius (px)
-const STEM_PX   = 36;   // stem length from image top-edge midpoint to rotate handle edge (px)
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Pure DOM helpers
-// ─────────────────────────────────────────────────────────────────────────────
-
-// Returns { el, stem, rot, corners } — all DOM elements appended separately to
-// the canvas container so they are positioned in raw screen space and never
-// inherit the matrix3d scale of the outline div.
-//
-// corners order = [nw, ne, se, sw]  →  matches image coords [tl, tr, br, bl]
-const buildHandleOverlay = () => {
-  // ── Selection outline (matrix3d div) ─────────────────────────────────────
+ 
+const HANDLE_R  =  10; 
+const ROT_R     =  10; 
+const STEM_PX   = 36; 
+ 
+const buildHandleOverlay = () => { 
   const el = document.createElement('div');
   Object.assign(el.style, {
     position:        'absolute',
@@ -37,15 +24,14 @@ const buildHandleOverlay = () => {
     height:          `${OH}px`,
     left:            '0px',
     top:             '0px',
-    border:          '1px dashed #f5a623',   // matches drawing selected-stroke
+    border:          '1px dashed #f5a623', 
     cursor:          'move',
     transformOrigin: '0 0',
     pointerEvents:   'all',
     zIndex:          500,
     display:         'none',
   });
-
-  // ── Connector stem (screen-space, rotated by positionOverlay) ─────────────
+ 
   const stem = document.createElement('div');
   Object.assign(stem.style, {
     position:        'absolute',
@@ -57,8 +43,7 @@ const buildHandleOverlay = () => {
     display:         'none',
     transformOrigin: 'left center',
   });
-
-  // ── Rotate handle (screen-space, positioned by positionOverlay) ───────────
+ 
   const D_ROT = ROT_R * 2;
   const rot   = document.createElement('div');
   rot.dataset.role = 'rotate';
@@ -73,8 +58,7 @@ const buildHandleOverlay = () => {
     zIndex:       501,
     display:      'none',
     userSelect:   'none',
-  });
-  // Tiny SVG icon — pointer-events:none keeps mousedown on the rot div
+  }); 
   const svgNS    = 'http://www.w3.org/2000/svg';
   const svg      = document.createElementNS(svgNS, 'svg');
   svg.setAttribute('width',   '7');
@@ -95,9 +79,7 @@ const buildHandleOverlay = () => {
   iconPath.setAttribute('fill', '#ffffff');
   svg.appendChild(iconPath);
   rot.appendChild(svg);
-
-  // ── Corner resize handles (screen-space, positioned by positionOverlay) ───
-  // Order: [nw, ne, se, sw] matches image source coords [tl, tr, br, bl]
+ 
   const D_HANDLE = HANDLE_R * 2;
   const corners  = [
     { corner: 'nw', cursor: 'nw-resize' },
@@ -124,18 +106,11 @@ const buildHandleOverlay = () => {
 
   return { el, stem, rot, corners };
 };
-
-// Reposition ALL overlay elements to match the current screen projection of the
-// image coordinates.  Handles are positioned in raw screen pixels so they never
-// inherit the scale from the matrix3d outline transform.
-//
-// overlayElements: { el, stem, rot, corners: [nw, ne, se, sw] }
-// coordinates:     [[lng,lat], [lng,lat], [lng,lat], [lng,lat]]  = [tl, tr, br, bl]
+ 
 const positionOverlay = ({ el, stem, rot, corners }, coordinates, map) => {
   const px = coordinates.map((c) => map.project(c));
   const [tl, tr, br, bl] = px;
-
-  // ── Selection outline: matrix3d homography (maps 100×100 → screen quad) ──
+ 
   const x0 = tl.x, y0 = tl.y;
   const x1 = tr.x, y1 = tr.y;
   const x2 = br.x, y2 = br.y;
@@ -165,38 +140,29 @@ const positionOverlay = ({ el, stem, rot, corners }, coordinates, map) => {
     transformOrigin: '0 0',
     transform: `matrix3d(${h11},${h21},0,${h31},${h12},${h22},0,${h32},0,0,1,0,${h13},${h23},0,1)`,
   });
-
-  // ── Corner handles: each fixed at the projected screen corner ─────────────
-  // corners[0]=nw=tl, [1]=ne=tr, [2]=se=br, [3]=sw=bl
+ 
   [tl, tr, br, bl].forEach((pt, i) => {
     Object.assign(corners[i].style, {
       left: `${pt.x - HANDLE_R}px`,
       top:  `${pt.y - HANDLE_R}px`,
     });
   });
-
-  // ── Stem + rotate handle: perpendicular to the image's top edge ───────────
-  // Screen space has y increasing DOWNWARD, so the CW rotation of the top-edge
-  // vector (edgeDx, edgeDy) is (edgeDy, -edgeDx), which points AWAY from the
-  // image interior (outward).  The CCW rotation (-edgeDy, edgeDx) would point
-  // INTO the image — that was the original bug placing the handle inside.
+ 
   const midX    = (tl.x + tr.x) / 2;
   const midY    = (tl.y + tr.y) / 2;
   const edgeDx  = tr.x - tl.x;
   const edgeDy  = tr.y - tl.y;
   const edgeLen = Math.sqrt(edgeDx * edgeDx + edgeDy * edgeDy) || 1;
-  const nX      =  edgeDy / edgeLen;   // outward normal X (CW rotation of edge)
-  const nY      = -edgeDx / edgeLen;   // outward normal Y (CW rotation of edge)
-
-  // Stem: starts at midX/midY, extends STEM_PX in normal direction
+  const nX      =  edgeDy / edgeLen; 
+  const nY      = -edgeDx / edgeLen; 
+ 
   const stemAngleDeg = Math.atan2(nY, nX) * (180 / Math.PI);
   Object.assign(stem.style, {
     left:      `${midX}px`,
     top:       `${midY}px`,
     transform: `rotate(${stemAngleDeg}deg)`,
   });
-
-  // Rotate handle: centre is STEM_PX + ROT_R beyond midpoint
+ 
   const rotCX = midX + nX * (STEM_PX + ROT_R);
   const rotCY = midY + nY * (STEM_PX + ROT_R);
   Object.assign(rot.style, {
@@ -204,29 +170,21 @@ const positionOverlay = ({ el, stem, rot, corners }, coordinates, map) => {
     top:  `${rotCY - ROT_R}px`,
   });
 };
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Component
-// ─────────────────────────────────────────────────────────────────────────────
+ 
 export default function ImageOverlayManager() {
   const dispatch   = useDispatch();
   const map        = useSelector((s) => s.map.mapContainer);
   const items      = useSelector((s) => s.imageOverlay.items);
   const selectedId = useSelector((s) => s.imageOverlay.selectedId);
   const activeTool = useSelector((s) => s.drawingToolbar.activeTool);
-
-  // id → { sourceId, layerId, hitLayerId }
+ 
   const registryRef = useRef(new Map());
-
-  // Live coordinates per id — updated imperatively during drag
+ 
   const liveCoordsRef = useRef(new Map());
-
-  // The ONE overlay elements object — created once on mount, never recreated
-  // Shape: { el, stem, rot, corners: [nw, ne, se, sw] }
+ 
   const overlayElRef   = useRef(null);
   const overlayItemRef = useRef(null);
-
-  // Always-current values — readable in event handlers without stale closure
+ 
   const itemsRef = useRef(items);
   useEffect(() => { itemsRef.current = items; }, [items]);
 
@@ -235,32 +193,25 @@ export default function ImageOverlayManager() {
 
   const activeToolRef = useRef(activeTool);
   useEffect(() => { activeToolRef.current = activeTool; }, [activeTool]);
-
-  // Flag to prevent the general map 'click' from clearing selection right after
-  // a hit-layer click selects an image (both fire for the same browser event).
+ 
   const selectJustFiredRef = useRef(false);
-
-  // Drag state
+ 
   const moveDragRef   = useRef({ active: false });
   const rotateDragRef = useRef({ active: false });
   const resizeDragRef = useRef({ active: false });
   const isDraggingRef = useRef(false);
-
-  // ── Create overlay elements on mount ─────────────────────────────────────
+ 
   useEffect(() => {
     if (!map) return;
     const ov        = buildHandleOverlay();
     const container = map.getCanvasContainer();
-
-    // Append each element separately — they are siblings in screen space,
-    // NOT children of the matrix3d div, so their sizes are always in real px.
+ 
     container.appendChild(ov.el);
     container.appendChild(ov.stem);
     container.appendChild(ov.rot);
     ov.corners.forEach((h) => container.appendChild(h));
     overlayElRef.current = ov;
-
-    // Reposition on every MapLibre render (handles pan / zoom / pitch)
+ 
     const onRender = () => {
       if (!overlayItemRef.current || !overlayElRef.current) return;
       const coords = liveCoordsRef.current.get(overlayItemRef.current)
@@ -279,8 +230,7 @@ export default function ImageOverlayManager() {
       overlayItemRef.current = null;
     };
   }, [map]);
-
-  // ── Show / hide overlay ───────────────────────────────────────────────────
+ 
   const showOverlay = useCallback((itemId) => {
     const ov = overlayElRef.current;
     if (!ov || !map) return;
@@ -304,21 +254,15 @@ export default function ImageOverlayManager() {
     ov.corners.forEach((h) => { h.style.display = 'none'; });
     overlayItemRef.current = null;
   }, []);
-
-  // ── Wire overlay event handlers once (on mount) ───────────────────────────
-  // Handlers read from refs so they are never stale.
+ 
   useEffect(() => {
     if (!map) return;
     const ov = overlayElRef.current;
     if (!ov) return;
     const { el, rot, corners } = ov;
-
-    // cornerMap: corner name → index in liveCoords ([tl,tr,br,bl])
+ 
     const cornerMap = { nw: 0, ne: 1, se: 2, sw: 3 };
-
-    // ── Move ─────────────────────────────────────────────────────────────
-    // Fires on the outline div. Handles are sibling elements with higher
-    // z-index, so clicks on handles never bubble to el.
+ 
     el.addEventListener('mousedown', (e) => {
       e.stopPropagation();
       e.preventDefault();
@@ -335,8 +279,7 @@ export default function ImageOverlayManager() {
         liveCoords: coords.map((c) => [...c]),
       };
     });
-
-    // ── Rotate ───────────────────────────────────────────────────────────
+ 
     rot.addEventListener('mousedown', (e) => {
       e.stopPropagation();
       e.preventDefault();
@@ -361,8 +304,7 @@ export default function ImageOverlayManager() {
         liveRotation: item.rotation || 0,
       };
     });
-
-    // ── Resize ───────────────────────────────────────────────────────────
+ 
     corners.forEach((handle) => {
       handle.addEventListener('mousedown', (e) => {
         e.stopPropagation();
@@ -382,16 +324,14 @@ export default function ImageOverlayManager() {
       });
     });
   }, [map, dispatch, hideOverlay]);
-
-  // ── Core drag logic: update sources imperatively, never touch Redux ───────
+ 
   useEffect(() => {
     if (!map) return;
 
     const updateSourcesDirect = (id, newCoords) => {
       const entry = registryRef.current.get(id);
       if (!entry) return;
-      map.getSource(entry.sourceId)?.setCoordinates(newCoords);
-      // Keep hit polygon in sync so click detection follows the image
+      map.getSource(entry.sourceId)?.setCoordinates(newCoords); 
       map.getSource(`${entry.sourceId}-hit`)?.setData({
         type: 'Feature',
         geometry: { type: 'Polygon', coordinates: [[...newCoords, newCoords[0]]] },
@@ -403,8 +343,7 @@ export default function ImageOverlayManager() {
       }
     };
 
-    const onMove = (e) => {
-      // ── Move ────────────────────────────────────────────────────────────
+    const onMove = (e) => { 
       const md = moveDragRef.current;
       if (md.active) {
         isDraggingRef.current = true;
@@ -421,8 +360,7 @@ export default function ImageOverlayManager() {
         updateSourcesDirect(md.id, newCoords);
         return;
       }
-
-      // ── Rotate ──────────────────────────────────────────────────────────
+ 
       const rr = rotateDragRef.current;
       if (rr.active) {
         isDraggingRef.current = true;
@@ -432,9 +370,7 @@ export default function ImageOverlayManager() {
         const angle  = Math.atan2(
           e.clientY - (cRect.top  + cp.y),
           e.clientX - (cRect.left + cp.x),
-        );
-        // Negate delta: atan2 is in screen space (y-down) but lat/lng has y-up.
-        // Without negation a clockwise drag produces a counter-clockwise rotation.
+        ); 
         const delta = rr.lastAngle - angle;
         const cos   = Math.cos(delta);
         const sin   = Math.sin(delta);
@@ -451,8 +387,7 @@ export default function ImageOverlayManager() {
         updateSourcesDirect(rr.id, newCoords);
         return;
       }
-
-      // ── Resize ──────────────────────────────────────────────────────────
+ 
       const rd = resizeDragRef.current;
       if (rd.active) {
         isDraggingRef.current = true;
@@ -510,8 +445,7 @@ export default function ImageOverlayManager() {
       window.removeEventListener('mouseup',   onUp);
     };
   }, [map, dispatch]);
-
-  // ── Delete key ────────────────────────────────────────────────────────────
+ 
   useEffect(() => {
     const onKey = (e) => {
       if (e.key !== 'Delete' && e.key !== 'Backspace') return;
@@ -523,29 +457,28 @@ export default function ImageOverlayManager() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [dispatch]);
-
-  // ── Deselect on tool change ───────────────────────────────────────────────
-  // Only clear image selection when switching AWAY from 'select', so that the
-  // auto-select dispatch on image import isn't immediately undone.
+ 
   useEffect(() => {
     if (activeTool !== 'select') dispatch(clearItemSelection());
     dispatch(clearSelection());
   }, [activeTool, dispatch]);
-
-  // ── selectedId change → show/hide overlay ────────────────────────────────
+ 
   useEffect(() => {
     if (selectedId) showOverlay(selectedId);
     else            hideOverlay();
   }, [selectedId, showOverlay, hideOverlay]);
 
-  // ── Sync items → MapLibre sources (add new, remove deleted) ─────────────
+  const getNavBaseLayer = () => {
+    const firstNavLayer = Object.values(NAV_LAYERS).find((l) => map.getLayer(l));
+    return firstNavLayer ?? undefined;  
+  };
+ 
   useEffect(() => {
     if (!map) return;
 
     const registry    = registryRef.current;
     const incomingIds = new Set(items.map((i) => i.id));
-
-    // Remove deleted items
+ 
     registry.forEach((entry, id) => {
       if (incomingIds.has(id)) return;
       try { if (map.getLayer(entry.hitLayerId))          map.removeLayer(entry.hitLayerId);         } catch {}
@@ -590,7 +523,7 @@ export default function ImageOverlayManager() {
         map.addLayer({
           id: layerId, type: 'raster', source: sourceId,
           paint: { 'raster-opacity': 1 },
-        });
+        }, getNavBaseLayer());
 
         map.addSource(`${sourceId}-hit`, {
           type: 'geojson',
@@ -603,7 +536,7 @@ export default function ImageOverlayManager() {
         map.addLayer({
           id: hitLayerId, type: 'fill', source: `${sourceId}-hit`,
           paint: { 'fill-opacity': 0, 'fill-color': '#000' },
-        });
+        }, getNavBaseLayer());
 
         map.on('click', hitLayerId, (e) => {
           if (activeToolRef.current !== 'select') return;
@@ -622,8 +555,7 @@ export default function ImageOverlayManager() {
       }
     });
   }, [map, items, dispatch]);
-
-  // ── Click map background → deselect ──────────────────────────────────────
+ 
   useEffect(() => {
     if (!map) return;
     const onClick = () => {
@@ -636,8 +568,7 @@ export default function ImageOverlayManager() {
     map.on('click', onClick);
     return () => map.off('click', onClick);
   }, [map, dispatch]);
-
-  // ── Cleanup ───────────────────────────────────────────────────────────────
+ 
   useEffect(() => () => {
     if (map) {
       registryRef.current.forEach(({ sourceId, layerId, hitLayerId }) => {

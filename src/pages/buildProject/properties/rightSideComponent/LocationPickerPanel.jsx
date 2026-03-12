@@ -8,6 +8,7 @@ import { postRequest } from '../../../../hooks/axiosClient';
 import { setProjectData, setShowLocationPicker } from '../../../../store/slices/projectItemSlice';
 import { setMapCenter } from '../../../../store/slices/mapSlice';
 import { decode } from '../../../../helpers/utils';
+import { useProjectHeader } from '../../Helpers/pageDiv/ProjectHeaderContext';
 import { FaCheck } from 'react-icons/fa';
 
 
@@ -110,12 +111,13 @@ export default function LocationPickerPanel() {
     const { id }      = useParams();
     const decodedId   = decode(id);
     const projectData = useSelector((state) => state.api.projectData);
-
+    
     const [activeTab,   setActiveTab]   = useState('map');  
     const [selectedLoc, setSelectedLoc] = useState(null);
     const [flyTo,       setFlyTo]       = useState(null);
     const [saving,      setSaving]      = useState(false);
-
+    
+    const { getProjectById }  = useProjectHeader();
     const hasExistingLocation = !!projectData?.positions;
 
    
@@ -137,25 +139,28 @@ export default function LocationPickerPanel() {
             // });
             
             const response = await postRequest(`project-location/${decodedId}`, { 
-                center: { x: selectedLoc.lng, y: selectedLoc.lat },
-                radius_km: selectedLoc.radiusKm,
+                center: { lng: selectedLoc.lng, lat: selectedLoc.lat },
+                radius_km: selectedLoc.radiusKm.toFixed(2),
                 address:   selectedLoc.address ?? '',
             });
 
             if (response.type === 1) {
                 dispatch(setProjectData({
                     positions:        { x: selectedLoc.lng, y: selectedLoc.lat },
-                    location_radius:  selectedLoc.radiusKm,
+                    location_radius:  selectedLoc.radiusKm.toFixed(2),
                     location_address: selectedLoc.address,
                 }));
                 dispatch(setMapCenter([selectedLoc.lng, selectedLoc.lat]));
                 dispatch(setShowLocationPicker(false));
                 toast.success('Location saved successfully');
+                getProjectById()
             } else {
-                toast.error('Failed to save location. Please try again.');
+                toast.error(response.errormessage ?? 'Failed to save location. Please try again.');
             }
-        } catch {
-            toast.error('Failed to save location. Please try again.');
+ 
+        } catch (err) {
+            console.log(err,"err");
+            toast.error(err.message ?? 'Failed to save location. Please try again.');
         } finally {
             setSaving(false);
         }
@@ -220,36 +225,6 @@ export default function LocationPickerPanel() {
                         </button>
                     )}
                 </div>
-
-             
-                {/* <div style={{ display: 'flex' }}>
-                    {[
-                        { key: 'map',     label: 'Select on Map'  },
-                        { key: 'address', label: 'Enter Address'  },
-                    ].map(({ key, label }) => (
-                        <button
-                            key={key}
-                            type="button"
-                            onClick={() => setActiveTab(key)}
-                            style={{
-                                flex:        1,
-                                padding:     '8px 12px',
-                                fontSize:    '0.8125rem',
-                                fontWeight:  500,
-                                border:      'none',
-                                borderBottom: activeTab === key
-                                    ? '2px solid #3b82f6'
-                                    : '2px solid transparent',
-                                background:  'none',
-                                color:       activeTab === key ? '#3b82f6' : '#6b7280',
-                                cursor:      'pointer',
-                                transition:  'color 0.15s, border-color 0.15s',
-                            }}
-                        >
-                            {label}
-                        </button>
-                    ))}
-                </div> */}
 
                 <div style={{
                     display:       'inline-flex',

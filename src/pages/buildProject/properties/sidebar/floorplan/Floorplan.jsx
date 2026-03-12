@@ -14,6 +14,7 @@ import AddFloorPlanModal from './components/AddFloorPlanModal';
 import { useFloorPlanActions } from './hooks/useFloorPlanActions';
 import { setCurrentFloor } from '../../../../../store/slices/projectItemSlice';
 import { useDispatch } from 'react-redux';
+import { Loader } from '../../utils/commonComponent';
 
 const FloorPlan = () => {
     const navigate            = useNavigate();
@@ -116,18 +117,22 @@ const FloorPlan = () => {
             </div>
  
             <div className="custom-scrollbar customScroll" style={{ height:'calc(100vh - 190px)' }}>
-                {filteredData.map((plan, idx) => (
-                    <FloorItem
-                        key={plan.enc_id}
-                        index={idx}
-                        plan={plan}
-                        floorsArray={filteredData}
-                        onEdit={handleEdit}
-                        onDelete={handleDelete}
-                        onReorder={handleReorder}
-                        onDropEnd={loadFloors}
-                    />
-                ))}
+                {
+                    loading  ? 
+                        <Loader/>
+                    : filteredData.map((plan, idx) => (
+                        <FloorItem
+                            key={plan.enc_id}
+                            index={idx}
+                            plan={plan}
+                            floorsArray={filteredData}
+                            onEdit={handleEdit}
+                            onDelete={handleDelete}
+                            onReorder={handleReorder}
+                            onDropEnd={loadFloors}
+                        />
+                    ))
+                }
  
                 <div style={{ marginTop: '1rem' }}>
                     <div className="warning-pin-div">

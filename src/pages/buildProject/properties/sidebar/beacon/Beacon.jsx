@@ -22,7 +22,7 @@ import { encode } from '../../../../../helpers/utils';
 
 const BeaconSideBar = () => {
 
-    useActiveTab('beacon');
+    useActiveTab('all');
     
     const dispatch    = useDispatch();
     const navigate    = useNavigate();
