@@ -24,7 +24,7 @@ const BaseMap = forwardRef(
                 ...config
             };
             
-            const bounds = getBoundsFromCenter(defaultConfig.center, 0.25);
+            const bounds = getBoundsFromCenter(defaultConfig.center, defaultConfig.radius);
             
             const newMap = new maplibregl.Map({
                 container: mapContainer.current,

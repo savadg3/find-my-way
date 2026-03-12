@@ -1,10 +1,5 @@
-// navigationUtils.js
-// Pure math utilities for the navigation path system.
-// No React/Redux — safe to call from anywhere.
-
 import { v4 as uuid } from 'uuid';
 
-// ── Geodesic distance (Haversine) in metres ───────────────────────────────────
 const R = 6371000;
 export const haversineM = ([lng1, lat1], [lng2, lat2]) => {
   const toRad = (d) => (d * Math.PI) / 180;
@@ -16,12 +11,9 @@ export const haversineM = ([lng1, lat1], [lng2, lat2]) => {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 };
 
-// ── 2-D Euclidean distance between two pixel {x,y} points ────────────────────
 export const dist2D = (a, b) =>
   Math.sqrt((b.x - a.x) ** 2 + (b.y - a.y) ** 2);
 
-// ── Nearest point on a 2-D segment a→b to point p ────────────────────────────
-// Returns { point:{x,y}, t:[0,1] fraction, dist:px }
 export const nearestOnSeg2D = (p, a, b) => {
   const dx = b.x - a.x;
   const dy = b.y - a.y;
@@ -32,7 +24,6 @@ export const nearestOnSeg2D = (p, a, b) => {
   return { point, t, dist: dist2D(p, point) };
 };
 
-// ── Arc-length of a polyline (points = [[lng,lat],...]) ───────────────────────
 export const polylineLength = (positions) => {
   let len = 0;
   for (let i = 0; i < positions.length - 1; i++) {
@@ -41,7 +32,6 @@ export const polylineLength = (positions) => {
   return len;
 };
 
-// ── Get [lng,lat] at fractional arc-length t ∈ [0,1] along a polyline ────────
 export const getPositionAtT = (positions, t) => {
   if (!positions || positions.length === 0) return null;
   if (positions.length === 1) return positions[0];
@@ -71,8 +61,6 @@ export const getPositionAtT = (positions, t) => {
   return positions[positions.length - 1];
 };
 
-// ── Nearest point on a polyline to a screen-space point ──────────────────────
-// Returns { position:[lng,lat], t:[0,1], segIndex, distPx }
 export const nearestOnPolyline2D = (screenPt, pathPoints, map) => {
   let best = { distPx: Infinity, t: 0, segIndex: 0, position: null };
 
@@ -89,9 +77,7 @@ export const nearestOnPolyline2D = (screenPt, pathPoints, map) => {
   for (let i = 0; i < px.length - 1; i++) {
     const { point, t, dist: distPx } = nearestOnSeg2D(screenPt, px[i], px[i + 1]);
     if (distPx < best.distPx) {
-      // Convert pixel snap point back to lng/lat
       const lngLat = map.unproject(point);
-      // Global t along the whole polyline
       const globalT = total > 0 ? (acc + t * segs[i]) / total : 0;
       best = { distPx, t: globalT, segIndex: i, position: [lngLat.lng, lngLat.lat] };
     }
@@ -101,25 +87,18 @@ export const nearestOnPolyline2D = (screenPt, pathPoints, map) => {
   return best;
 };
 
-// ── Snap detection ─────────────────────────────────────────────────────────────
-// Returns the best snap target for a given screen position.
-// Priority: pin → existing node → path segment
-// Returns null if nothing within threshold.
 export const findSnap = ({
-  lngLat,     // [lng, lat] of the mouse / click
-  map,        // MapLibre map instance
-  paths,      // current paths array from Redux
-  visiblePins,// visible pin objects from Redux (with enc_id, positions)
-  excludePointId = null, // ignore this point (when dragging it)
+  lngLat,
+  map,
+  paths,
+  visiblePins,
+  excludePointId = null,
   nodeThresholdPx  = 14,
   segThresholdPx   = 16,
   pinThresholdPx   = 18,
 }) => {
   const screenPt = map.project(lngLat);
 
-  // 1. Pins ─────────────────────────────────────────────────────────────────
-  // Markers use anchor='center', so the stored [lng,lat] IS the visual centre
-  // of the icon. No pixel offset needed — snap to the coordinate directly.
   for (const pin of (visiblePins || [])) {
     try {
       const pos = parsePinPosition(pin.positions);
@@ -128,10 +107,9 @@ export const findSnap = ({
       if (dist2D(screenPt, pxPin) <= pinThresholdPx) {
         return { type: 'pin', pinId: pin.enc_id, position: pos };
       }
-    } catch { /* skip bad pin */ }
+    } catch {  }
   }
 
-  // 2. Existing nodes ────────────────────────────────────────────────────────
   for (const path of paths) {
     for (const pt of path.points) {
       if (pt.id === excludePointId) continue;
@@ -142,7 +120,6 @@ export const findSnap = ({
     }
   }
 
-  // 3. Path segments ─────────────────────────────────────────────────────────
   let bestSeg = null;
   let bestDist = segThresholdPx;
   for (const path of paths) {
@@ -165,7 +142,6 @@ export const findSnap = ({
   return null;
 };
 
-// ── Parse pin position {x,y} → [lng,lat] ─────────────────────────────────────
 export const parsePinPosition = (positions) => {
   try {
     const parsed = typeof positions === 'string' ? JSON.parse(positions) : positions;
@@ -178,7 +154,6 @@ export const parsePinPosition = (positions) => {
   }
 };
 
-// ── Build GeoJSON for rendering ───────────────────────────────────────────────
 export const pathsToLinesGeoJSON = (paths, selectedPathId) => {
   const features = [];
   for (const path of paths) {
@@ -191,7 +166,7 @@ export const pathsToLinesGeoJSON = (paths, selectedPathId) => {
         coordinates: path.points.map((p) => p.position),
       },
       properties: {
-        pathId:   path.id,   // explicit — hitTestPath reads this, never relies on f.id
+        pathId:   path.id,
         pathType: path.type,
         selected: path.id === selectedPathId,
       },
@@ -213,7 +188,7 @@ export const nodesToGeoJSON = (paths, selectedPathId, selectedPointId) => {
         id:   pt.id,
         geometry: { type: 'Point', coordinates: pt.position },
         properties: {
-          pointId:     pt.id,        // explicit — hitTestNode reads this, never relies on f.id
+          pointId:     pt.id, 
           pathId:      path.id,
           pathType:    path.type,
           pinId:       pt.pinId    || null,
@@ -234,7 +209,6 @@ export const previewToGeoJSON = (inProgress, mousePos) => {
   const pathType = inProgress.type;
   const features = [];
 
-  // ── Preview line (includes live mouse position) ──
   const lineCoords = [...inProgress.points.map((p) => p.position)];
   if (mousePos) lineCoords.push(mousePos);
   if (lineCoords.length >= 2) {
@@ -245,7 +219,6 @@ export const previewToGeoJSON = (inProgress, mousePos) => {
     });
   }
 
-  // ── A dot at every committed click point ──
   for (const pt of inProgress.points) {
     features.push({
       type: 'Feature',
@@ -259,12 +232,6 @@ export const previewToGeoJSON = (inProgress, mousePos) => {
 
 export const emptyCol = () => ({ type: 'FeatureCollection', features: [] });
 
-// ── Decompose a global arc-length fraction into { segIndex, localT } ─────────
-// segIndex = which segment [i, i+1] this fraction falls on (0-based)
-// localT   = 0..1 fraction within that segment
-// Use the OLD path shape to decompose — then reAnchorSnapPoint re-applies the
-// same (segIndex, localT) to the NEW shape, keeping anchors on unchanged
-// segments perfectly still.
 export const decomposeSnapT = (pathPoints, globalT) => {
   if (!pathPoints || pathPoints.length < 2) return { segIndex: 0, localT: 0 };
   const segs = [];
@@ -288,11 +255,6 @@ export const decomposeSnapT = (pathPoints, globalT) => {
   return { segIndex: segs.length - 1, localT: 1 };
 };
 
-// ── Re-anchor a snap point to (segIndex, localSegT) on a (re)shaped path ─────
-// Returns { position:[lng,lat], snapT:number } or null if the segment is missing.
-// For anchors on unchanged segments: position is identical to before (lerp of
-// same two unmoved endpoints), so they stay visually still even though all
-// floating anchors are processed through this function.
 export const reAnchorSnapPoint = (newPathPoints, segIndex, localSegT) => {
   const a = newPathPoints[segIndex]?.position;
   const b = newPathPoints[segIndex + 1]?.position;
@@ -301,7 +263,7 @@ export const reAnchorSnapPoint = (newPathPoints, segIndex, localSegT) => {
     a[0] + localSegT * (b[0] - a[0]),
     a[1] + localSegT * (b[1] - a[1]),
   ];
-  // Recompute global snapT so Dijkstra virtual-edge computation stays accurate
+  
   const segs = [];
   let total = 0;
   for (let i = 0; i < newPathPoints.length - 1; i++) {
@@ -316,7 +278,7 @@ export const reAnchorSnapPoint = (newPathPoints, segIndex, localSegT) => {
   return { position: newPos, snapT };
 };
 
-// ── New Point factory ─────────────────────────────────────────────────────────
+
 export const makePoint = (position, extra = {}) => ({
   id: uuid(),
   position,
@@ -326,22 +288,11 @@ export const makePoint = (position, extra = {}) => ({
   ...extra,
 });
 
-// ── Build graph for Dijkstra ──────────────────────────────────────────────────
-// Returns { nodes: { id: [lng,lat] }, adj: { id: [{ to, weight }] } }
-//
-// prioritizeMain (default true):
-//   Sub-path edges receive a 1 × 10⁹ m penalty so Dijkstra always routes
-//   through main-path edges when any main-path connection exists.
-//   The penalty is large enough to guarantee preference for main paths even
-//   when the main-path detour is thousands of metres longer than the sub-path
-//   shortcut.  Virtual snap-edges (sub-path → main-path handoff) are NOT
-//   penalised — they are the intended on/off ramp and must stay cheap.
-//   Call with prioritizeMain=false to get raw-distance routing (legacy).
-const SUB_PATH_PENALTY = 1e9; // 1 × 10⁹ m ≈ 1 000 000 km
+const SUB_PATH_PENALTY = 1e9;
 
 export const buildNavGraph = (paths, prioritizeMain = true) => {
-  const nodes = {}; // id → [lng,lat]
-  const adj   = {}; // id → [{to, weight}]
+  const nodes = {};
+  const adj   = {};
 
   const ensureNode = (id, pos) => {
     if (!nodes[id]) {
@@ -354,15 +305,11 @@ export const buildNavGraph = (paths, prioritizeMain = true) => {
     adj[b].push({ to: a, weight: w });
   };
 
-  // 1. Register all nodes and path edges
   for (const path of paths) {
     for (const pt of path.points) {
       ensureNode(pt.id, pt.position);
     }
-    // Sub-path segments get a massive penalty when prioritizeMain is on,
-    // so any route through the main-path network is always preferred.
-    // The penalty is additive (not multiplicative) so zero-length edges
-    // still cost the full penalty and Dijkstra can never "sneak through" them.
+    
     const subPenalty = (prioritizeMain && path.type === 'sub') ? SUB_PATH_PENALTY : 0;
     for (let i = 0; i < path.points.length - 1; i++) {
       const a = path.points[i];
@@ -372,16 +319,12 @@ export const buildNavGraph = (paths, prioritizeMain = true) => {
     }
   }
 
-  // 2. Connect snap endpoints to the main path segment endpoints
-  // When a sub-path endpoint has snapPathId/snapT, create virtual edges to
-  // the surrounding main-path nodes (the actual traversable connections).
   for (const path of paths) {
     for (const pt of path.points) {
       if (!pt.snapPathId) continue;
       const hostPath = paths.find((p) => p.id === pt.snapPathId);
       if (!hostPath || hostPath.points.length < 2) continue;
 
-      // Find which segment this t falls on
       const positions = hostPath.points.map((p) => p.position);
       const segs = [];
       let total = 0;
@@ -413,8 +356,6 @@ export const buildNavGraph = (paths, prioritizeMain = true) => {
   return { nodes, adj };
 };
 
-// ── Dijkstra ──────────────────────────────────────────────────────────────────
-// Returns { distanceM, nodeIds } or null if no path found.
 export const dijkstra = (nodes, adj, startId, endId) => {
   if (!nodes[startId] || !nodes[endId]) return null;
   if (startId === endId) return { distanceM: 0, nodeIds: [startId] };
@@ -425,7 +366,6 @@ export const dijkstra = (nodes, adj, startId, endId) => {
   Object.keys(nodes).forEach((id) => { dist[id] = Infinity; });
   dist[startId] = 0;
 
-  // MinHeap via sorted array (fine for small graphs < 10k nodes)
   const pq = [{ id: startId, d: 0 }];
 
   while (pq.length > 0) {
@@ -455,7 +395,6 @@ export const dijkstra = (nodes, adj, startId, endId) => {
   return { distanceM: dist[endId], nodeIds };
 };
 
-// ── Find node ID for a pin (its first path endpoint matching pinId) ────────────
 export const findPinNodeId = (paths, pinId) => {
   for (const path of paths) {
     for (const pt of path.points) {
@@ -465,16 +404,6 @@ export const findPinNodeId = (paths, pinId) => {
   return null;
 };
 
-// ── Auto-generate sub paths ───────────────────────────────────────────────────
-// For each pin that has no sub-path endpoint yet, find the nearest main-path
-// segment and create a sub-path identical to one drawn manually (pen tool
-// sub→main snap): a floating yellow anchor with snapPathId + snapT.
-// The main path is NOT modified — buildNavGraph handles connectivity via snapT.
-//
-// Returns { newSubPaths }
-// Caller dispatches bulkAddPaths(newSubPaths).
-// Main paths are NOT modified — graph connectivity is handled by buildNavGraph
-// via snapPathId/snapT on the sub-path endpoint, exactly like manual drawing.
 export const autoGenerateSubPaths = (paths, visiblePins, map, currentFloor) => {
   const mainPaths = paths.filter((p) => p.type === 'main' && p.floorId == currentFloor?.enc_id);
   if (mainPaths.length === 0) return { newSubPaths: [] };
@@ -484,9 +413,6 @@ export const autoGenerateSubPaths = (paths, visiblePins, map, currentFloor) => {
   for (const pin of visiblePins) {
     const pinId = pin.enc_id;
 
-    // Skip if already connected — covers both cases:
-    //  • a sub-path whose endpoint anchors this pin
-    //  • a main-path that was drawn directly through this pin
     const alreadyConnected = paths.some(
       (p) => p.points.some((pt) => pt.pinId === pinId)
     );
@@ -495,8 +421,6 @@ export const autoGenerateSubPaths = (paths, visiblePins, map, currentFloor) => {
     const pinPos = parsePinPosition(pin.positions);
     if (!pinPos) continue;
 
-    // Markers use anchor='center', so pinPos IS the visual centre of the icon.
-    // Find the nearest point on any main path in screen space.
     let best = null;
     let bestDistPx = Infinity;
     const screenPin = map.project(pinPos);
@@ -505,7 +429,6 @@ export const autoGenerateSubPaths = (paths, visiblePins, map, currentFloor) => {
       if (mp.points.length < 2) continue;
       const pxPoints = mp.points.map((pt) => map.project(pt.position));
 
-      // Arc-length totals for global-T calculation
       let acc = 0;
       const segs = [];
       let total = 0;
@@ -535,12 +458,6 @@ export const autoGenerateSubPaths = (paths, visiblePins, map, currentFloor) => {
 
     if (!best) continue;
 
-    // Build the sub-path identically to a manually drawn sub→main snap:
-    //   point[0] — pin anchor  (pinId links it to the map marker)
-    //   point[1] — floating yellow anchor on the main path
-    //              (snapPathId + snapT → buildNavGraph creates the virtual edge;
-    //               isSnap = !!snapPathId → nodesToGeoJSON renders it yellow)
-    // The main path is NOT modified; no shared UUID trick needed.
     newSubPaths.push({
       id:   uuid(),
       type: 'sub',
@@ -551,7 +468,35 @@ export const autoGenerateSubPaths = (paths, visiblePins, map, currentFloor) => {
       ],
     });
   }
-
-  console.log({newSubPaths,paths,mainPaths});
-  return { newSubPaths };
+ 
+  return { newSubPaths }; 
+  
 };
+
+
+// function generateStressPath(points = 1000) {
+//   const baseLng = 75.7792;
+//   const baseLat = 11.2586;
+
+//   const path = {
+//     id: "stress-main-path-001",
+//     type: "main",
+//     floorId: 433,
+//     points: []
+//   };
+
+//   for (let i = 0; i < points; i++) {
+//     path.points.push({
+//       id: `p${i + 1}`,
+//       position: [
+//         baseLng + i * 0.00001,
+//         baseLat + i * 0.00001
+//       ],
+//       pinId: null,
+//       snapPathId: null,
+//       snapT: null
+//     });
+//   }
+
+//   return [path];
+// }

@@ -216,15 +216,20 @@ const MapMarkers = React.memo(() => {
   const paths           = useSelector((s) => s.navigation.paths);
   const selectedPathId  = useSelector((s) => s.navigation.selectedPathId);
   const selectedPointId = useSelector((s) => s.navigation.selectedPointId);
+  const shortestPath    = useSelector((s) => s.navigation.shortestPath);
  
   const isSelectToolRef    = useRef(isSelectTool);
+  const isNavigationRef    = useRef(isNavigation);
   const pathsRef           = useRef(paths);
   const selectedPathIdRef  = useRef(selectedPathId);
   const selectedPointIdRef = useRef(selectedPointId);
+  const currentFloorRef    = useRef(currentFloor);
   isSelectToolRef.current    = isSelectTool;
+  isNavigationRef.current    = isNavigation;
   pathsRef.current           = paths;
   selectedPathIdRef.current  = selectedPathId;
   selectedPointIdRef.current = selectedPointId;
+  currentFloorRef.current    = currentFloor;
 
   const markerRegistryRef = useRef(new Map());
  
@@ -251,8 +256,9 @@ const MapMarkers = React.memo(() => {
   }, [allPins, activeTab, currentFloor, isDrawing]);
   
   const handleDragEnd = useCallback(
-    async (marker, feature) => { 
-      if (isNavigation && !isSelectToolRef.current) return;
+    async (marker, feature) => {
+       
+      if (isNavigationRef.current && !isSelectToolRef.current) return;
 
       const { lng, lat } = marker.getLngLat(); 
       const { category, enc_id } = feature;
@@ -349,7 +355,7 @@ const MapMarkers = React.memo(() => {
       try {
         marker = new maplibregl.Marker({
           element, 
-          draggable: isNavigation ? isSelectToolRef.current : true,
+          draggable: shortestPath?.positions ? false : isNavigation ? isSelectToolRef.current : true,
         })
         .setLngLat([pos.x, pos.y])
         .addTo(map);
@@ -357,30 +363,26 @@ const MapMarkers = React.memo(() => {
         console.error(`Failed to create marker for ${enc_id}:`, err);
         return;
       }
-      
+ 
       element.addEventListener('click', (e) => {
-        // e.stopPropagation();
+        // e.stopPropagation(); 
         bringToFront(marker);   
       });
       
       marker.on('dragstart', () => bringToFront(marker));
-
-      // Live drag: imperatively push updated path lines + nodes into MapLibre
-      // without dispatching to Redux (avoids expensive re-renders every frame).
-      // The final position is committed to Redux in handleDragEnd (dragend).
+ 
       marker.on('drag', () => {
         // if (isNavigation && !isSelectToolRef.current) return;
-        if (!isSelectToolRef.current) return;
-        // anchor='center' → getLngLat() is already the icon centre, no offset needed
+        // if (!isSelectToolRef.current) return; 
         const { lng, lat } = marker.getLngLat();
-        const newPos = [lng, lat];
-        const curPaths = pathsRef.current;
+        const newPos = [lng, lat]; 
 
-        // Build updated paths with all pin-anchored points moved to newPos.
-        // Paths with no point anchored to this pin are returned unchanged. 
+        const floorId  = currentFloorRef.current?.enc_id ?? null;
+        const curPaths = pathsRef.current.filter((p) => p.floorId === floorId);
+ 
         const updatedPaths = curPaths.map((path) => {
           const hasPinPt = path.points.some((pt) => pt.pinId === enc_id);
-          if (!hasPinPt) return path;
+          if (!hasPinPt) return path; 
           return {
             ...path,
             points: path.points.map((pt) =>
@@ -404,10 +406,10 @@ const MapMarkers = React.memo(() => {
       });
       registry.clear();
     };
-  }, [map, visiblePins, editingPinId, bringToFront, handleDragEnd]);
+  }, [map, visiblePins, editingPinId, isNavigation, shortestPath, bringToFront, handleDragEnd]);
   
   return null;
-});
+}); 
 
 MapMarkers.displayName = 'MapMarkers';
 

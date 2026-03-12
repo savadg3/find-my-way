@@ -15,6 +15,7 @@ import AutosaveForm from '../../../components/AutoSaveForm';
 
 import { fetchFloorPlanById, saveFloorPlan } from './services/floorPlanService';
 import { FormInitializer } from '../../utils/pinServices'; 
+import { Loader } from '../../utils/commonComponent';
  
 const ValidationSchema = Yup.object().shape({
     floor_plan: Yup.string().required('This field is required.'),
@@ -68,9 +69,10 @@ const FloorPlanView = () => {
     const [zoomValue, setZoomValue] = useState(1);
  
     useEffect(() => {
-        if (!decodedSubid) return;
+        if (!decodedSubid) return; 
 
         const load = async () => {
+            setLoading(true)
             try {
                 const data = await fetchFloorPlanById(decodedSubid);
 
@@ -92,7 +94,9 @@ const FloorPlanView = () => {
                 }
             } catch (err) {
                 console.error('Failed to load floor plan:', err);
-            }
+            }finally {
+            setLoading(false);
+        }
         };
 
         load();
@@ -102,8 +106,8 @@ const FloorPlanView = () => {
         if (decodedId) getProjectById(decodedId);
     }, [decodedId]);
  
-    const handleSave = async (values, { setFieldError }) => {
-        setLoading(true);
+    const handleSave = async (values, { setFieldError }) => { 
+        // setLoading(true);
         try {
             const response = await saveFloorPlan({ values, projectData });
 
@@ -113,7 +117,7 @@ const FloorPlanView = () => {
         } catch (err) {
             console.error('Save floor plan failed:', err);
         } finally {
-            setLoading(false);
+            // setLoading(false);
         }
     };
  
@@ -162,6 +166,8 @@ const FloorPlanView = () => {
                     </div>
                 </Col>
             </Row>
+
+            {loading && <Loader/>}
 
             <Formik
                 initialValues={initialValues}

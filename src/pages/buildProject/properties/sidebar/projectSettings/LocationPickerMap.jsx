@@ -1,13 +1,7 @@
-// LocationPickerMap.jsx
-// Standalone MapLibre map for initial project-location selection.
-// Does NOT dispatch to Redux — isolated from the main map state.
-
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import maplibregl from 'maplibre-gl';
+import { useSelector } from 'react-redux';
 
-// ── Geo helpers ───────────────────────────────────────────────────────────────
-
-/** Generate a circle GeoJSON polygon from a center [lng, lat] and radius (km). */
 function makeCircleGeoJSON(center, radiusKm, steps = 64) {
     const [lng, lat] = center;
     const R = 6371;
@@ -26,7 +20,6 @@ function makeCircleGeoJSON(center, radiusKm, steps = 64) {
     };
 }
 
-/** The drag-handle point sits on the east edge of the circle. */
 function getHandlePoint(center, radiusKm) {
     const [lng, lat] = center;
     const R = 6371;
@@ -35,7 +28,6 @@ function getHandlePoint(center, radiusKm) {
     return [lng + dLng, lat];
 }
 
-/** Haversine distance between two [lng, lat] points, returns km. */
 function haversineKm([lng1, lat1], [lng2, lat2]) {
     const R = 6371;
     const φ1 = (lat1 * Math.PI) / 180;
@@ -48,7 +40,6 @@ function haversineKm([lng1, lat1], [lng2, lat2]) {
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-/** Reverse-geocode [lng, lat] via Nominatim. */
 async function reverseGeocode(lng, lat) {
     try {
         const r = await fetch(
@@ -61,32 +52,25 @@ async function reverseGeocode(lng, lat) {
     }
 }
 
-// ── Component ─────────────────────────────────────────────────────────────────
-
-/**
- * Props:
- *   defaultRadiusKm  – initial circle radius (default 1)
- *   flyTo            – [lng, lat] — when changed, map flies to that point and
- *                      auto-places a pin there (used by "Enter Address" tab)
- *   onSelect         – callback({ lng, lat, radiusKm, address })
- */
 export default function LocationPickerMap({
     defaultRadiusKm = 1,
     flyTo = null,
     onSelect,
     mapHeight = '260px',
 }) {
-    const containerRef = useRef(null);
-    const mapRef       = useRef(null);
-    const markerRef    = useRef(null);
-    const centerRef    = useRef(null);
-    const radiusRef    = useRef(defaultRadiusKm);
-    const isDragging   = useRef(false);
+    const containerRef  = useRef(null);
+    const mapRef        = useRef(null);
+    const markerRef     = useRef(null);
+    const centerRef     = useRef(null);
+    const radiusRef     = useRef(defaultRadiusKm);
+    const isDragging    = useRef(false); 
+    const isMarkerDrag  = useRef(false); 
+
+    const projectData = useSelector((state) => state.api.projectData);
 
     const [radiusKm, setRadiusKm] = useState(defaultRadiusKm);
     const [hasPin,   setHasPin]   = useState(false);
-
-    // ── Circle layer helpers ──────────────────────────────────────────────────
+ 
     const updateLayers = useCallback((map, center, radius) => {
         if (!map || !map.getSource('lp-circle')) return;
         map.getSource('lp-circle').setData({
@@ -101,21 +85,46 @@ export default function LocationPickerMap({
             }],
         });
     }, []);
+ 
+    const placePin = useCallback(async (map, lngLat, skipGeocode = false) => {
+        if (markerRef.current) { 
+            markerRef.current.setLngLat(lngLat);
+        } else { 
+            const marker = new maplibregl.Marker({ color: '#3b82f6', draggable: true })
+                .setLngLat(lngLat)
+                .addTo(map);
+ 
+            marker.on('drag', () => {
+                isMarkerDrag.current = true;
+                const { lng, lat } = marker.getLngLat();
+                const newCenter = [lng, lat];
+                centerRef.current = newCenter;
+                updateLayers(map, newCenter, radiusRef.current);
+            });
+ 
+            marker.on('dragend', async () => {
+                isMarkerDrag.current = false;
+                const { lng, lat } = marker.getLngLat();
+                const newCenter = [lng, lat];
+                centerRef.current = newCenter;
+                updateLayers(map, newCenter, radiusRef.current);
+                const address = await reverseGeocode(lng, lat);
+                onSelect?.({ lng, lat, radiusKm: radiusRef.current, address });
+            });
 
-    // ── Place pin + circle + notify parent ───────────────────────────────────
-    const placePin = useCallback(async (map, lngLat) => {
-        if (markerRef.current) markerRef.current.remove();
-        markerRef.current = new maplibregl.Marker({ color: '#3b82f6' })
-            .setLngLat(lngLat)
-            .addTo(map);
+            markerRef.current = marker;
+        }
+
         centerRef.current = lngLat;
         setHasPin(true);
         updateLayers(map, lngLat, radiusRef.current);
-        const address = await reverseGeocode(lngLat[0], lngLat[1]);
-        onSelect?.({ lng: lngLat[0], lat: lngLat[1], radiusKm: radiusRef.current, address });
-    }, [updateLayers, onSelect]);
 
-    // ── Map init ─────────────────────────────────────────────────────────────
+        if (!skipGeocode) {
+            const address = await reverseGeocode(lngLat[0], lngLat[1]);
+            onSelect?.({ lng: lngLat[0], lat: lngLat[1], radiusKm: radiusRef.current, address });
+        }
+    }, [updateLayers, onSelect]);
+ 
     useEffect(() => {
         if (!containerRef.current || mapRef.current) return;
 
@@ -128,7 +137,7 @@ export default function LocationPickerMap({
         });
         mapRef.current = map;
 
-        map.on('load', () => { 
+        map.on('load', () => {
             map.addSource('lp-circle', {
                 type: 'geojson',
                 data: { type: 'FeatureCollection', features: [] },
@@ -149,7 +158,7 @@ export default function LocationPickerMap({
                     'line-dasharray': [5, 3],
                 },
             });
- 
+
             map.addSource('lp-handle', {
                 type: 'geojson',
                 data: { type: 'FeatureCollection', features: [] },
@@ -165,30 +174,15 @@ export default function LocationPickerMap({
                     'circle-stroke-width': 2.5,
                 },
             });
- 
-            navigator.geolocation?.getCurrentPosition(
-                ({ coords }) => {
-                    map.flyTo({
-                        center: [coords.longitude, coords.latitude],
-                        zoom: 18,
-                        duration: 800,
-                    });
-                },
-                () => {}
-            );
         });
-
-        // Click → place pin
+ 
         map.on('click', (e) => {
-            if (isDragging.current) return;
+            if (isDragging.current || isMarkerDrag.current) return;
             placePin(map, [e.lngLat.lng, e.lngLat.lat]);
         });
-
-        // Drag handle → resize circle
+ 
         map.on('mousedown', (e) => {
-            const hits = map.queryRenderedFeatures(e.point, {
-                layers: ['lp-handle-dot'],
-            });
+            const hits = map.queryRenderedFeatures(e.point, { layers: ['lp-handle-dot'] });
             if (!hits.length) return;
             isDragging.current = true;
             map.dragPan.disable();
@@ -228,7 +222,6 @@ export default function LocationPickerMap({
         map.on('mouseup',    finishDrag);
         map.on('mouseleave', finishDrag);
 
-        // Cursor hint on handle
         map.on('mouseenter', 'lp-handle-dot', () => {
             if (!isDragging.current) map.getCanvas().style.cursor = 'ew-resize';
         });
@@ -238,43 +231,87 @@ export default function LocationPickerMap({
 
         return () => {
             map.remove();
-            mapRef.current = null;
+            mapRef.current  = null;
+            markerRef.current = null;
         };
-    }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-    // ── Fly to address (from "Enter Address" tab) ─────────────────────────────
+    }, []); 
+ 
     useEffect(() => {
         if (!flyTo || !mapRef.current) return;
         const map = mapRef.current;
-        const lngLat = flyTo; // [lng, lat]
-        map.flyTo({ center: lngLat, zoom: 18, duration: 700 });
-        // Auto-place pin at the searched address
-        if (map.loaded()) {
-            placePin(map, lngLat);
+        map.flyTo({ center: flyTo, zoom: 18, duration: 700 });
+        if (map.isStyleLoaded() && map.getSource('lp-circle')) {
+            placePin(map, flyTo);
         } else {
-            map.once('load', () => placePin(map, lngLat));
+            map.once('load', () => placePin(map, flyTo));
         }
-    }, [flyTo]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [flyTo]); 
+ 
+    useEffect(() => {
+        const lngLat = projectData?.positions;
+
+        if (!mapRef.current || !lngLat?.x) {
+            if (mapRef.current) {
+                navigator.geolocation?.getCurrentPosition(
+                    ({ coords }) => {
+                        mapRef.current.flyTo({
+                            center: [coords.longitude, coords.latitude],
+                            zoom: 18,
+                            duration: 800,
+                        });
+                    },
+                    () => {}
+                );
+            }
+            return;
+        }
+
+        const map    = mapRef.current;
+        const center = [lngLat.x, lngLat.y];
+        const radius = parseFloat(projectData?.radius_km ?? 1);
+
+        radiusRef.current = radius;
+        setRadiusKm(radius);
+
+        onSelect?.({
+            lng:      lngLat.x,
+            lat:      lngLat.y,
+            radiusKm: radius,
+            address:  projectData?.address ?? '',
+        });
+
+        map.flyTo({ center, zoom: 18, duration: 700 });
+
+        const doPlace = () => placePin(map, center, true); 
+
+        if (map.isStyleLoaded() && map.getSource('lp-circle')) {
+            doPlace();
+        } else {
+            map.once('load', doPlace);
+        }
+    }, [projectData]); 
 
     return (
         <div style={{ position: 'relative', width: '100%', height: mapHeight, borderRadius: 8, overflow: 'hidden', border: '1px solid #e5e7eb' }}>
             <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
             {hasPin && (
                 <div style={{
-                    position:    'absolute',
-                    bottom:      8,
-                    left:        '50%',
-                    transform:   'translateX(-50%)',
-                    background:  'rgba(255,255,255,0.92)',
-                    borderRadius: 6,
-                    padding:     '3px 10px',
-                    fontSize:    11,
-                    color:       '#374151',
+                    position:      'absolute',
+                    bottom:        8,
+                    left:          '50%',
+                    transform:     'translateX(-50%)',
+                    background:    'rgba(255,255,255,0.92)',
+                    borderRadius:  6,
+                    padding:       '3px 10px',
+                    fontSize:      11,
+                    color:         '#374151',
                     pointerEvents: 'none',
-                    whiteSpace:  'nowrap',
-                    boxShadow:   '0 1px 4px rgba(0,0,0,0.15)',
+                    whiteSpace:    'nowrap',
+                    boxShadow:     '0 1px 4px rgba(0,0,0,0.15)',
                 }}>
-                    Radius: {radiusKm.toFixed(2)} km · drag <strong>●</strong> to resize
+                    Radius: {radiusKm.toFixed(2)} km · drag <strong><span className='resize-circle'></span>
+                    {/* ● */}
+                    </strong> to resize
                 </div>
             )}
         </div>

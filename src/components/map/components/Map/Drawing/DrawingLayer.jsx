@@ -1,9 +1,3 @@
-// DrawingLayer.jsx
-// Registers MapLibre sources + layers for drawing shapes.
-// ALL data updates go through drawingSourceRef imperatively —
-// this component has NO useSelector on shapes/selectedIds,
-// so it NEVER re-renders due to drawing state changes.
-
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useParams }                from 'react-router-dom';
@@ -28,23 +22,18 @@ export const LAYERS = {
   previewLine:    'drawing-preview-line',
   previewFill:    'drawing-preview-fill',
   previewVertex:  'drawing-preview-vertex',
-  previewEdge:    'drawing-preview-edge',
-  // NOTE: text shapes are rendered by TextOverlay.jsx (HTML overlay) so
-  // they support arbitrary CSS fonts.  No MapLibre symbol layers needed.
+  previewEdge:    'drawing-preview-edge', 
 };
 
 const prop = (name) => ['get', name];
-
-// ── Imperative handle ─────────────────────────────────────────────────────────
-// The ONLY way data gets into MapLibre sources.
-// DrawingLayer wires these on mount. useDrawingManager calls them directly.
+ 
 export const drawingSourceRef = {
-  setShapesData:  null,   // (shapes, selectedIds) => void  — full rebuild (used by DrawingSync)
-  setShapesOnly:  null,   // (shapes, selectedIds) => void  — fast update during drag
-  setShapesFull:  null,   // (shapes, selectedIds) => void  — full rebuild after commit
-  setPreviewData: null,   // (geojson) => void
+  setShapesData:  null,   
+  setShapesOnly:  null,   
+  setShapesFull:  null,   
+  setPreviewData: null,   
   isDragging:     false,
-  onInit:         null,   // () => void — called after successful init so DrawingSync can re-push
+  onInit:         null,    
 };
 
 export default function DrawingLayer() {
@@ -174,12 +163,7 @@ export default function DrawingLayer() {
 
   return null;
 }
-
-// ── DrawingAutoSave ───────────────────────────────────────────────────────────
-// Loads saved shapes on mount; debounced auto-save (1 s) on every shapes change.
-// Retries up to 3 times with exponential back-off. Falls back to localStorage
-// so no drawing is ever lost even when the server is unreachable.
-// Uses the shared setSaveStatus from navigationSlice (read by headerDiv).
+ 
 const DRW_LS_KEY    = (pid) => `drawing-shapes-${pid}`;
 const DRW_MAX_RETRY = 1;
 const DRW_RETRY_MS  = 2000;
@@ -228,8 +212,7 @@ export function DrawingAutoSave() {
         }
       });
   };
-
-  // ── Load on mount / project change ────────────────────────────────
+ 
   useEffect(() => {
     if (!decodedId) return;
 
@@ -240,8 +223,7 @@ export function DrawingAutoSave() {
     const load = async () => {
       try {
         let savedShapes = await loadDrawingShapes(decodedId);
-
-        // Fallback to localStorage when backend has no shapes
+ 
         if (!savedShapes?.length) {
           try {
             const raw = localStorage.getItem(DRW_LS_KEY(decodedId));
@@ -254,7 +236,7 @@ export function DrawingAutoSave() {
           dispatch(setAllShapes(savedShapes));
         }
       } catch {
-        // Backend unreachable — try localStorage
+         
         try {
           const raw = localStorage.getItem(DRW_LS_KEY(decodedId));
           if (raw) {
@@ -277,8 +259,7 @@ export function DrawingAutoSave() {
       if (statusTimer.current) clearTimeout(statusTimer.current);
     };
   }, [decodedId, dispatch]);
-
-  // ── Debounced auto-save on every shapes change ─────────────────────
+ 
   useEffect(() => { 
 
     if (!hasLoaded.current) return;
@@ -295,23 +276,18 @@ export function DrawingAutoSave() {
     saveTimer.current = setTimeout(() => {
       saveVersion.current += 1;
       const version = saveVersion.current;
-
-      // Optimistic localStorage write (survives tab close before server responds)
+ 
       try { localStorage.setItem(DRW_LS_KEY(decodedId), JSON.stringify(snapshot)); } catch {}
 
 
       dispatch(setSaveStatus('saving'));
       attemptSave(decodedId, snapshot, version);
     }, 1000);
-  }, [shapes, decodedId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [shapes, decodedId]); 
 
   return null;
 }
-
-// ── DrawingSync ───────────────────────────────────────────────────────────────
-// Separate tiny component that ONLY pushes Redux state into MapLibre.
-// Isolated here so DrawingLayer itself never re-renders from data changes.
-// Import and mount this alongside <DrawingLayer /> in MapComponent.
+ 
 export function DrawingSync() {
   const dispatch     = useDispatch();
   const shapes       = useSelector((s) => s.drawing.shapes);
@@ -320,9 +296,7 @@ export function DrawingSync() {
   const currentFloor = useSelector((s) => s.api.currentFloor);
 
   const floorId = currentFloor?.enc_id ?? null;
-
-  // Only push the current floor's shapes into MapLibre.
-  // Shapes for other floors stay in Redux (so they're saved) but are invisible.
+ 
   const floorShapes = useMemo(
     () => shapes.filter((s) => s.properties?.floorId === floorId),
     [shapes, floorId],
@@ -331,9 +305,7 @@ export function DrawingSync() {
     () => selectedIds.filter((id) => floorShapes.some((s) => String(s.id) === id)),
     [selectedIds, floorShapes],
   );
-
-  // Incremented whenever DrawingLayer finishes (re-)initializing,
-  // so we re-push existing shapes into the freshly created source.
+ 
   const [initCount, setInitCount] = useState(0);
   useEffect(() => {
     drawingSourceRef.onInit = () => setInitCount((c) => c + 1);
@@ -341,12 +313,10 @@ export function DrawingSync() {
   }, []);
 
   useEffect(() => {
-    if (drawingSourceRef.isDragging) return; // drag handler owns the source
+    if (drawingSourceRef.isDragging) return; 
     drawingSourceRef.setShapesData?.(floorShapes, floorSelectedIds);
   }, [floorShapes, floorSelectedIds, initCount]);
-
-  // Clear any selection when the active floor changes so a shape from the
-  // previous floor is never left "selected" while invisible.
+ 
   useEffect(() => {
     dispatch(clearSelection());
   }, [floorId, dispatch]);

@@ -17,7 +17,7 @@ import { MdBlock } from 'react-icons/md';
 import { useAdvertisingSubmit } from './hooks/useBuildAdvertisingPayload';
 
 const EditAdvertising = () => {
-    useActiveTab('advertisements');
+    useActiveTab('all');
 
     const navigate      = useNavigate();
     const { id, subid } = useParams();

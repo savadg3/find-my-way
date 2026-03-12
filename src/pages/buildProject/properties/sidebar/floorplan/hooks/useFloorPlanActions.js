@@ -18,12 +18,15 @@ export const useFloorPlanActions = ({ setFloorPlans, setModal, setLoading }) => 
     const projectId   = projectData?.enc_id; 
 
     const loadFloors = useCallback(async () => {
+        setLoading(true);
         try {
             const data = await fetchFloorPlans(projectId);
             setFloorPlans(data);
-            dispatch(setFloorList(data));
+            dispatch(setFloorList(data)); 
         } catch (err) {
-            console.error('Failed to load floor plans:', err);
+            console.error('Failed to load floor plans:', err); 
+        }finally {
+            setLoading(false);
         }
     }, [projectId, dispatch, setFloorPlans]); 
 

@@ -135,8 +135,7 @@ const LocationFormFields = ({
                     )}
                 </div>
             </div>
-
-            {/* ── Website ── */}
+ 
             <div className="bar-sub-header">
                 <p style={{ marginTop: 0 }}>Website</p>
                 <div className="plus-icon" onClick={() => setwebsiteLinks((prev) => [...prev, {}])}>
@@ -159,8 +158,7 @@ const LocationFormFields = ({
                     />
                 ))}
             </div>
-
-            {/* ── Promotions ── */}
+ 
             <div className="bar-sub-header">
                 <p style={{ marginTop: 0 }}>Images / Promotions</p>
                 <div className="plus-icon" onClick={() => setPromotions((prev) => [...prev, {}])}>
@@ -183,8 +181,7 @@ const LocationFormFields = ({
                     setIsDirty={setIsDirty}
                 />
             ))}
-
-            {/* ── Style ── */}
+ 
             <div className="bar-sub-header">
                 <p style={{ marginTop: 0 }}>Style</p>
             </div>

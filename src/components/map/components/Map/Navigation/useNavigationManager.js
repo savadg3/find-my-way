@@ -51,6 +51,7 @@ export default function useNavigationManager({ activeTool, activePath }) {
   const selectedPathId  = useSelector((s) => s.navigation.selectedPathId);
   const selectedPointId = useSelector((s) => s.navigation.selectedPointId);
   const inProgress      = useSelector((s) => s.navigation.inProgress);
+  const shortestPath    = useSelector((s) => s.navigation.shortestPath);
 
   // Filter paths to the currently active floor so that all manager logic
   // (hit-tests, graph builds, snap detection) operates only on this floor's
@@ -137,18 +138,13 @@ export default function useNavigationManager({ activeTool, activePath }) {
     dispatch(clearInProgress());
     pushPreview(null);
 
-    // ════════════════════════════════════════════════════════════════════════
-    // PEN tool — draw paths
-    // ════════════════════════════════════════════════════════════════════════
+    if(shortestPath?.positions) return
+ 
     if (activeTool === 'pen') {
       setCursor('crosshair');
-
-      // Track local coords separately from Redux inProgress for snap preview
-      // (avoids expensive re-renders on every mousemove)
-      let localProgress    = null; // { type, points: Point[] }
-      // When the last click lands on an existing same-type path's endpoint,
-      // set this so commitPath merges the two paths into one continuous line.
-      let localMergeTarget = null; // { pathId, pointId } | null
+ 
+      let localProgress    = null; 
+      let localMergeTarget = null; 
 
       const commitPath = () => {
         if (!localProgress || localProgress.points.length < 2) {
@@ -158,8 +154,7 @@ export default function useNavigationManager({ activeTool, activePath }) {
           pushPreview(null);
           return;
         }
-
-        // ── Merge: last click landed on an existing same-type path endpoint ──
+ 
         const mergeTarget = localMergeTarget;
         localMergeTarget  = null;
 
@@ -171,14 +166,12 @@ export default function useNavigationManager({ activeTool, activePath }) {
             const tLast  = targetPath.points[targetPath.points.length - 1];
             let mergedPoints = null;
 
-            if (tFirst?.id === mergeTarget.pointId) {
-              // new path's end → target's start: drop duplicate point, append target
+            if (tFirst?.id === mergeTarget.pointId) { 
               mergedPoints = [
                 ...localProgress.points.slice(0, -1),
                 ...targetPath.points,
               ];
-            } else if (tLast?.id === mergeTarget.pointId) {
-              // new path's end → target's end: drop duplicate, append target reversed
+            } else if (tLast?.id === mergeTarget.pointId) { 
               mergedPoints = [
                 ...localProgress.points.slice(0, -1),
                 ...targetPath.points.slice().reverse(),
@@ -206,14 +199,11 @@ export default function useNavigationManager({ activeTool, activePath }) {
         pushPreview(null);
         setCursor('crosshair');
       };
-
-      // ── Click ────────────────────────────────────────────────────────
+ 
       on('click', (e) => {
         const { lng, lat } = e.lngLat;
         const { activePath: curPath, paths: curPaths } = stateRef.current;
-
-        // Snap detection — wider pin threshold (25 px) so clicking anywhere on
-        // a pin icon reliably snaps to the pin's coordinate.
+ 
         const snap = findSnap({
           lngLat: [lng, lat],
           map,
@@ -224,14 +214,11 @@ export default function useNavigationManager({ activeTool, activePath }) {
 
         let newPoint;
         let shouldEnd = false;
-        localMergeTarget = null; // reset on every click
+        localMergeTarget = null;  
 
         if (snap) {
-          if (snap.type === 'pin') {
-            // ── Pin anchor — always use pinId ──────────────────────────────
-            newPoint = makePoint(snap.position, { pinId: snap.pinId });
-            // If we're already drawing (didn't start FROM this pin) finish here.
-            // If this IS the first point (starting a path from a pin) keep going.
+          if (snap.type === 'pin') { 
+            newPoint = makePoint(snap.position, { pinId: snap.pinId }); 
             if (localProgress !== null) shouldEnd = true;
 
           } else if (snap.type === 'node') {
@@ -334,27 +321,22 @@ export default function useNavigationManager({ activeTool, activePath }) {
           newPoint = makePoint([lng, lat]);
         }
 
-        if (!localProgress) {
-          // Start a new path
+        if (!localProgress) { 
           localProgress = { type: curPath, points: [newPoint] };
         } else {
           localProgress = { ...localProgress, points: [...localProgress.points, newPoint] };
         }
-
-        // Update Redux inProgress for NavSync to pick up
-        dispatch(setInProgress(localProgress));
-        // Push preview imperatively
+ 
+        dispatch(setInProgress(localProgress)); 
         pushPreview(localProgress, null);
 
         if (shouldEnd) {
           commitPath();
         }
       });
-
-      // ── Double-click: finish path ─────────────────────────────────────
+ 
       on('dblclick', (e) => {
-        e.preventDefault();
-        // Remove last point added by the preceding single-click
+        e.preventDefault(); 
         if (localProgress && localProgress.points.length > 1) {
           localProgress = {
             ...localProgress,
@@ -363,9 +345,8 @@ export default function useNavigationManager({ activeTool, activePath }) {
         }
         commitPath();
       });
-
-      // ── Mousemove: live preview ───────────────────────────────────────
-      on('mousemove', (e) => {
+ 
+      on('mousemove', (e) => { 
         if (!localProgress) return;
         const mousePos = [e.lngLat.lng, e.lngLat.lat];
         pushPreview(localProgress, mousePos);
@@ -672,7 +653,7 @@ export default function useNavigationManager({ activeTool, activePath }) {
       cleanups.forEach((fn) => fn());
       setCursor('default');
     };
-  }, [map, activeTool, activePath, dispatch, setCursor, hitTestPath, hitTestNode]);
+  }, [map, activeTool, activePath, shortestPath, dispatch, setCursor, hitTestPath, hitTestNode]);
 
   // ── When pin moves (dragend in MapMarkers), update connected points ────────
   // MapMarkers dispatches updatePinConnectedPoints via the pin dragend handler.

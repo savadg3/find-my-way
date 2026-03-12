@@ -19,7 +19,7 @@ import ProductItem from './components/ProductItem';
 
 const ProductSideBar = () => {
 
-    useActiveTab('product');
+    useActiveTab('all');
     
     const dispatch    = useDispatch();
     const navigate    = useNavigate();

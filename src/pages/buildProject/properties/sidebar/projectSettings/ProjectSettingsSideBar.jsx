@@ -123,10 +123,7 @@ const LogoField = ({ logoUrl, fileKey, onFileSelect, onDelete, errors, touched }
         </div>
     );
 };
-
-// ── Location Section (above Details) ─────────────────────────────────────────
-// Shows an active location card (if set) or a "Set Project Location" button.
-// The actual map picker lives on the right side (LocationPickerPanel).
+ 
 function LocationSection({ projectData, dispatch }) {
     const hasLocation = !!projectData?.positions;
     const pos    = projectData?.positions;
@@ -155,7 +152,8 @@ function LocationSection({ projectData, dispatch }) {
                         {addr && <p className="loc-active-address">{addr}</p>}
                         <p className="loc-active-coords">{coordLabel}</p>
                         <p className="loc-active-radius">
-                            Boundary Radius: {Number(radius).toFixed(1)} km
+                            {/* Boundary Radius: {Number(radius).toFixed(1)} km */}
+                            Boundary Radius: {parseFloat(radius ?? 1).toFixed(2)} km
                         </p>
                         <button
                             type="button"
@@ -183,8 +181,7 @@ function LocationSection({ projectData, dispatch }) {
         </>
     );
 }
-
-// ── Main form ─────────────────────────────────────────────────────────────────
+ 
 const ProjectSettingsForm = ({
     logoState,
     setLogoState,
@@ -275,12 +272,12 @@ const ProjectSettingsForm = ({
 
                 <form onSubmit={(e) => handleSubmit(e, setFieldError)} noValidate>
                     <div className="custom-scrollbar customScroll" style={{ height:'calc(100vh - 90px)' }}>
-
-                        {/* ── Location — above Details ── */}
+ 
                         <LocationSection
                             projectData={projectData}
-                            dispatch={dispatch}
+                            dispatch={dispatch} 
                         />
+
                         {hasLocation && <>
 
                             <SectionHeader title="Details" />

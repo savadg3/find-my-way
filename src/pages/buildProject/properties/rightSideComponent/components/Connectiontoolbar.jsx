@@ -5,6 +5,8 @@ import {
   setNavActivePath,
   clearNavSelection,
   clearAllNavPaths,
+  setAllPaths,
+  clearShortestPath,
 } from '../../../../../store/slices/navigationSlice';
 import {
   useAutoGenerateSubPaths,
@@ -34,9 +36,12 @@ const TrashIcon = () => (
 );
 
 export default function ConnectionToolbar() {
-  const dispatch    = useDispatch();
-  const activeTool  = useSelector((s) => s.navigation.activeTool);
-  const activePath  = useSelector((s) => s.navigation.activePath);
+  const dispatch     = useDispatch();
+  const activeTool   = useSelector((s) => s.navigation.activeTool);
+  const activePath   = useSelector((s) => s.navigation.activePath);
+  const paths        = useSelector((s) => s.navigation.paths);
+  const currentFloor = useSelector((s) => s.api.currentFloor);
+  const shortestPath = useSelector((s) => s.navigation.shortestPath);
 
   const autoGenerate = useAutoGenerateSubPaths();
 
@@ -56,6 +61,11 @@ export default function ConnectionToolbar() {
     };
   }, [dispatch]);
 
+  const clearPathConnection = () =>{
+    let removedPath = paths.filter((item) => item?.floorId !== currentFloor.enc_id) 
+    dispatch(setAllPaths(removedPath ?? []))
+  }
+
   return (
     <div className="ct-wrapper-body mt-2">
       <div className="ct-wrapper">
@@ -65,7 +75,12 @@ export default function ConnectionToolbar() {
               <button
                 key={t.id}
                 className={`ct-tool-btn ${activeTool === t.id ? 'active' : ''}`}
-                onClick={() => dispatch(setNavActiveTool(t.id))}
+                onClick={() => {
+                  if(shortestPath?.positions){
+                    dispatch(clearShortestPath());
+                  }
+                  dispatch(setNavActiveTool(t.id))
+                }}
                 title={t.label}
               >
                 {t.icon}
@@ -91,9 +106,13 @@ export default function ConnectionToolbar() {
             title="Clear all paths"
             style={{ color: '#e03131' }}
             onClick={() => {
-              if (window.confirm('Clear all navigation paths?')) {
-                dispatch(clearAllNavPaths());
-              }
+              // if (window.confirm('Clear all navigation paths?')) {
+                // dispatch(clearAllNavPaths()); 
+                if(shortestPath?.positions){
+                  dispatch(clearShortestPath());
+                }
+                clearPathConnection()
+              // }
             }}
           >
             <TrashIcon />

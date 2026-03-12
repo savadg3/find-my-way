@@ -103,7 +103,7 @@ const VerticalTransportSideBar = ({
 
 }) => {
 
-    useActiveTab('vertical_transport');
+    useActiveTab('all');
      const dispatch = useDispatch();
     const editingPinId = useSelector(state => state.api.editingPinId); 
     useEffect(()=>{

@@ -18,6 +18,7 @@ import ProductFormFields from './components/ProductFormFields';
 import { FormInitializer } from '../../utils/pinServices';
 import { postRequest } from '../../../../../hooks/axiosClient';
 import { environmentaldatas } from '../../../../../constant/defaultValues';
+import { Loader } from '../../utils/commonComponent';
 const { image_url } = environmentaldatas;
 
 
@@ -39,7 +40,7 @@ const validationSchema = Yup.object().shape({
 
 
 const EditProduct = () => {
-    useActiveTab('product');
+    useActiveTab('all');
 
     const dispatch     = useDispatch();
     const navigate     = useNavigate();
@@ -58,6 +59,7 @@ const EditProduct = () => {
     const [planDetails, setPlanDetails]       = useState(null);
     const [planModal, setPlanModal]           = useState(false);
     const [isSaving, setIsSaving]             = useState(false);
+    const [loading, setLoading]               = useState(false);
 
     const pendingNavigation = useRef(false);
 
@@ -70,6 +72,7 @@ const EditProduct = () => {
         if (!decodedSubid) return;
 
         const load = async () => {
+            setLoading(true)
             try {
                 const data = await fetchProductById(decodedSubid);
                 const { prefillData, websiteLinks: links, specificationsArray, uniqueImages } = normalizeProductData(data);
@@ -86,8 +89,10 @@ const EditProduct = () => {
                 if (data?.positions) {
                     flyToPin(JSON.parse(data.positions));
                 }
+                setLoading(false)
             } catch (err) {
                 console.error('Failed to load product:', err);
+                setLoading(false)
             }
         };
 
@@ -174,21 +179,9 @@ const EditProduct = () => {
             id="inner-customizer2"
             style={{ position: 'relative', height: window.innerHeight, paddingBottom: 20 }}
         >
-            {/* Loading overlay shown while auto-saving before navigation */}
-            {isSaving && (
-                <div style={{
-                    position:        'absolute',
-                    top: 0, left: 0, right: 0, bottom: 0,
-                    backgroundColor: 'rgba(255, 255, 255, 0.75)',
-                    display:         'flex',
-                    alignItems:      'center',
-                    justifyContent:  'center',
-                    zIndex:          9999,
-                }}>
-                    <div className="spinner-border text-primary" role="status">
-                        <span className="sr-only">Saving…</span>
-                    </div>
-                </div>
+            
+            {(isSaving || loading) && (
+                <Loader/> 
             )}
 
             <Row className="backRow">

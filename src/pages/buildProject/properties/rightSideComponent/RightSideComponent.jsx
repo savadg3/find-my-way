@@ -231,15 +231,12 @@ function RightSideComponent() {
     const floorList              = useSelector((state) => state.api.floorList);
     const isConnectionEnabled    = useSelector((state) => state.vertical.isConnectionEnabled);
     const showLocationPicker     = useSelector((state) => state.api.showLocationPicker);
-
-    // Use useMatch for reliable route detection — handles trailing slashes and
-    // any URL normalisation React Router applies, unlike manual string splitting.
+ 
     const isNavigation = !!useMatch('/project/:id/navigation');
     const isFloorplan  = !!useMatch('/project/:id/floor-plan/:subid');
 
     const handleDrop = useHandleDrop({ projectData, currentFloor, dispatch });
-
-    // All hook calls must be before any conditional returns (rules of hooks)
+ 
     const [, dropLocation] = usePinDrop('location', map, handleDrop);
     const [, dropProduct]  = usePinDrop('product',  map, handleDrop);
     const [, dropBeacon]   = usePinDrop('beacon',   map, handleDrop);
@@ -280,23 +277,17 @@ function RightSideComponent() {
             dispatch(setCurrentFloor(found));
         }
     };
-
-    // ── Conditional rendering (after all hooks) ───────────────────────────────
-
-    // Show the location picker panel whenever requested (initial set OR change)
+ 
     if (showLocationPicker) {
         return <LocationPickerPanel />;
     }
-
-    // No location set and picker not open — hide the map entirely.
-    // The user must first set a location via Project Settings.
+ 
     if (!projectData?.positions) return null;
-
-    // Normal map view
+ 
     return (
         <div className="pin-drag-drop-div position-relative" ref={setDropRef}>
 
-            {!isFloorplan && (
+            {!isFloorplan && floorOptions.length > 1 && (
                 <div className='d-flex position-absolute top-2 left-2 z-10'>
                     <div style={{ minWidth: "150px" }}>
                         <CustomDropdown3

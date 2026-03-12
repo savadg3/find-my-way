@@ -19,7 +19,7 @@ import { decode } from '../../../../../helpers/utils';
 
 const AmenitySideBar = () => {
 
-    useActiveTab('amenity');
+    useActiveTab('all');
     
     const dispatch    = useDispatch();
     const navigate    = useNavigate();
